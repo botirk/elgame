@@ -1,39 +1,45 @@
-import { buttonColor, textColor } from "../game";
+import { InitSettings } from "../settings";
+import drawText from "./text";
 import { saveOldStyles } from "./utils";
 
-const drawRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
-  const loadOldStyles = saveOldStyles(ctx);
+const drawRoundedRect = (is: InitSettings, x: number, y: number, w: number, h: number, r: number, isDefaultStyle ?: boolean) => {
+  const loadOldStyles = saveOldStyles(is.ctx);
   
-  ctx.fillStyle = buttonColor;
+  if (isDefaultStyle) is.ctx.fillStyle = is.buttonColor;
   if (w < 2 * r) r = w / 2;
   if (h < 2 * r) r = h / 2;
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.arcTo(x+w, y,   x+w, y+h, r);
-  ctx.arcTo(x+w, y+h, x,   y+h, r);
-  ctx.arcTo(x,   y+h, x,   y,   r);
-  ctx.arcTo(x,   y,   x+w, y,   r);
-  ctx.closePath();
-  ctx.fill();
+  is.ctx.beginPath();
+  is.ctx.moveTo(x+r, y);
+  is.ctx.arcTo(x+w, y,   x+w, y+h, r);
+  is.ctx.arcTo(x+w, y+h, x,   y+h, r);
+  is.ctx.arcTo(x,   y+h, x,   y,   r);
+  is.ctx.arcTo(x,   y,   x+w, y,   r);
+  is.ctx.closePath();
+  is.ctx.fill();
 
   loadOldStyles();
 }
 
-const additionalButtonHeight = 7;
-const drawButton = (ctx: CanvasRenderingContext2D, x: number, y: number, text: string, width: number) => {
-  const loadOldStyles = saveOldStyles(ctx);
+const drawButton = (is: InitSettings, x: number, y: number, text: string, width: number, hover ?: boolean) => {
+  const loadOldStyles = saveOldStyles(is.ctx);
 
-  const textPx = 15;
-  ctx.font = `${textPx}px serif`;
-  ctx.fillStyle = textColor;
-  const metrics = ctx.measureText(text);
+  is.ctx.fillStyle = is.buttonColor;
+  if (hover) is.ctx.fillStyle = is.hoverColor;
+  is.ctx.font = is.ctxFont;
+  const metrics = is.ctx.measureText(text);
   const textWidth = metrics.width;
   const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
-  const buttonX = (x - width / 2), buttonY = (y - textHeight / 2 - additionalButtonHeight / 2);
+  const buttonX = (x - width / 2), buttonY = (y - textHeight / 2 - is.additionalButtonHeight / 2);
   const textX = (x - textWidth / 2), textY = (y + textHeight / 2);
-  drawRoundedRect(ctx, buttonX, buttonY, width, textHeight + additionalButtonHeight, 4);
-  ctx.fillText(text, textX, textY);
-  alert(`${textX}, ${textY}, ${ctx.canvas.clientWidth}, ${ctx.canvas.clientHeight}`);
+  drawRoundedRect(is, buttonX, buttonY, width, textHeight + is.additionalButtonHeight, 4);
+  drawText(is, textX, textY, text);
+  
+  const [promise] = is.addHoverRequest((x, y) => x >= buttonX && x <= buttonX + width && y >= buttonY && y <= buttonY + textHeight + is.additionalButtonHeight, !hover);
+  promise.then(() => {
+    drawButton(is, x, y, text, width, !hover);
+    //alert("SUCCESS!");
+    //is.ctx.fillRect(0,0, 300, 300);
+  });
 
   loadOldStyles();
 }

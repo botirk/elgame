@@ -4,7 +4,7 @@
   "description": "English Learning Game",
   "main": "index.js",
   "scripts": {
-    "develop": "npx parcel src/index.html",
+    "develop": "npx parcel src/example/index.html",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
