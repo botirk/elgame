@@ -1,31 +1,34 @@
-type IsInArea = (x: number, y: number) => boolean;
-type IsCurrentlyOutside = boolean;
-type HoverResolver = () => void;
+interface HoverRequest {
+  isInArea: (x: number, y: number) => boolean,
+  onHover: () => void,
+  onLeave: () => void,
+  isCurrentlyInside: boolean,
+}
 
 const hover = (ctx: CanvasRenderingContext2D) => {
-  const requesters: [IsInArea, IsCurrentlyOutside, HoverResolver][] = [];
-  
+  const requesters: HoverRequest[] = [];
+
   ctx.canvas.addEventListener("mousemove", (e) => {
     requesters.forEach((requester, i) => {
-      if ((requester[1] && requester[0](e.x, e.y)) || (!requester[1] && !requester[0](e.x, e.y))) {
-        requester[2]();
-        requesters.splice(i, 1);
-      } 
+      if (!requester.isCurrentlyInside && requester.isInArea(e.x, e.y)) {
+        requester.onHover();
+        requester.isCurrentlyInside = true;
+      } else if (requester.isCurrentlyInside && !requester.isInArea(e.x, e.y)) {
+        requester.onLeave();
+        requester.isCurrentlyInside = false;
+      }
     });
   });
 
-  const addHoverRequest = (isInArea: IsInArea, isCurrentlyOutside: IsCurrentlyOutside): [Promise<void>, () => void] => {
-    let resolver: () => void;
-    const promise = new Promise((resolve) => resolver = resolve as () => void) as Promise<void>;
-    resolver ||= () => 0;
-    const toAdd:  [IsInArea, IsCurrentlyOutside, HoverResolver] = [isInArea, isCurrentlyOutside, resolver];
+  const addHoverRequest = (isInArea: HoverRequest["isInArea"], isCurrentlyInside: HoverRequest["isCurrentlyInside"], onHover: HoverRequest["onHover"], onLeave: HoverRequest["onLeave"]): () => void => {
+    const toAdd = { isInArea, isCurrentlyInside, onHover, onLeave };
     requesters[requesters.length] = toAdd;
-    
+
     const removeHoverRequest = () => {
       const i = requesters.indexOf(toAdd);
-      if (i != -1) requesters.splice(requesters.indexOf(toAdd), i);
+      if (i != -1) requesters.splice(i, 1);
     }
-    return [promise, removeHoverRequest];
+    return removeHoverRequest;
   }
 
   return addHoverRequest;
