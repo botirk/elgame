@@ -28,6 +28,10 @@ const init = (elementId: string) => {
     if (currentWidthToHeightRatio < settings.dimensions.widthToHeightRatio) {
       ctx.canvas.width = ctx.canvas.height * settings.dimensions.widthToHeightRatio;
     }
+    // add shadow
+    ctx.shadowColor = "black";
+    ctx.shadowBlur = 1;
+    // calc
     const isMobile = settings.dimensions.isMobile(currentWidthToHeightRatio);
     const gameWidth = settings.dimensions.gameWidth(isMobile);
     drawMenu({
@@ -38,8 +42,9 @@ const init = (elementId: string) => {
       calculated: { 
         isMobile,
         gameWidth,
-        gameXMin: settings.dimensions.gameXMin(ctx, gameWidth),
+        gameX: settings.dimensions.gameX(ctx, gameWidth),
         gameXMax: settings.dimensions.gameXMax(ctx, gameWidth),
+        verticalSpeedMultiplier: isMobile ? 1 : 1.33,
       },
     });
   }

@@ -1,14 +1,22 @@
 import { InitSettings } from "../settings";
-import { saveOldStyles } from "./utils";
 
-const drawText = (is: InitSettings, x: number, y: number, text: string) => {
-  const loadOldStyles = saveOldStyles(is.ctx);
-
+export const drawTextAtCenter = (is: InitSettings, x: number, y: number, text: string) => {
   is.ctx.font = is.fonts.ctxFont;
-  is.ctx.fillStyle = is.colors.textColor;
-  is.ctx.fillText(text, x, y);
+  const metrics = is.ctx.measureText(text);
 
-  loadOldStyles();
+  const textWidth = metrics.width;
+  const textHeight = is.fonts.fontSize;
+  const textX = (x - textWidth / 2), textY = (y + textHeight / 2);
+  is.ctx.fillText(text, textX, textY);
 }
 
-export default drawText;
+export const drawQuestAtCenter = (is: InitSettings, x: number, y: number, text: string) => {
+  is.ctx.font = is.fonts.ctxFont;
+  const metrics = is.ctx.measureText("! " + text);
+
+  const textWidth = metrics.width;
+  const textHeight = is.fonts.fontSize;
+  const textX = (x - textWidth / 2), textY = (y + textHeight / 2);
+  is.ctx.fillStyle = is.colors.questColor;
+  is.ctx.fillText("! " + text, textX, textY);
+}

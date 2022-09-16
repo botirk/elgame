@@ -1,30 +1,9 @@
 import { InitSettings } from "../settings";
-import drawText from "./text";
-import { saveOldStyles } from "./utils";
-
-const drawRoundedRect = (is: InitSettings, x: number, y: number, w: number, h: number, r: number, isDefaultStyle ?: boolean) => {
-  const loadOldStyles = saveOldStyles(is.ctx);
-  
-  if (isDefaultStyle) is.ctx.fillStyle = is.colors.buttonColor;
-  if (w < 2 * r) r = w / 2;
-  if (h < 2 * r) r = h / 2;
-  is.ctx.beginPath();
-  is.ctx.moveTo(x+r, y);
-  is.ctx.arcTo(x+w, y,   x+w, y+h, r);
-  is.ctx.arcTo(x+w, y+h, x,   y+h, r);
-  is.ctx.arcTo(x,   y+h, x,   y,   r);
-  is.ctx.arcTo(x,   y,   x+w, y,   r);
-  is.ctx.closePath();
-  is.ctx.fill();
-
-  loadOldStyles();
-}
+import drawRoundedRect from "./roundedRect";
 
 const drawButton = (is: InitSettings, onClick: () => void, x: number, y: number, text: string, width: number) => {
-  const loadOldStyles = saveOldStyles(is.ctx);
   is.ctx.font = is.fonts.ctxFont;
   const metrics = is.ctx.measureText(text);
-  loadOldStyles();
 
   const textWidth = metrics.width;
   const textHeight = is.fonts.fontSize;
@@ -35,8 +14,6 @@ const drawButton = (is: InitSettings, onClick: () => void, x: number, y: number,
 
   const state = { isHover: false, isPressed: false };
   const redraw = () => {
-    const loadOldStyles = saveOldStyles(is.ctx);
-
     is.ctx.font = is.fonts.ctxFont;
     if (state.isPressed) {
       is.ctx.fillStyle = is.colors.pressedColor;
@@ -49,9 +26,8 @@ const drawButton = (is: InitSettings, onClick: () => void, x: number, y: number,
       is.ctx.canvas.style.cursor = "pointer";
     }
     drawRoundedRect(is, buttonX, buttonY, width, textHeight + additionalButtonHeight, 4);
-    drawText(is, textX, textY, text);
-
-    loadOldStyles();
+    is.ctx.fillStyle = is.colors.textColor;
+    is.ctx.fillText(text, textX, textY);
   }
   redraw();
 
