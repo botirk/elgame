@@ -9,13 +9,12 @@ const drawGameBackground = (is: InitSettings, state: DropState) => {
 
 const drawQuest = (is: InitSettings, state: DropState) => {
   is.ctx.fillStyle = is.colors.questColor;
-  drawQuestAtCenter(is, is.calculated.gameX + is.calculated.gameWidth / 2, is.dropGame.questY, state.quest.text + ` ${state.currentSuccessCount}/${state.requiredSuccessCount}`);
+  drawQuestAtCenter(is, is.calculated.gameX + is.calculated.gameWidth / 2, is.dropGame.questY, state.quest.name + ` ${state.currentSuccessCount}/${state.requiredSuccessCount}`);
 }
 
 const drawTargets = (is: InitSettings, state: DropState) => {
   state.targets.forEach((target) => {
-    is.ctx.fillStyle = target.word.color;
-    is.ctx.fillRect(target.x, target.y, state.targetWidth, state.targetWidth)
+    is.ctx.drawImage(target target.x, target.y, state.targetWidth, state.targetWidth)
   });
 }
 

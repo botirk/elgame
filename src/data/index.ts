@@ -1,15 +1,20 @@
+import data from "./index.json";
 
-export interface Word {
-  text: string,
-  color: string,
-}
+export interface Data { imgB64: string, name: string };
 
-const words: Word[] = [
-  { text: "banana", color: "#ffe135" },
-  { text: "apple", color: "#c7372f" },
-  { text: "orange", color: "#FFA500" },
-]
+export interface LoadedData extends Data { img: HTMLImageElement }
 
-export const randomWord = () => words[Math.floor(Math.random() * words.length)];
+export const mapData = data as { [key: string]: Data };
 
-export default words;
+export const arrayData = Object.values(mapData);
+
+export const loadData = (maxWidth: number): LoadedData[] => arrayData.map((data) => {
+  const img = new Image();
+  img.onload = () => {
+
+  };
+  img.src = `data:image/png;base64,${data.imgB64}`;
+  return { ...data, img };
+});
+
+export const randomWord = () => arrayData[Math.floor(Math.random() * arrayData.length)];

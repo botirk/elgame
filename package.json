@@ -4,13 +4,18 @@
   "description": "English Learning Game",
   "main": "index.js",
   "scripts": {
-    "develop": "npx parcel src/example/index.html",
+    "generateData": "node -e \"require('./src/data/generateData.js')();\"",
+    "develop": "npm run generateData && npx parcel src/example/index.html",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/node": "^18.7.18",
     "parcel": "^2.7.0"
+  },
+  "devDependencies": {
+    "os-browserify": "^0.3.0"
   }
 }
