@@ -1,6 +1,8 @@
+import settings from "../../settings";
+
 interface ClickRequest {
   isInArea: (x: number, y: number) => boolean,
-  isPressed: boolean,
+  isPressed?: boolean,
   onReleased: (isInside: boolean) => void,
   onPressed?: () => void,
 }
@@ -9,8 +11,9 @@ const click = (ctx: CanvasRenderingContext2D) => {
   const requesters: ClickRequest[] = [];
   
   ctx.canvas.addEventListener("mousedown", (e) => {
-    requesters.forEach((requester, i) => {
-      if (requester.isInArea(e.x, e.y)) {
+    const [x, y] = settings.dimensions.toCanvasCoords(ctx, e.x, e.y);
+    requesters.forEach((requester) => {
+      if (requester.isInArea(x, y)) {
         requester.onPressed?.();
         requester.isPressed = true;
       }
@@ -18,26 +21,25 @@ const click = (ctx: CanvasRenderingContext2D) => {
   });
 
   ctx.canvas.addEventListener("mouseup", (e) => {
-    requesters.forEach((requester, i) => {
+    const [x, y] = settings.dimensions.toCanvasCoords(ctx, e.x, e.y);
+    requesters.forEach((requester) => {
       if (requester.isPressed) {
-        requester.onReleased(requester.isInArea(e.x, e.y));
+        requester.onReleased(requester.isInArea(x, y));
       }
       requester.isPressed = false;
     });
   });
 
-  const addClickRequest = (isInArea: ClickRequest["isInArea"], onReleased: ClickRequest["onReleased"], onPressed?: ClickRequest["onPressed"]) => {
-    const toAdd = { isInArea, onReleased, onPressed, isPressed: false };
-    requesters[requesters.length] = toAdd;
-    
-    const removeHoverRequest = () => {
-      const i = requesters.indexOf(toAdd);
+  const addRequest = (req: ClickRequest) => {
+    requesters.push(req);
+    const removeRequest = () => {
+      const i = requesters.indexOf(req);
       if (i != -1) requesters.splice(i, 1);
     }
-    return removeHoverRequest;
+    return removeRequest;
   }
 
-  return addClickRequest;
+  return addRequest;
 }
 
 export default click;

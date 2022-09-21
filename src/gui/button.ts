@@ -1,4 +1,4 @@
-import { InitSettings } from "../settings";
+import { InitSettings } from "..";
 import drawRoundedRect from "./roundedRect";
 
 const drawButton = (is: InitSettings, onClick: () => void, x: number, y: number, text: string, width: number) => {
@@ -28,12 +28,18 @@ const drawButton = (is: InitSettings, onClick: () => void, x: number, y: number,
     drawRoundedRect(is, buttonX, buttonY, width, textHeight + additionalButtonHeight, 4);
     is.ctx.fillStyle = is.colors.textColor;
     is.ctx.fillText(text, textX, textY);
-  }
+  };
   redraw();
-
-  
-  const stopHover = is.addHoverRequest(isInArea, false, () => { state.isHover = true; redraw(); }, () => { state.isHover = false; redraw(); });
-  const stopClick = is.addClickRequest(isInArea, (isInArea) => { state.isPressed = false; redraw(); if (isInArea) onClick(); }, () => { state.isPressed = true; redraw(); });
+  const stopHover = is.addHoverRequest({
+    isInArea, 
+    onHover: () => { state.isHover = true; redraw(); },
+    onLeave: () => { state.isHover = false; redraw(); },
+  });
+  const stopClick = is.addClickRequest({
+    isInArea,
+    onReleased: (isInArea) => { state.isPressed = false; redraw(); if (isInArea) onClick(); },
+    onPressed: () => { state.isPressed = true; redraw(); },
+  });
 
   const stopDrawing = (shouldRedrawToDefault?: boolean) => {
     if (shouldRedrawToDefault && (state.isHover || state.isPressed)) {

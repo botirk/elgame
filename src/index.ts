@@ -1,7 +1,9 @@
-import settings, { InitSettings } from "./settings";
+import settings, { Settings } from "./settings";
 import drawMenu from "./gui/menu";
-import hover from "./gui/hover";
-import click from "./gui/click";
+import hover from "./gui/events/hover";
+import click from "./gui/events/click";
+import move from "./gui/events/move";
+import button from "./gui/events/button";
 
 export const canInit = (elementId: string): [CanvasRenderingContext2D | undefined, string] => {
   const el = document.getElementById(elementId);
@@ -14,12 +16,26 @@ export const canInit = (elementId: string): [CanvasRenderingContext2D | undefine
   return [ctx, 'Can init'];
 }
 
+export interface InitSettings extends Settings {
+  ctx: CanvasRenderingContext2D,
+  addMoveRequest: ReturnType<typeof move>,
+  addHoverRequest: ReturnType<typeof hover>,
+  addClickRequest: ReturnType<typeof click>,
+  addButtonRequest: ReturnType<typeof button>,
+  calculated: {
+    isMobile: boolean,
+    gameWidth: number, clickableGameWidth: number,
+    gameX: number, gameXMax: number, clickableGameX: number, clickableGameXMax: number,
+    verticalSpeedMultiplier: number,
+  }
+}
+
 const init = (elementId: string) => {
   const [ctx, msg] = canInit(elementId);
   if (ctx) {
     // set height to fixed
     {
-      const ratio =  settings.dimensions.heigth / ctx.canvas.clientHeight;
+      const ratio = settings.dimensions.heigth / ctx.canvas.clientHeight;
       ctx.canvas.width = ctx.canvas.clientWidth * ratio;
       ctx.canvas.height = ctx.canvas.clientHeight * ratio;
     }
@@ -37,12 +53,16 @@ const init = (elementId: string) => {
     drawMenu({
       ...settings,
       ctx,
+      addMoveRequest: move(ctx),
       addHoverRequest: hover(ctx),
       addClickRequest: click(ctx),
-      calculated: { 
+      addButtonRequest: button(ctx),
+      calculated: {
         isMobile,
-        gameWidth,
+        gameWidth, clickableGameWidth: settings.dimensions.clickableGameWidth(ctx, gameWidth),
         gameX: settings.dimensions.gameX(ctx, gameWidth),
+        clickableGameX: settings.dimensions.clickableGameX(ctx, gameWidth),
+        clickableGameXMax: settings.dimensions.clickableGameXMax(ctx, gameWidth),
         gameXMax: settings.dimensions.gameXMax(ctx, gameWidth),
         verticalSpeedMultiplier: isMobile ? 1 : 1.33,
       },

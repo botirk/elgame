@@ -13,6 +13,10 @@
 <body style="margin:0; height: 100%;">
   <!-- your content here... -->
   <canvas id="elgame" style="height:100%; width:100%; float: left;"></canvas>
-  <script src="index.ts" type="module"></script>
+  <script type="module">
+    import init from '../index';
+    const [isInited, message] = init('elgame');
+    if (!isInited) alert(message);
+  </script>
 </body>
 </html>

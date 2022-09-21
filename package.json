@@ -2,17 +2,17 @@
   "name": "elgame",
   "version": "1.0.0",
   "description": "English Learning Game",
-  "main": "index.js",
   "scripts": {
-    "generateData": "node -e \"require('./src/data/generateData.js')();\"",
-    "develop": "npm run generateData && npx parcel src/example/index.html",
+    "generateData": "node -e \"require('./src/compileTime/generateImages.js')();\"",
+    "develop": "npm run generateData && npx parcel src/examples/onePage.html --log-level verbose",
+    "buildOnePage": "npm run generateData && npx parcel build src/examples/onePage.html --dist-dir build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/node": "^18.7.18",
+    "@rbf/parcel-optimizer-javascript-obfuscator": "^0.2.2",
     "parcel": "^2.7.0"
   },
   "devDependencies": {
