@@ -1,6 +1,5 @@
 
 const dropGame = {
-  speed: 4,
   acceleration: 2.1,
   mouseSpeed: 5.5,
   fps: 100,
@@ -10,19 +9,39 @@ const dropGame = {
   accelerationButton: " ",
   difficulties: {
     easy: {
+      targets: {
+        speed: 4,
+        cd: 1500,
+      },
       successCountPerWord: 3,
       maxHealth: 3,
     },
     normal: {
+      targets: {
+        speed: 5,
+        cd: 1200,
+      },
       successCountPerWord: 4,
       maxHealth: 2,
     },
     hard: {
+      targets: {
+        speed: 6,
+        cd: 800,
+      },
       successCountPerWord: 5,
       maxHealth: 1,
+    },
+    movie: {
+      targets: {
+        speed: 14,
+        cd: 111,
+      },
+      successCountPerWord: Infinity,
+      maxHealth: Infinity,
     }
   },
-  winTime: 4000, loseTime: 3000, movieSpeed: 14,
+  winTime: 4000, loseTime: 3000,
 }
 
 export type DropGameDifficulty = typeof dropGame.difficulties.easy | typeof dropGame.difficulties.normal | typeof dropGame.difficulties.hard;
@@ -33,14 +52,18 @@ const colors = {
   questColor2: "#85e368",
   questColor3: "#5be14e",
   questColor4: "#23d653",
+  success: "#2C5530",
+  fail: "#E84855",
   questColorText: "#FEFA12",
   textColor: "#CF081F",
-  buttonColor: "#ffffff",
-  hoverColor: "#d6d98b",
-  pressedColor: "#c2c754",
-  labelColor: "#ffffff",
-  bgColor: "#483C46",
-  skyColor: "#87CEEB",
+  button: {
+    bg: "#ffffff",
+    hover: "#d6d98b",
+    pressed: "#c2c754",
+  },
+  label: "#ffffff",
+  bg: "#483C46",
+  sky: "#87CEEB",
 }
 
 const fonts = {

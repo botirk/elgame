@@ -7,179 +7,224 @@ import { drawFrame } from "./draw";
 import { loadImgs, LoadedImg, randomLoadedImg, TransformedImgsJSON } from "../../compileTime/generated";
 import { calcTextWidth } from "../../gui/text";
 import { InitSettings } from "../..";
+import { mergeDeep, RecursivePartial } from "../../gui/utils";
 
-const generateTarget = (is: InitSettings, words: LoadedImg[], prevWord?: LoadedImg) => {
+const generateTarget = (is: InitSettings, words: LoadedImg[], state: DropState) => {
   const x = is.calculated.clickableGameX + Math.random() * is.calculated.clickableGameWidth, y = 1000;
   let wordsAvailable = words;
-  if (wordsAvailable.length > 1 && prevWord) {
-    wordsAvailable = wordsAvailable.filter((word) => word != prevWord);
+  if (wordsAvailable.length > 1 && state.gameplay.targets.a.length > 0) {
+    wordsAvailable = wordsAvailable.filter((word) => word != state.gameplay.targets.a[state.gameplay.targets.a.length - 1].word);
   }
-  return { word: randomLoadedImg(wordsAvailable), x, y, timeGenerated: Date.now() };
+  return { word: randomLoadedImg(wordsAvailable), x, y, timeGenerated: state.lastTick };
 }
 
 const generateQuest = (is: InitSettings, words: LoadedImg[], state?: DropState) => {
   is.ctx.font = is.fonts.ctxFont;
   let wordsAvailable = words;
   if (state) {
-    const remaining = state.words.filter((word) => state.successCount[word.name] < state.requiredSuccessCountPerWord);
+    const remaining = state.gameplay.words.filter((word) => state.gameplay.score.perWord[word.name] < state.gameplay.score.requiredPerWord);
     if (remaining.length == 1) {
       wordsAvailable = remaining;
     } else if (remaining.length > 0) {
-      wordsAvailable = remaining.filter((word) => word != state.quest.word);
+      wordsAvailable = remaining.filter((word) => word != state.gameplay.quest.word);
     }
   }
   const word = randomLoadedImg(wordsAvailable)
   const textX = is.calculated.gameX + (is.calculated.gameWidth - calcTextWidth(is, word.name)) / 2;
-  return { word, textX };
+  return { word, textX, timeGenerated: state?.lastTick || Date.now() };
 }
 
 const calcGameplay = (is: InitSettings, state: DropState) => {
-  state.targets.forEach((target, i) => {
+  state.gameplay.targets.a.forEach((target, i) => {
     const isMiss = (target.y < is.dropGame.progressBarY - target.word.img.height);
-    const isHit = (Math.abs(state.heroX - target.x) <= is.hero.width) && (Math.abs(state.heroY - target.y) <= is.hero.height);
-    const isQuest = (target.word == state.quest.word);
+    const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= is.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= is.hero.height);
+    const isQuest = (target.word == state.gameplay.quest.word);
     if (isHit && isQuest) {
-      if (state.successCount[state.quest.word.name] < state.requiredSuccessCountPerWord) {
-        state.successCount[state.quest.word.name] += 1;
-        state.currentSuccessCount += 1;
+      if (state.gameplay.score.perWord[state.gameplay.quest.word.name] < state.gameplay.score.requiredPerWord) {
+        state.gameplay.score.perWord[state.gameplay.quest.word.name] += 1;
+        state.gameplay.score.total += 1;
+        state.gameplay.score.lastScoreIncreasedTime = state.lastTick;
       }
-      if (state.currentSuccessCount == state.requiredSuccessCount) {
-        state.wonTime = Date.now();
+      if (state.gameplay.score.total == state.gameplay.score.required) {
+        state.gameplay.score.wonTime = state.lastTick;
       } else {
-        state.quest = generateQuest(is, state.words, state);
+        state.gameplay.quest = generateQuest(is, state.gameplay.words, state);
       }
     } else if ((isMiss && isQuest) || (isHit && !isQuest)) {
-      state.health = state.health - 1;
-      if (state.health == 0) {
-        state.loseTime = Date.now();
+      state.gameplay.score.health = state.gameplay.score.health - 1;
+      state.gameplay.score.lastHealthLostTime = state.lastTick;
+      if (state.gameplay.score.health == 0) {
+        state.gameplay.score.loseTime = state.lastTick;
       }
     }
-    if (isHit || isMiss) {
-      const prevWord = state.targets.splice(i, 1)[0].word;
-      state.targets.push(generateTarget(is, state.words, prevWord));
-    }
+    if (isHit || isMiss) state.gameplay.targets.a.splice(i, 1);
   });
 }
 
 const calcNextFrame = (is: InitSettings, state: DropState) => {
-  if (state.mouseX > -1) {
-    if (state.heroX > state.mouseX) state.heroX = Math.max(state.heroX - state.speed, state.mouseX); else state.heroX = Math.min(state.heroX + state.speed, state.mouseX - is.hero.width / 2);
-    state.heroX = Math.max(is.calculated.gameX, Math.min(is.calculated.clickableGameXMax, state.heroX));
+  if (state.gui.mouse.x > -1) {
+    if (state.gameplay.hero.x > state.gui.mouse.x) 
+      state.gameplay.hero.x = Math.max(state.gameplay.hero.x - state.gameplay.hero.speed, state.gui.mouse.x); 
+    else 
+      state.gameplay.hero.x = Math.min(state.gameplay.hero.x + state.gameplay.hero.speed, state.gui.mouse.x);
+    // fix
+    state.gameplay.hero.x = Math.max(is.calculated.gameX, Math.min(is.calculated.clickableGameXMax, state.gameplay.hero.x));
   }
-  let speed = is.dropGame.speed;
-  if (state.accelerationKB || state.accelerationMouse) speed *= is.dropGame.acceleration;
-  state.targets.forEach((target) => target.y -= speed);
+  let speed = state.gameplay.targets.speed;
+  if (state.gui.accelerationKB || state.gui.accelerationMouse) speed *= is.dropGame.acceleration;
+  state.gameplay.targets.a.forEach((target) => target.y -= speed);
+  // generate new
+  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= state.gameplay.targets.cd) {
+    state.gameplay.targets.a.push(generateTarget(is, state.gameplay.words, state));
+    state.gameplay.targets.lastTimeGenerated = state.lastTick;
+  }
 }
 
 const calcNextLoseFrame = (is: InitSettings, state: DropState) => {
   // move & remove
-  let speed = is.dropGame.movieSpeed;
-  state.targets.forEach((target, i) => {
-    if (target.y < is.dropGame.progressBarY - target.word.img.height) state.targets.splice(i, 1);
+  let speed = is.dropGame.difficulties.movie.targets.speed;
+  state.gameplay.targets.a.forEach((target, i) => {
+    if (target.y < is.dropGame.progressBarY - target.word.img.height) {
+      state.gameplay.targets.a.splice(i, 1);
+      state.gameplay.score.lastHealthLostTime = state.lastTick;
+    } 
     else target.y -= speed;
   });
   // generate new
-  if (Date.now() - (state.targets.at(-1)?.timeGenerated || 0) > 150) {
-    let target = generateTarget(is, state.words);
-    for (let i = 0; i < 10 && Math.abs(target.x - state.heroX) < is.hero.width * 2; i++)  
-      target.x = is.calculated.gameX * Math.random() * is.calculated.clickableGameWidth;
-    state.targets.push(target);
-  } 
+  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= is.dropGame.difficulties.movie.targets.cd) {
+    let target = generateTarget(is, state.gameplay.words, state);
+    for (let i = 0; i < 10 && Math.abs(target.x - state.gameplay.hero.x) < is.hero.width * 2; i++)
+      target.x = is.calculated.gameX + Math.random() * is.calculated.clickableGameWidth;
+    state.gameplay.targets.a.push(target);
+    state.gameplay.targets.lastTimeGenerated = state.lastTick;
+  }
 }
 
 const calcNextWonFrame = (is: InitSettings, state: DropState) => {
   // move & remove
-  let speed = is.dropGame.movieSpeed;
-  state.targets.forEach((target, i) => {
-    // remove
-    const isHit = (Math.abs(state.heroX - target.x) <= is.hero.width) && (Math.abs(state.heroY - target.y) <= is.hero.height);
+  state.gameplay.targets.a.forEach((target, i) => {
+    const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= is.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= is.hero.height);
     if (isHit) {
-      state.targets.splice(i, 1);
+      // remove
+      state.gameplay.targets.a.splice(i, 1);
+      state.gameplay.score.lastScoreIncreasedTime = state.lastTick;
       return;
-    }
-    // x move
-    if (target.y < state.heroY + is.hero.height * 4) {
-      if (target.x > state.heroX) {
-        target.x = Math.max(state.heroX, target.x - speed);
-      } else {
-        target.x = Math.min(state.heroX, target.x + speed);
+    } else {
+      // x move
+      if (target.y < state.gameplay.hero.y + is.hero.height * 4) {
+        if (target.x > state.gameplay.hero.x) {
+          target.x = Math.max(state.gameplay.hero.x, target.x - is.dropGame.difficulties.movie.targets.speed);
+        } else {
+          target.x = Math.min(state.gameplay.hero.x, target.x + is.dropGame.difficulties.movie.targets.speed);
+        }
       }
-    }
-    // y move
-    if (target.y > state.heroY) {
-      target.y = Math.max(state.heroY, target.y - speed);
+      // y move
+      if (target.y > state.gameplay.hero.y) {
+        target.y = Math.max(state.gameplay.hero.y, target.y - is.dropGame.difficulties.movie.targets.speed);
+      }
     }
   });
   // generate new
-  if (Date.now() - (state.targets.at(-1)?.timeGenerated || 0) > 150) {
-    const target = generateTarget(is, state.words);
-    state.targets.push(target);
+  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= is.dropGame.difficulties.movie.targets.cd) {
+    state.gameplay.targets.a.push(generateTarget(is, state.gameplay.words, state));
+    state.gameplay.targets.lastTimeGenerated = state.lastTick;
   }
 }
 
 export interface DropState {
-  health: number,
-  words: LoadedImg[],
-  assets: TransformedImgsJSON<typeof gameJSON>,
-  currentSuccessCount: number, requiredSuccessCount: number, requiredSuccessCountPerWord: number,
-  successCount: { [word: string]: number },
-  mouseX: number, mouseY: number,
-  heroX: number, heroY: number,
-  maxXHero: number, maxXTarget: number,
-  progressBarTextsY: number,
-  quest: { word: LoadedImg, textX: number },
-  prevQuest?: DropState["quest"],
-  targets: { word: LoadedImg, x: number, y: number, timeGenerated: number }[],
-  speed: number,
-  accelerationMouse: boolean, accelerationKB: boolean,
-  wonTime?: number, loseTime?: number,
+  // gameplay
+  gameplay: {
+    words: LoadedImg[],
+    quest: { word: LoadedImg, textX: number, timeGenerated: number },
+    prevQuest?: DropState["gameplay"]["quest"],
+    targets: {
+      a: { word: LoadedImg, x: number, y: number, timeGenerated: number }[],
+      speed: number,
+      lastTimeGenerated: number,
+      cd: number,
+    }
+    hero: { x: number, y: number, speed: number },
+    score: {
+      health: number,
+      total: number, required: number, requiredPerWord: number,
+      perWord: { [word: string]: number },
+      wonTime?: number, loseTime?: number,
+      lastHealthLostTime?: number, lastScoreIncreasedTime?: number,
+    }
+  }
+  // gui
+  gui: {
+    mouse: { x: number, y: number },
+    progressBarTextsY: number,
+    maxXHero: number, maxXTarget: number,
+    accelerationMouse: boolean, accelerationKB: boolean,
+    assets: TransformedImgsJSON<typeof gameJSON>,
+  }
+  lastTick: number,
 }
 
-const drop = (is: InitSettings, dif: DropGameDifficulty, optional?: Partial<DropState>) => {
+const drop = (is: InitSettings, dif: DropGameDifficulty, optional?: RecursivePartial<DropState>) => {
   drawBackground(is);
 
   const words = loadImgs(fruitsJSON, is.hero.width, "width");
   const stopMove = is.addMoveRequest((x, y) => {
-    state.mouseX = x, state.mouseY = y;
-    state.accelerationMouse = (y >= is.dropGame.accelerationY);
+    state.gui.mouse.x = x, state.gui.mouse.y = y;
+    state.gui.accelerationMouse = (y >= is.dropGame.accelerationY);
   });
   const stopButton = is.addButtonRequest({
     button: " ", 
-    onReleased: () => state.accelerationKB = false,
-    onPressed: () => state.accelerationKB = true,
+    onReleased: () => state.gui.accelerationKB = false,
+    onPressed: () => state.gui.accelerationKB = true,
   });
   // general state
   const state: DropState = {
-    health: dif.maxHealth,
-    words, assets: loadImgs(gameJSON, is.hero.width, "width"),
-    requiredSuccessCount: dif.successCountPerWord * words.length, currentSuccessCount: 0,
-    requiredSuccessCountPerWord: dif.successCountPerWord,
-    successCount: words.reduce((prev, word) => { prev[word.name] = 0; return prev; }, {}),
-    mouseX: -1, mouseY: - 1,
-    progressBarTextsY: (is.dropGame.progressBarY / 2 + is.fonts.fontSize / 2),
-    heroX: is.calculated.gameX + is.calculated.gameWidth / 2, heroY: is.dropGame.heroY,
-    maxXHero: is.calculated.gameXMax - is.hero.width, maxXTarget: is.calculated.gameXMax - is.hero.width,
-    quest: generateQuest(is, words),
-    targets: [generateTarget(is, words)],
-    speed: is.dropGame.mouseSpeed * is.calculated.verticalSpeedMultiplier,
-    accelerationKB: false,  accelerationMouse: false,
-    ...optional,
+    gameplay: {
+      words,
+      hero: { 
+        x: is.calculated.gameX + is.calculated.gameWidth / 2, y: is.dropGame.heroY, 
+        speed: is.dropGame.mouseSpeed * is.calculated.verticalSpeedMultiplier 
+      },
+      quest: generateQuest(is, words),
+      targets: {
+        a: [],
+        lastTimeGenerated: Date.now(),
+        speed: dif.targets.speed,
+        cd: dif.targets.cd,
+      },
+      score: {
+        health: dif.maxHealth,
+        required: dif.successCountPerWord * words.length, total: 0,
+        requiredPerWord: dif.successCountPerWord,
+        perWord: words.reduce((prev, word) => { prev[word.name] = 0; return prev; }, {}),
+      }
+    },
+    gui: {
+      assets: loadImgs(gameJSON, is.hero.width, "width"),
+      mouse: { x: -1, y: -1 },
+      maxXHero: is.calculated.gameXMax - is.hero.width, maxXTarget: is.calculated.gameXMax - is.hero.width,
+      accelerationKB: false,  accelerationMouse: false,
+      progressBarTextsY: (is.dropGame.progressBarY / 2 + is.fonts.fontSize / 2),
+    },
+    lastTick: 0,
   };
+  mergeDeep(state, optional);
+  
   // render
   const render = () => {
-    if (state.loseTime) {
-      if (state.loseTime + is.dropGame.loseTime > Date.now()) {
+    state.lastTick = Date.now();
+    if (state.gameplay.score.loseTime) {
+      if (state.gameplay.score.loseTime + is.dropGame.loseTime > state.lastTick) {
         calcNextLoseFrame(is, state);
         drawFrame(is, state);
       } else {
         gameEnder(0);
       }
-    } else if (state.wonTime) {
-      if (state.wonTime + is.dropGame.winTime > Date.now()) {
+    } else if (state.gameplay.score.wonTime) {
+      if (state.gameplay.score.wonTime + is.dropGame.winTime > state.lastTick) {
         calcNextWonFrame(is, state);
         drawFrame(is, state);
       } else {
-        gameEnder(state.health);
+        gameEnder(state.gameplay.score.health);
       }
     } else {
       calcNextFrame(is, state); 

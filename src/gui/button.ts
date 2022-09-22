@@ -16,13 +16,13 @@ const drawButton = (is: InitSettings, onClick: () => void, x: number, y: number,
   const redraw = () => {
     is.ctx.font = is.fonts.ctxFont;
     if (state.isPressed) {
-      is.ctx.fillStyle = is.colors.pressedColor;
+      is.ctx.fillStyle = is.colors.button.pressed;
     }
     if (!state.isHover) {
-      if (!state.isPressed) is.ctx.fillStyle = is.colors.buttonColor;
+      if (!state.isPressed) is.ctx.fillStyle = is.colors.button.bg;
       is.ctx.canvas.style.cursor = "default";
     } else {
-      if (!state.isPressed) is.ctx.fillStyle = is.colors.hoverColor;
+      if (!state.isPressed) is.ctx.fillStyle = is.colors.button.hover;
       is.ctx.canvas.style.cursor = "pointer";
     }
     drawRoundedRect(is, buttonX, buttonY, width, textHeight + additionalButtonHeight, 4);
