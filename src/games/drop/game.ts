@@ -8,6 +8,7 @@ import { loadImgs, LoadedImg, randomLoadedImg, TransformedImgsJSON } from "../..
 import { calcTextWidth } from "../../gui/text";
 import { InitSettings } from "../..";
 import { mergeDeep, RecursivePartial } from "../../gui/utils";
+import drawLoading from "../../gui/loading";
 
 const generateTarget = (is: InitSettings, words: LoadedImg[], state: DropState) => {
   const x = is.calculated.clickableGameX + Math.random() * is.calculated.clickableGameWidth, y = 1000;
@@ -163,11 +164,14 @@ export interface DropState {
   lastTick: number,
 }
 
-const drop = (is: InitSettings, dif: DropGameDifficulty, optional?: RecursivePartial<DropState>) => {
-  drawBackground(is);
+const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: RecursivePartial<DropState>) => {
+  drawLoading(is);
+  const [words, assets] = await Promise.all([loadImgs(fruitsJSON, is.hero.width, "width"), loadImgs(gameJSON, is.hero.width, "width")]);
+  alert("LOADED");
+  //await new Promise((resolve) => setTimeout(resolve, 3000));
+  
 
-  const words = loadImgs(fruitsJSON, is.hero.width, "width");
-  const stopMove = is.addMoveRequest((x, y) => {
+  /*const stopMove = is.addMoveRequest((x, y) => {
     state.gui.mouse.x = x, state.gui.mouse.y = y;
     state.gui.accelerationMouse = (y >= is.dropGame.accelerationY);
   });
@@ -199,7 +203,7 @@ const drop = (is: InitSettings, dif: DropGameDifficulty, optional?: RecursivePar
       }
     },
     gui: {
-      assets: loadImgs(gameJSON, is.hero.width, "width"),
+      assets,
       mouse: { x: -1, y: -1 },
       maxXHero: is.calculated.gameXMax - is.hero.width, maxXTarget: is.calculated.gameXMax - is.hero.width,
       accelerationKB: false,  accelerationMouse: false,
@@ -243,7 +247,7 @@ const drop = (is: InitSettings, dif: DropGameDifficulty, optional?: RecursivePar
     stopMove();
     promiseResolve(healthCount);
   };
-  return promise;
+  return await promise;*/
 }
 
 export default drop;

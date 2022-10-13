@@ -1,4 +1,4 @@
-import { InitSettings } from "../settings";
+import { InitSettings } from "..";
 
 export const drawTextAtCenter = (is: InitSettings, x: number, y: number, text: string) => {
   is.ctx.font = is.fonts.ctxFont;
