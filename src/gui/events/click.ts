@@ -11,7 +11,7 @@ const click = (ctx: CanvasRenderingContext2D) => {
   const requesters: ClickRequest[] = [];
   
   ctx.canvas.addEventListener("mousedown", (e) => {
-    const [x, y] = settings.dimensions.toCanvasCoords(ctx, e.x, e.y);
+    const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
     requesters.forEach((requester) => {
       if (requester.isInArea(x, y)) {
         requester.onPressed?.();
@@ -21,7 +21,7 @@ const click = (ctx: CanvasRenderingContext2D) => {
   });
 
   ctx.canvas.addEventListener("mouseup", (e) => {
-    const [x, y] = settings.dimensions.toCanvasCoords(ctx, e.x, e.y);
+    const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
     requesters.forEach((requester) => {
       if (requester.isPressed) {
         requester.onReleased(requester.isInArea(x, y));

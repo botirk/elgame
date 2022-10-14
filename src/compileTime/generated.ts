@@ -24,11 +24,21 @@ export async function loadImgs(toLoad: any, maxWidth: number, side: "width" | "h
   if (toLoad instanceof Array) {
     return await Promise.all(toLoad.map((toLoad) => loadImg(toLoad, maxWidth, side)));
   } else {
-    const loaded = await Promise.all(toLoad.map((toLoad) => loadImg(toLoad, maxWidth, side)));
-    return Object.entries(toLoad).reduce((prev, cur, i) => {
-      prev[cur[0]] = loaded[i];
-      return prev;
-    }, {});
+    // preparation
+    const state = {
+      names: [] as string[],
+      promises: [] as Promise<LoadedImg>[],
+      loadedImgs: [] as LoadedImg[],
+    }
+    Object.entries(toLoad).forEach((entry) => {
+      state.names.push(entry[0]);
+      state.promises.push(loadImg(entry[1] as UnloadedImg, maxWidth, side));
+    });
+    state.loadedImgs = await Promise.all(state.promises);
+    // final
+    const result = {};
+    for (let i = state.names.length; i >= 0; i--) result[state.names[i]] = state.loadedImgs[i];
+    return result;
   }
 }
 

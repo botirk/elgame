@@ -11,7 +11,7 @@ const hover = (ctx: CanvasRenderingContext2D) => {
   const requesters: HoverRequest[] = [];
 
   ctx.canvas.addEventListener("mousemove", (e) => {
-    const [x, y] = settings.dimensions.toCanvasCoords(ctx, e.x, e.y);
+    const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
     requesters.forEach((requester) => {
       if (!requester.isCurrentlyInside && requester.isInArea(x, y)) {
         requester.onHover();

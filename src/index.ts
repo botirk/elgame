@@ -48,8 +48,8 @@ const init = (elementId: string) => {
     ctx.shadowColor = "black";
     ctx.shadowBlur = 1;
     // calc
-    const isMobile = settings.dimensions.isMobile(currentWidthToHeightRatio);
-    const gameWidth = settings.dimensions.gameWidth(isMobile);
+    const isMobile = settings.calculate.isMobile(currentWidthToHeightRatio);
+    const gameWidth = settings.calculate.gameWidth(isMobile);
     drawMenu({
       ...settings,
       ctx,
@@ -59,11 +59,11 @@ const init = (elementId: string) => {
       addButtonRequest: button(ctx),
       calculated: {
         isMobile,
-        gameWidth, clickableGameWidth: settings.dimensions.clickableGameWidth(ctx, gameWidth),
-        gameX: settings.dimensions.gameX(ctx, gameWidth),
-        clickableGameX: settings.dimensions.clickableGameX(ctx, gameWidth),
-        clickableGameXMax: settings.dimensions.clickableGameXMax(ctx, gameWidth),
-        gameXMax: settings.dimensions.gameXMax(ctx, gameWidth),
+        gameWidth, clickableGameWidth: settings.calculate.clickableGameWidth(ctx, gameWidth),
+        gameX: settings.calculate.gameX(ctx, gameWidth),
+        clickableGameX: settings.calculate.clickableGameX(ctx, gameWidth),
+        clickableGameXMax: settings.calculate.clickableGameXMax(ctx, gameWidth),
+        gameXMax: settings.calculate.gameXMax(ctx, gameWidth),
         verticalSpeedMultiplier: isMobile ? 1 : 1.33,
       },
     });

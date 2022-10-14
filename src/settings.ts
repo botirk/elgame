@@ -79,6 +79,9 @@ const dimensions = {
   desiredClientMinWidth: 500 * 1080/2400,
   widthToHeightRatio: 1080/2400,
   heigth: 900,
+}
+
+const calculate = {
   isMobile: (widthToHeightRatio: number) => widthToHeightRatio < 1,
   gameWidth: (isMobile: boolean) => isMobile ? 900 * 1080/2400 : 900,
   gameX: (ctx: CanvasRenderingContext2D, gameWidth: number) => (ctx.canvas.width - gameWidth) / 2,
@@ -95,6 +98,7 @@ const hero = {
 }
 
 const settings = {
+  calculate,
   colors, 
   fonts,
   dimensions,

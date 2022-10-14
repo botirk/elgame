@@ -2,7 +2,6 @@ import fruitsJSON from "../../compileTime/generated/fruits.json";
 import gameJSON from "../../compileTime/generated/game.json";
 
 import { DropGameDifficulty } from "../../settings";
-import drawBackground from "../../gui/background";
 import { drawFrame } from "./draw";
 import { loadImgs, LoadedImg, randomLoadedImg, TransformedImgsJSON } from "../../compileTime/generated";
 import { calcTextWidth } from "../../gui/text";
@@ -10,13 +9,17 @@ import { InitSettings } from "../..";
 import { mergeDeep, RecursivePartial } from "../../gui/utils";
 import drawLoading from "../../gui/loading";
 
-const generateTarget = (is: InitSettings, words: LoadedImg[], state: DropState) => {
+const generateTarget = (is: InitSettings, state: DropState) => {
   const x = is.calculated.clickableGameX + Math.random() * is.calculated.clickableGameWidth, y = 1000;
-  let wordsAvailable = words;
-  if (wordsAvailable.length > 1 && state.gameplay.targets.a.length > 0) {
-    wordsAvailable = wordsAvailable.filter((word) => word != state.gameplay.targets.a[state.gameplay.targets.a.length - 1].word);
+  const word = randomLoadedImg(state.gameplay.targets.candidates);
+  if (state.gameplay.targets.candidates.length == 0 || (state.gameplay.targets.candidates.length == 1 && state.gameplay.words.length <= 2)) {
+    state.gameplay.targets.candidates = [...state.gameplay.words];
+  } else if (state.gameplay.targets.candidates.length == 1) {
+    state.gameplay.targets.candidates = state.gameplay.words.filter((word) => word != state.gameplay.targets.candidates[0]);
+  } else {
+    state.gameplay.targets.candidates.splice(state.gameplay.targets.candidates.indexOf(word), 1);
   }
-  return { word: randomLoadedImg(wordsAvailable), x, y, timeGenerated: state.lastTick };
+  return { word, x, y, timeGenerated: state.lastTick };
 }
 
 const generateQuest = (is: InitSettings, words: LoadedImg[], state?: DropState) => {
@@ -60,6 +63,11 @@ const calcGameplay = (is: InitSettings, state: DropState) => {
     }
     if (isHit || isMiss) state.gameplay.targets.a.splice(i, 1);
   });
+  // generate new
+  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= state.gameplay.targets.cd) {
+    state.gameplay.targets.a.push(generateTarget(is, state));
+    state.gameplay.targets.lastTimeGenerated = state.lastTick;
+  }
 }
 
 const calcNextFrame = (is: InitSettings, state: DropState) => {
@@ -74,11 +82,6 @@ const calcNextFrame = (is: InitSettings, state: DropState) => {
   let speed = state.gameplay.targets.speed;
   if (state.gui.accelerationKB || state.gui.accelerationMouse) speed *= is.dropGame.acceleration;
   state.gameplay.targets.a.forEach((target) => target.y -= speed);
-  // generate new
-  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= state.gameplay.targets.cd) {
-    state.gameplay.targets.a.push(generateTarget(is, state.gameplay.words, state));
-    state.gameplay.targets.lastTimeGenerated = state.lastTick;
-  }
 }
 
 const calcNextLoseFrame = (is: InitSettings, state: DropState) => {
@@ -93,7 +96,7 @@ const calcNextLoseFrame = (is: InitSettings, state: DropState) => {
   });
   // generate new
   if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= is.dropGame.difficulties.movie.targets.cd) {
-    let target = generateTarget(is, state.gameplay.words, state);
+    let target = generateTarget(is, state);
     for (let i = 0; i < 10 && Math.abs(target.x - state.gameplay.hero.x) < is.hero.width * 2; i++)
       target.x = is.calculated.gameX + Math.random() * is.calculated.clickableGameWidth;
     state.gameplay.targets.a.push(target);
@@ -127,7 +130,7 @@ const calcNextWonFrame = (is: InitSettings, state: DropState) => {
   });
   // generate new
   if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= is.dropGame.difficulties.movie.targets.cd) {
-    state.gameplay.targets.a.push(generateTarget(is, state.gameplay.words, state));
+    state.gameplay.targets.a.push(generateTarget(is, state));
     state.gameplay.targets.lastTimeGenerated = state.lastTick;
   }
 }
@@ -140,6 +143,7 @@ export interface DropState {
     prevQuest?: DropState["gameplay"]["quest"],
     targets: {
       a: { word: LoadedImg, x: number, y: number, timeGenerated: number }[],
+      candidates: LoadedImg[],
       speed: number,
       lastTimeGenerated: number,
       cd: number,
@@ -167,11 +171,8 @@ export interface DropState {
 const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: RecursivePartial<DropState>) => {
   drawLoading(is);
   const [words, assets] = await Promise.all([loadImgs(fruitsJSON, is.hero.width, "width"), loadImgs(gameJSON, is.hero.width, "width")]);
-  alert("LOADED");
-  //await new Promise((resolve) => setTimeout(resolve, 3000));
-  
 
-  /*const stopMove = is.addMoveRequest((x, y) => {
+  const stopMove = is.addMoveRequest((x, y) => {
     state.gui.mouse.x = x, state.gui.mouse.y = y;
     state.gui.accelerationMouse = (y >= is.dropGame.accelerationY);
   });
@@ -191,6 +192,7 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
       quest: generateQuest(is, words),
       targets: {
         a: [],
+        candidates: [...words],
         lastTimeGenerated: Date.now(),
         speed: dif.targets.speed,
         cd: dif.targets.cd,
@@ -237,17 +239,25 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
     }
   };
   const timer = setInterval(render, 1000 / is.dropGame.fps);
+  // size change
+  const resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+
+    }
+  })
+  resizeObserver.observe(is.ctx.canvas);
   // promise magic
   let promiseResolve: (healthCount: number) => void;
   const promise = new Promise<number>((resolve) => promiseResolve = resolve);
   // game ender
   const gameEnder = (healthCount: number) => {
+    resizeObserver.disconnect();
     clearInterval(timer);
     stopButton();
     stopMove();
     promiseResolve(healthCount);
   };
-  return await promise;*/
+  return await promise;
 }
 
 export default drop;

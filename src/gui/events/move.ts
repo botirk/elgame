@@ -6,11 +6,11 @@ const move = (ctx: CanvasRenderingContext2D) => {
   const requesters: MoveRequest[] = [];
 
   ctx.canvas.addEventListener("mousemove", (e) => {
-    const [x, y] = settings.dimensions.toCanvasCoords(ctx, e.x, e.y);
+    const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
     requesters.forEach((req) => req(x, y));
   });
   ctx.canvas.addEventListener("touchmove", (e) => {
-    const [x, y] = settings.dimensions.toCanvasCoords(ctx, e.touches[0].pageX, e.touches[0].pageY);
+    const [x, y] = settings.calculate.toCanvasCoords(ctx, e.touches[0].pageX, e.touches[0].pageY);
     requesters.forEach((req) => req(x, y)); 
   });
 
