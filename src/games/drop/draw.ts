@@ -1,10 +1,22 @@
 import { InitSettings } from "../..";
 import { LoadedImg } from "../../compileTime/generated";
+import { calcTextWidth } from "../../gui/text";
 import { DropState } from "./game";
+
+export const prepareQuestX = (is: InitSettings, quest: string) => {
+  return is.prepared.gameX + (is.prepared.gameWidth - calcTextWidth(is, quest)) / 2
+}
+export const prepare = (is: InitSettings, quest: string) => {
+  return {
+    progressBarTextsY: (is.dropGame.progressBarY / 2 + is.fonts.fontSize / 2),
+    questX: prepareQuestX(is, quest),
+  }
+}
+export type Prepared = ReturnType<typeof prepare>;
 
 const drawGameBackground = (is: InitSettings) => {
   is.ctx.fillStyle = is.colors.sky;
-  is.ctx.fillRect(is.calculated.gameX, 0, is.calculated.gameWidth, is.dimensions.heigth);
+  is.ctx.fillRect(is.prepared.gameX, 0, is.prepared.gameWidth, is.dimensions.heigth);
 }
 
 const drawWord = (is: InitSettings, word: LoadedImg, x: number, y: number) => {
@@ -26,7 +38,7 @@ const drawHealth = (is: InitSettings, state: DropState, x: number, y: number) =>
 
 const drawHealths = (is: InitSettings, state: DropState) => {
   const y = (is.dropGame.progressBarY - state.gui.assets.heart.img.height) / 2;
-  const startX = is.calculated.clickableGameXMax - state.gui.assets.heart.img.width;
+  const startX = state.gameplay.prepared.clickableGameXMax - state.gui.assets.heart.img.width;
   for (let i = state.gameplay.score.health; i > 0; i--) {
     drawHealth(is, state, startX - (state.gameplay.score.health - i) * (state.gui.assets.heart.img.width + 5), y);
   }
@@ -35,7 +47,7 @@ const drawHealths = (is: InitSettings, state: DropState) => {
 const drawQuest = (is: InitSettings, state: DropState) => {
   is.ctx.fillStyle = "black";
   is.ctx.font = is.fonts.ctxFont;
-  is.ctx.fillText(state.gameplay.quest.word.name, state.gameplay.quest.textX, state.gui.progressBarTextsY);
+  is.ctx.fillText(state.gameplay.quest.word.name, is.prepared.gameX + (is.prepared.gameWidth - calcTextWidth(is, state.gameplay.quest.word.name)) / 2, state.gui.prepared.progressBarTextsY);
 }
 
 const drawProgressBar = (is: InitSettings, state: DropState) => {
@@ -51,7 +63,7 @@ const drawProgressBar = (is: InitSettings, state: DropState) => {
   if (isSuccess) is.ctx.fillStyle = is.colors.success;
   else if (isFail) is.ctx.fillStyle = is.colors.fail;
   else is.ctx.fillStyle = is.colors.questColorBG;
-  is.ctx.fillRect(is.calculated.gameX, 0, is.calculated.gameWidth, is.dropGame.progressBarY);
+  is.ctx.fillRect(is.prepared.gameX, 0, is.prepared.gameWidth, is.dropGame.progressBarY);
   // bar
   if (!isSuccess && !isFail) {
     const progress = state.gameplay.score.total / state.gameplay.score.required;
@@ -59,7 +71,7 @@ const drawProgressBar = (is: InitSettings, state: DropState) => {
     else if (progress < 0.5) is.ctx.fillStyle = is.colors.questColor2;
     else if (progress < 0.75) is.ctx.fillStyle = is.colors.questColor3;
     else is.ctx.fillStyle = is.colors.questColor4;
-    is.ctx.fillRect(is.calculated.gameX, 0, is.calculated.gameWidth * progress, is.dropGame.progressBarY);
+    is.ctx.fillRect(is.prepared.gameX, 0, is.prepared.gameWidth * progress, is.dropGame.progressBarY);
   }
 }
 

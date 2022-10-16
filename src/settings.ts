@@ -5,13 +5,12 @@ const dropGame = {
   fps: 100,
   heroY: 150,
   progressBarY: 100,
-  accelerationY: 675,
   accelerationButton: " ",
   difficulties: {
     easy: {
       targets: {
         speed: 4,
-        cd: 1500,
+        cd: 2000,
       },
       successCountPerWord: 3,
       maxHealth: 3,
@@ -19,7 +18,7 @@ const dropGame = {
     normal: {
       targets: {
         speed: 5,
-        cd: 1200,
+        cd: 1500,
       },
       successCountPerWord: 4,
       maxHealth: 2,
@@ -27,7 +26,7 @@ const dropGame = {
     hard: {
       targets: {
         speed: 6,
-        cd: 800,
+        cd: 1200,
       },
       successCountPerWord: 5,
       maxHealth: 1,
@@ -86,9 +85,6 @@ const calculate = {
   gameWidth: (isMobile: boolean) => isMobile ? 900 * 1080/2400 : 900,
   gameX: (ctx: CanvasRenderingContext2D, gameWidth: number) => (ctx.canvas.width - gameWidth) / 2,
   gameXMax: (ctx: CanvasRenderingContext2D, gameWidth: number) => (ctx.canvas.width + gameWidth) / 2,
-  clickableGameX: (ctx: CanvasRenderingContext2D, gameWidth: number) => (ctx.canvas.width - gameWidth) / 2 + settings.hero.width,
-  clickableGameXMax: (ctx: CanvasRenderingContext2D, gameWidth: number) => (ctx.canvas.width + gameWidth) / 2 - settings.hero.width,
-  clickableGameWidth: (ctx: CanvasRenderingContext2D, gameWidth: number) => gameWidth - settings.hero.width * 2,
   toCanvasCoords: (ctx: CanvasRenderingContext2D, x: number, y: number): [ number, number ] => [x * (ctx.canvas.width / ctx.canvas.clientWidth), y * (ctx.canvas.height / ctx.canvas.clientHeight)],
 }
 

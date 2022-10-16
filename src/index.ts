@@ -4,6 +4,7 @@ import hover from "./gui/events/hover";
 import click from "./gui/events/click";
 import move from "./gui/events/move";
 import button from "./gui/events/button";
+import prepare, { Prepared } from "./gui/prepare";
 
 export const canInit = (elementId: string): [CanvasRenderingContext2D | undefined, string] => {
   const el = document.getElementById(elementId);
@@ -22,34 +23,13 @@ export interface InitSettings extends Settings {
   addHoverRequest: ReturnType<typeof hover>,
   addClickRequest: ReturnType<typeof click>,
   addButtonRequest: ReturnType<typeof button>,
-  calculated: {
-    isMobile: boolean,
-    gameWidth: number, clickableGameWidth: number,
-    gameX: number, gameXMax: number, clickableGameX: number, clickableGameXMax: number,
-    verticalSpeedMultiplier: number,
-  }
+  prepared: Prepared,
 }
 
 const init = (elementId: string) => {
   const [ctx, msg] = canInit(elementId);
   if (ctx) {
-    // set height to fixed
-    {
-      const ratio = settings.dimensions.heigth / ctx.canvas.clientHeight;
-      ctx.canvas.width = ctx.canvas.clientWidth * ratio;
-      ctx.canvas.height = ctx.canvas.clientHeight * ratio;
-    }
-    // fix width
-    const currentWidthToHeightRatio = ctx.canvas.width / ctx.canvas.height;
-    if (currentWidthToHeightRatio < settings.dimensions.widthToHeightRatio) {
-      ctx.canvas.width = ctx.canvas.height * settings.dimensions.widthToHeightRatio;
-    }
-    // add shadow
-    ctx.shadowColor = "black";
-    ctx.shadowBlur = 1;
     // calc
-    const isMobile = settings.calculate.isMobile(currentWidthToHeightRatio);
-    const gameWidth = settings.calculate.gameWidth(isMobile);
     drawMenu({
       ...settings,
       ctx,
@@ -57,15 +37,7 @@ const init = (elementId: string) => {
       addHoverRequest: hover(ctx),
       addClickRequest: click(ctx),
       addButtonRequest: button(ctx),
-      calculated: {
-        isMobile,
-        gameWidth, clickableGameWidth: settings.calculate.clickableGameWidth(ctx, gameWidth),
-        gameX: settings.calculate.gameX(ctx, gameWidth),
-        clickableGameX: settings.calculate.clickableGameX(ctx, gameWidth),
-        clickableGameXMax: settings.calculate.clickableGameXMax(ctx, gameWidth),
-        gameXMax: settings.calculate.gameXMax(ctx, gameWidth),
-        verticalSpeedMultiplier: isMobile ? 1 : 1.33,
-      },
+      prepared: prepare(ctx),
     });
   }
   return [!!ctx, msg];
