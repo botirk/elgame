@@ -1,13 +1,12 @@
 import fruitsJSON from "../../compileTime/generated/fruits.json";
-import gameJSON from "../../compileTime/generated/game.json";
 
-import { DropGameDifficulty } from "../../settings";
+import settings, { DropGameDifficulty } from "../../settings";
 import { drawFrame, Prepared as PreparedDraw, prepare as prepareDraw, prepareQuestX } from "./draw";
 import { loadImgs, LoadedImg, randomLoadedImg, TransformedImgsJSON } from "../../compileTime/generated";
 import { InitSettings } from "../..";
 import { mergeDeep, RecursivePartial } from "../../gui/utils";
 import drawLoading from "../../gui/loading";
-import prepareGui from "../../gui/prepare";
+import { reprepare as reprepareGui } from "../../gui/prepare";
 import drawBackground from "../../gui/background";
 
 const generateTarget = (is: InitSettings, state: DropState) => {
@@ -24,7 +23,7 @@ const generateTarget = (is: InitSettings, state: DropState) => {
 }
 
 const generateQuest = (is: InitSettings, words: LoadedImg[], state?: DropState) => {
-  is.ctx.font = is.fonts.ctxFont;
+  is.ctx.font = settings.fonts.ctxFont;
   let wordsAvailable = words;
   if (state) {
     const remaining = state.gameplay.words.filter((word) => state.gameplay.score.perWord[word.name] < state.gameplay.score.requiredPerWord);
@@ -40,8 +39,8 @@ const generateQuest = (is: InitSettings, words: LoadedImg[], state?: DropState) 
 
 const calcGameplay = (is: InitSettings, state: DropState) => {
   state.gameplay.targets.a.forEach((target, i) => {
-    const isMiss = (target.y < is.dropGame.progressBarY - target.word.img.height);
-    const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= is.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= is.hero.height);
+    const isMiss = (target.y < settings.dropGame.progressBarY - target.word.img.height);
+    const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= settings.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= settings.hero.height);
     const isQuest = (target.word == state.gameplay.quest.word);
     if (isHit && isQuest) {
       if (state.gameplay.score.perWord[state.gameplay.quest.word.name] < state.gameplay.score.requiredPerWord) {
@@ -72,33 +71,33 @@ const calcGameplay = (is: InitSettings, state: DropState) => {
 }
 
 const calcNextFrame = (is: InitSettings, state: DropState) => {
-  if (state.gui.mouse.x > -1) {
-    if (state.gameplay.hero.x > state.gui.mouse.x - is.hero.width / 2)
-      state.gameplay.hero.x = Math.max(state.gameplay.hero.x - state.gameplay.hero.speed, state.gui.mouse.x - is.hero.width / 2); 
+  if (state.gui.mouse.x) {
+    if (state.gameplay.hero.x > state.gui.mouse.x - settings.hero.width / 2)
+      state.gameplay.hero.x = Math.max(state.gameplay.hero.x - state.gameplay.hero.speed, state.gui.mouse.x - settings.hero.width / 2); 
     else 
-      state.gameplay.hero.x = Math.min(state.gameplay.hero.x + state.gameplay.hero.speed, state.gui.mouse.x- is.hero.width / 2);
+      state.gameplay.hero.x = Math.min(state.gameplay.hero.x + state.gameplay.hero.speed, state.gui.mouse.x- settings.hero.width / 2);
     // fix
     state.gameplay.hero.x = Math.max(is.prepared.gameX, Math.min(state.gameplay.prepared.clickableGameXMax, state.gameplay.hero.x));
   }
   let speed = state.gameplay.targets.speed;
-  if (state.gui.accelerationKB || state.gui.accelerationMouse) speed *= is.dropGame.acceleration;
+  if (state.gui.accelerationKB || state.gui.accelerationMouse) speed *= settings.dropGame.acceleration;
   state.gameplay.targets.a.forEach((target) => target.y -= speed);
 }
 
 const calcNextLoseFrame = (is: InitSettings, state: DropState) => {
   // move & remove
-  let speed = is.dropGame.difficulties.movie.targets.speed;
+  let speed = settings.dropGame.difficulties.movie.targets.speed;
   state.gameplay.targets.a.forEach((target, i) => {
-    if (target.y < is.dropGame.progressBarY - target.word.img.height) {
+    if (target.y < settings.dropGame.progressBarY - target.word.img.height) {
       state.gameplay.targets.a.splice(i, 1);
       state.gameplay.score.lastHealthLostTime = state.lastTick;
     } 
     else target.y -= speed;
   });
   // generate new
-  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= is.dropGame.difficulties.movie.targets.cd) {
+  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= settings.dropGame.difficulties.movie.targets.cd) {
     let target = generateTarget(is, state);
-    for (let i = 0; i < 10 && Math.abs(target.x - state.gameplay.hero.x) < is.hero.width * 2; i++)
+    for (let i = 0; i < 10 && Math.abs(target.x - state.gameplay.hero.x) < settings.hero.width * 2; i++)
       target.x = is.prepared.gameX + Math.random() * state.gameplay.prepared.clickableGameWidth;
     state.gameplay.targets.a.push(target);
     state.gameplay.targets.lastTimeGenerated = state.lastTick;
@@ -108,7 +107,7 @@ const calcNextLoseFrame = (is: InitSettings, state: DropState) => {
 const calcNextWonFrame = (is: InitSettings, state: DropState) => {
   // move & remove
   state.gameplay.targets.a.forEach((target, i) => {
-    const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= is.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= is.hero.height);
+    const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= settings.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= settings.hero.height);
     if (isHit) {
       // remove
       state.gameplay.targets.a.splice(i, 1);
@@ -116,21 +115,21 @@ const calcNextWonFrame = (is: InitSettings, state: DropState) => {
       return;
     } else {
       // x move
-      if (target.y < state.gameplay.hero.y + is.hero.height * 4) {
+      if (target.y < state.gameplay.hero.y + settings.hero.height * 4) {
         if (target.x > state.gameplay.hero.x) {
-          target.x = Math.max(state.gameplay.hero.x, target.x - is.dropGame.difficulties.movie.targets.speed);
+          target.x = Math.max(state.gameplay.hero.x, target.x - settings.dropGame.difficulties.movie.targets.speed);
         } else {
-          target.x = Math.min(state.gameplay.hero.x, target.x + is.dropGame.difficulties.movie.targets.speed);
+          target.x = Math.min(state.gameplay.hero.x, target.x + settings.dropGame.difficulties.movie.targets.speed);
         }
       }
       // y move
       if (target.y > state.gameplay.hero.y) {
-        target.y = Math.max(state.gameplay.hero.y, target.y - is.dropGame.difficulties.movie.targets.speed);
+        target.y = Math.max(state.gameplay.hero.y, target.y - settings.dropGame.difficulties.movie.targets.speed);
       }
     }
   });
   // generate new
-  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= is.dropGame.difficulties.movie.targets.cd) {
+  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= settings.dropGame.difficulties.movie.targets.cd) {
     state.gameplay.targets.a.push(generateTarget(is, state));
     state.gameplay.targets.lastTimeGenerated = state.lastTick;
   }
@@ -138,11 +137,11 @@ const calcNextWonFrame = (is: InitSettings, state: DropState) => {
 
 const prepare = (is: InitSettings) => {
   return {
-    maxXHero: is.prepared.gameXMax - is.hero.width, 
-    maxXTarget: is.prepared.gameXMax - is.hero.width,
-    clickableGameX: (is.ctx.canvas.width - is.prepared.gameWidth) / 2 + is.hero.width,
-    clickableGameXMax: (is.ctx.canvas.width + is.prepared.gameWidth) / 2 - is.hero.width,
-    clickableGameWidth: is.prepared.gameWidth - is.hero.width * 2,
+    maxXHero: is.prepared.gameXMax - settings.hero.width, 
+    maxXTarget: is.prepared.gameXMax - settings.hero.width,
+    clickableGameX: (is.ctx.canvas.width - is.prepared.gameWidth) / 2 + settings.hero.width,
+    clickableGameXMax: (is.ctx.canvas.width + is.prepared.gameWidth) / 2 - settings.hero.width,
+    clickableGameWidth: is.prepared.gameWidth - settings.hero.width * 2,
   };
 }
 type Prepared = ReturnType<typeof prepare>;
@@ -150,6 +149,7 @@ type Prepared = ReturnType<typeof prepare>;
 export interface DropState {
   // gameplay
   gameplay: {
+    direction?: "left" | "right",
     words: LoadedImg[],
     quest: { word: LoadedImg, timeGenerated: number },
     prevQuest?: DropState["gameplay"]["quest"],
@@ -172,35 +172,45 @@ export interface DropState {
   }
   // gui
   gui: {
-    mouse: { x: number, y: number },
+    mouse: { x?: number, y?: number },
     accelerationMouse: boolean, accelerationKB: boolean,
-    assets: TransformedImgsJSON<typeof gameJSON>,
     prepared: PreparedDraw,
   }
   lastTick: number,
 }
 
 const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: RecursivePartial<DropState>) => {
-  drawLoading(is);
-  const [words, assets] = await Promise.all([loadImgs(fruitsJSON, is.hero.width, "width"), loadImgs(gameJSON, is.hero.width, "width")]);
+  drawLoading(is.ctx);
+  const words = await loadImgs(fruitsJSON, settings.hero.width, "width");
 
   const stopMove = is.addMoveRequest((x, y) => {
     state.gui.mouse.x = x, state.gui.mouse.y = y;
-    state.gui.accelerationMouse = (y <= is.dropGame.progressBarY);
+    state.gui.accelerationMouse = (y <= settings.dropGame.progressBarY);
   });
   const stopButton = is.addButtonRequest({
     button: " ", 
     onReleased: () => state.gui.accelerationKB = false,
     onPressed: () => state.gui.accelerationKB = true,
   });
+  const stopRight = is.addButtonRequest({
+    button: "ArrowRight",
+    onPressed: () => { state.gui.mouse.x = Infinity; },
+    onReleased: () => { state.gui.mouse.x = undefined; },
+  });
+  const stopLeft = is.addButtonRequest({
+    button: "ArrowLeft",
+    onPressed: () => { state.gui.mouse.x = -Infinity; },
+    onReleased: () => { state.gui.mouse.x = undefined; },
+  });
+
   // general state
   const quest = generateQuest(is, words);
   const state: DropState = {
     gameplay: {
       words,
       hero: { 
-        x: is.prepared.gameX + is.prepared.gameWidth / 2, y: is.dropGame.heroY, 
-        speed: is.dropGame.mouseSpeed * is.prepared.verticalSpeedMultiplier 
+        x: is.prepared.gameX + is.prepared.gameWidth / 2, y: settings.dropGame.heroY, 
+        speed: settings.dropGame.mouseSpeed * is.prepared.verticalSpeedMultiplier 
       },
       quest,
       targets: {
@@ -219,7 +229,6 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
       prepared: prepare(is),
     },
     gui: {
-      assets,
       mouse: { x: -1, y: -1 },
       accelerationKB: false,  accelerationMouse: false,
       prepared: prepareDraw(is, quest.word.name),
@@ -232,14 +241,14 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
   const render = () => {
     state.lastTick = Date.now();
     if (state.gameplay.score.loseTime) {
-      if (state.gameplay.score.loseTime + is.dropGame.loseTime > state.lastTick) {
+      if (state.gameplay.score.loseTime + settings.dropGame.loseTime > state.lastTick) {
         calcNextLoseFrame(is, state);
         drawFrame(is, state);
       } else {
         gameEnder(0);
       }
     } else if (state.gameplay.score.wonTime) {
-      if (state.gameplay.score.wonTime + is.dropGame.winTime > state.lastTick) {
+      if (state.gameplay.score.wonTime + settings.dropGame.winTime > state.lastTick) {
         calcNextWonFrame(is, state);
         drawFrame(is, state);
       } else {
@@ -251,12 +260,12 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
       drawFrame(is, state);
     }
   };
-  const timer = setInterval(render, 1000 / is.dropGame.fps);
+  const timer = setInterval(render, 1000 / settings.dropGame.fps);
   // size change
   const resizeObserver = new ResizeObserver(() => {
     // change targets
     const {gameX: oldX, gameWidth: oldWidth } = is.prepared;
-    is.prepared = prepareGui(is.ctx);
+    is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
     const {gameX: newX, gameWidth: newWidth } = is.prepared;
     state.gameplay.targets.a.forEach((target) => {
       const coef = (target.x - oldX) / oldWidth;
@@ -268,14 +277,14 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
       state.gameplay.hero.x = newX + (coef * newWidth);
     }
     // change mouse
-    {
+    if (state.gui.mouse.x) {
       const coef = (state.gui.mouse.x - oldX) / oldWidth;
       state.gui.mouse.x = newX + (coef * newWidth);
     }
     // change others 
     state.gui.prepared = prepareDraw(is, state.gameplay.quest.word.name);
     state.gameplay.prepared = prepare(is);
-    drawBackground(is);
+    drawBackground(is.ctx);
     render();
   });
   resizeObserver.observe(is.ctx.canvas);
@@ -287,6 +296,8 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
     resizeObserver.disconnect();
     clearInterval(timer);
     stopButton();
+    stopRight();
+    stopLeft();
     stopMove();
     promiseResolve(healthCount);
   };

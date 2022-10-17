@@ -5,6 +5,7 @@ import click from "./gui/events/click";
 import move from "./gui/events/move";
 import button from "./gui/events/button";
 import prepare, { Prepared } from "./gui/prepare";
+import drawLoading from "./gui/loading";
 
 export const canInit = (elementId: string): [CanvasRenderingContext2D | undefined, string] => {
   const el = document.getElementById(elementId);
@@ -17,7 +18,7 @@ export const canInit = (elementId: string): [CanvasRenderingContext2D | undefine
   return [ctx, 'Can init'];
 }
 
-export interface InitSettings extends Settings {
+export interface InitSettings {
   ctx: CanvasRenderingContext2D,
   addMoveRequest: ReturnType<typeof move>,
   addHoverRequest: ReturnType<typeof hover>,
@@ -26,18 +27,19 @@ export interface InitSettings extends Settings {
   prepared: Prepared,
 }
 
-const init = (elementId: string) => {
+const init = async (elementId: string) => {
   const [ctx, msg] = canInit(elementId);
   if (ctx) {
+    // loading
+    drawLoading(ctx);
     // calc
     drawMenu({
-      ...settings,
       ctx,
       addMoveRequest: move(ctx),
       addHoverRequest: hover(ctx),
       addClickRequest: click(ctx),
       addButtonRequest: button(ctx),
-      prepared: prepare(ctx),
+      prepared: await prepare(ctx),
     });
   }
   return [!!ctx, msg];

@@ -10,7 +10,7 @@ interface ClickRequest {
 const click = (ctx: CanvasRenderingContext2D) => {
   const requesters: ClickRequest[] = [];
   
-  ctx.canvas.addEventListener("mousedown", (e) => {
+  ctx.canvas.addEventListener("mousedown", (e) => { if (e.button == 0) {
     const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
     requesters.forEach((requester) => {
       if (requester.isInArea(x, y)) {
@@ -18,17 +18,18 @@ const click = (ctx: CanvasRenderingContext2D) => {
         requester.isPressed = true;
       }
     });
-  });
+  }});
 
-  ctx.canvas.addEventListener("mouseup", (e) => {
+  ctx.canvas.addEventListener("mouseup", (e) => { if (e.button == 0) {
     const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
+    console.log(e);
     requesters.forEach((requester) => {
       if (requester.isPressed) {
         requester.onReleased(requester.isInArea(x, y));
       }
       requester.isPressed = false;
     });
-  });
+  }});
 
   const addRequest = (req: ClickRequest) => {
     requesters.push(req);

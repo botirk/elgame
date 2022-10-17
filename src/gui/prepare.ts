@@ -1,6 +1,9 @@
+import gameJSON from "../compileTime/generated/game.json";
+
+import { loadImgs } from "../compileTime/generated";
 import settings from "../settings";
 
-const prepare = (ctx: CanvasRenderingContext2D) => {
+export const reprepare = (ctx: CanvasRenderingContext2D) => {
   // set height to fixed
   {
     const ratio = settings.dimensions.heigth / ctx.canvas.clientHeight;
@@ -27,6 +30,13 @@ const prepare = (ctx: CanvasRenderingContext2D) => {
     verticalSpeedMultiplier: isMobile ? 1 : 1.33,
   };
 }
-export type Prepared = ReturnType<typeof prepare>;
+
+const prepare = async (ctx: CanvasRenderingContext2D) => {
+  return {
+    ...reprepare(ctx),
+    imgs: await loadImgs(gameJSON, settings.hero.width, "width"),
+  }
+}
+export type Prepared = Awaited<ReturnType<typeof prepare>>;
 
 export default prepare;

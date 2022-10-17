@@ -1,11 +1,11 @@
-import { InitSettings } from "..";
+import settings from "../settings";
 import drawBackground from "./background";
 import { drawTextAtCenter } from "./text";
 
-const drawLoading = (is: InitSettings) => {
-  drawBackground(is);
-  is.ctx.fillStyle = is.colors.textColor;
-  drawTextAtCenter(is, is.ctx.canvas.width / 2, is.ctx.canvas.height / 2, "...");
+const drawLoading = (ctx: CanvasRenderingContext2D) => {
+  drawBackground(ctx);
+  ctx.fillStyle = settings.colors.textColor;
+  drawTextAtCenter(ctx, ctx.canvas.width / 2, ctx.canvas.height / 2, "...");
 }
 
 export default drawLoading;

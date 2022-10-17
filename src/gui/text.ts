@@ -1,23 +1,23 @@
-import { InitSettings } from "..";
+import settings from "../settings";
 
-export const drawTextAtCenter = (is: InitSettings, x: number, y: number, text: string) => {
-  is.ctx.font = is.fonts.ctxFont;
-  const metrics = is.ctx.measureText(text);
+export const drawTextAtCenter = (ctx: CanvasRenderingContext2D, x: number, y: number, text: string) => {
+  ctx.font = settings.fonts.ctxFont;
+  const metrics = ctx.measureText(text);
 
   const textWidth = metrics.width;
-  const textHeight = is.fonts.fontSize;
+  const textHeight = settings.fonts.fontSize;
   const textX = (x - textWidth / 2), textY = (y + textHeight / 2);
-  is.ctx.fillText(text, textX, textY);
+  ctx.fillText(text, textX, textY);
 }
 
-export const calcTextWidth = (is: InitSettings, text: string) => {
-  return is.ctx.measureText(text).width;
+export const calcTextWidth = (ctx: CanvasRenderingContext2D, text: string) => {
+  return ctx.measureText(text).width;
 }
 
-export const drawQuestAtCenter = (is: InitSettings, x: number, y: number, text: string) => {
-  is.ctx.font = is.fonts.ctxFont;
-  const textWidth = calcTextWidth(is, text);
-  const textX = (x - textWidth / 2), textY = (y + is.fonts.fontSize / 2);
-  is.ctx.fillStyle = is.colors.questColorText;
-  is.ctx.fillText("! " + text, textX, textY);
+export const drawQuestAtCenter = (ctx: CanvasRenderingContext2D, x: number, y: number, text: string) => {
+  ctx.font = settings.fonts.ctxFont;
+  const textWidth = calcTextWidth(ctx, text);
+  const textX = (x - textWidth / 2), textY = (y + settings.fonts.fontSize / 2);
+  ctx.fillStyle = settings.colors.questColorText;
+  ctx.fillText("! " + text, textX, textY);
 }
