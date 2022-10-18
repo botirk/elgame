@@ -6,6 +6,7 @@ import move from "./gui/events/move";
 import button from "./gui/events/button";
 import prepare, { Prepared } from "./gui/prepare";
 import drawLoading from "./gui/loading";
+import resize from "./gui/events/resize";
 
 export const canInit = (elementId: string): [CanvasRenderingContext2D | undefined, string] => {
   const el = document.getElementById(elementId);
@@ -24,6 +25,7 @@ export interface InitSettings {
   addHoverRequest: ReturnType<typeof hover>,
   addClickRequest: ReturnType<typeof click>,
   addButtonRequest: ReturnType<typeof button>,
+  addResizeRequest: ReturnType<typeof resize>,
   prepared: Prepared,
 }
 
@@ -35,6 +37,7 @@ const init = async (elementId: string) => {
     // calc
     drawMenu({
       ctx,
+      addResizeRequest: resize(ctx),
       addMoveRequest: move(ctx),
       addHoverRequest: hover(ctx),
       addClickRequest: click(ctx),

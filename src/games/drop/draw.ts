@@ -1,5 +1,6 @@
 import { InitSettings } from "../..";
 import { LoadedImg } from "../../compileTime/generated";
+import drawBackground from "../../gui/background";
 import { calcTextWidth } from "../../gui/text";
 import settings from "../../settings";
 import { DropState } from "./game";
@@ -83,6 +84,7 @@ const drawStatus = (is: InitSettings, state: DropState) => {
 }
 
 export const drawFrame = (is: InitSettings, state: DropState) => {
+  drawBackground(is.ctx);
   drawGameBackground(is);
   drawHero(is, state);
   drawTargets(is, state);

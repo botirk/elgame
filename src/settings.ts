@@ -68,9 +68,15 @@ const colors = {
 const fonts = {
   fontSize: 22,
   font: 'Georgia',
-  additionalButtonHeight: 6,
   buttonDistance: 22 * 3,
   ctxFont: `22px Georgia`,
+}
+
+const gui = {
+  button: {
+    rounding: 4,
+    padding: 6,
+  }
 }
 
 const dimensions = {
@@ -100,6 +106,7 @@ const settings = {
   dimensions,
   dropGame,
   hero,
+  gui,
 }
 
 export type Settings = typeof settings;

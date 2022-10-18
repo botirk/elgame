@@ -1,4 +1,5 @@
 import gameJSON from "../compileTime/generated/game.json";
+import fruitsJSON from "../compileTime/generated/fruits.json";
 
 import { loadImgs } from "../compileTime/generated";
 import settings from "../settings";
@@ -35,6 +36,7 @@ const prepare = async (ctx: CanvasRenderingContext2D) => {
   return {
     ...reprepare(ctx),
     imgs: await loadImgs(gameJSON, settings.hero.width, "width"),
+    fruits: await loadImgs(fruitsJSON, settings.hero.width, "width"),
   }
 }
 export type Prepared = Awaited<ReturnType<typeof prepare>>;

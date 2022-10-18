@@ -10,7 +10,7 @@ const drawButton = (is: InitSettings, onClick: () => void, x: number, y: number,
 
   const textWidth = metrics.width;
   const textHeight = settings.fonts.fontSize;
-  const additionalButtonHeight = 5 + settings.fonts.additionalButtonHeight;
+  const additionalButtonHeight = 5 + settings.gui.button.padding;
   const buttonX = (x - width / 2), buttonY = (y - textHeight / 3 - additionalButtonHeight / 2);
   const textX = (x - textWidth / 2), textY = (y + textHeight / 2);
   const isInArea = (x: number, y: number) => x >= buttonX && x <= buttonX + width && y >= buttonY && y <= buttonY + textHeight + additionalButtonHeight;
@@ -28,7 +28,7 @@ const drawButton = (is: InitSettings, onClick: () => void, x: number, y: number,
       if (!state.isPressed) is.ctx.fillStyle = settings.colors.button.hover;
       is.ctx.canvas.style.cursor = "pointer";
     }
-    drawRoundedRect(is, buttonX, buttonY, width, textHeight + additionalButtonHeight, 4);
+    drawRoundedRect(is.ctx, buttonX, buttonY, width, textHeight + additionalButtonHeight, settings.gui.button.rounding);
     is.ctx.fillStyle = settings.colors.textColor;
     is.ctx.fillText(text, textX, textY);
   };
