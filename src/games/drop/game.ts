@@ -1,4 +1,4 @@
-import settings, { DropGameDifficulty } from "../../settings";
+import settings, { dropGame, DropGameDifficulty } from "../../settings";
 import { drawFrame, Prepared as PreparedDraw, prepare as prepareDraw, prepareQuestX } from "./draw";
 import { LoadedImg, randomLoadedImg } from "../../compileTime/generated";
 import { InitSettings } from "../..";
@@ -35,7 +35,7 @@ const generateQuest = (is: InitSettings, words: LoadedImg[], state?: DropState) 
 
 const calcGameplay = (is: InitSettings, state: DropState) => {
   state.gameplay.targets.a.forEach((target, i) => {
-    const isMiss = (target.y < settings.dropGame.progressBarY - target.word.img.height);
+    const isMiss = (target.y < dropGame.progressBarY - target.word.img.height);
     const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= settings.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= settings.hero.height);
     const isQuest = (target.word == state.gameplay.quest.word);
     if (isHit && isQuest) {
@@ -76,22 +76,22 @@ const calcNextFrame = (is: InitSettings, state: DropState) => {
     state.gameplay.hero.x = Math.max(is.prepared.gameX, Math.min(state.gameplay.prepared.clickableGameXMax, state.gameplay.hero.x));
   }
   let speed = state.gameplay.targets.speed;
-  if (state.gui.accelerationKB || state.gui.accelerationMouse) speed *= settings.dropGame.acceleration;
+  if (state.gui.accelerationKB || state.gui.accelerationMouse) speed *= dropGame.acceleration;
   state.gameplay.targets.a.forEach((target) => target.y -= speed);
 }
 
 const calcNextLoseFrame = (is: InitSettings, state: DropState) => {
   // move & remove
-  let speed = settings.dropGame.difficulties.movie.targets.speed;
+  let speed = dropGame.difficulties.movie.targets.speed;
   state.gameplay.targets.a.forEach((target, i) => {
-    if (target.y < settings.dropGame.progressBarY - target.word.img.height) {
+    if (target.y < dropGame.progressBarY - target.word.img.height) {
       state.gameplay.targets.a.splice(i, 1);
       state.gameplay.score.lastHealthLostTime = state.lastTick;
     } 
     else target.y -= speed;
   });
   // generate new
-  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= settings.dropGame.difficulties.movie.targets.cd) {
+  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= dropGame.difficulties.movie.targets.cd) {
     let target = generateTarget(is, state);
     for (let i = 0; i < 10 && Math.abs(target.x - state.gameplay.hero.x) < settings.hero.width * 2; i++)
       target.x = is.prepared.gameX + Math.random() * state.gameplay.prepared.clickableGameWidth;
@@ -113,19 +113,19 @@ const calcNextWonFrame = (is: InitSettings, state: DropState) => {
       // x move
       if (target.y < state.gameplay.hero.y + settings.hero.height * 4) {
         if (target.x > state.gameplay.hero.x) {
-          target.x = Math.max(state.gameplay.hero.x, target.x - settings.dropGame.difficulties.movie.targets.speed);
+          target.x = Math.max(state.gameplay.hero.x, target.x - dropGame.difficulties.movie.targets.speed);
         } else {
-          target.x = Math.min(state.gameplay.hero.x, target.x + settings.dropGame.difficulties.movie.targets.speed);
+          target.x = Math.min(state.gameplay.hero.x, target.x + dropGame.difficulties.movie.targets.speed);
         }
       }
       // y move
       if (target.y > state.gameplay.hero.y) {
-        target.y = Math.max(state.gameplay.hero.y, target.y - settings.dropGame.difficulties.movie.targets.speed);
+        target.y = Math.max(state.gameplay.hero.y, target.y - dropGame.difficulties.movie.targets.speed);
       }
     }
   });
   // generate new
-  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= settings.dropGame.difficulties.movie.targets.cd) {
+  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= dropGame.difficulties.movie.targets.cd) {
     state.gameplay.targets.a.push(generateTarget(is, state));
     state.gameplay.targets.lastTimeGenerated = state.lastTick;
   }
@@ -178,7 +178,7 @@ export interface DropState {
 const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: RecursivePartial<DropState>) => {
   const stopMove = is.addMoveRequest((x, y) => {
     state.gui.mouse.x = x, state.gui.mouse.y = y;
-    state.gui.accelerationMouse = (y <= settings.dropGame.progressBarY);
+    state.gui.accelerationMouse = (y <= dropGame.progressBarY);
   });
   const stopResize = is.addResizeRequest(() => {
     // change canvas size
@@ -228,8 +228,8 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
     gameplay: {
       words: is.prepared.fruits,
       hero: { 
-        x: is.prepared.gameX + is.prepared.gameWidth / 2, y: settings.dropGame.heroY, 
-        speed: settings.dropGame.mouseSpeed * is.prepared.verticalSpeedMultiplier 
+        x: is.prepared.gameX + is.prepared.gameWidth / 2, y: dropGame.heroY, 
+        speed: dropGame.mouseSpeed * is.prepared.verticalSpeedMultiplier 
       },
       quest,
       targets: {
@@ -259,14 +259,14 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
   const render = () => {
     state.lastTick = Date.now();
     if (state.gameplay.score.loseTime) {
-      if (state.gameplay.score.loseTime + settings.dropGame.loseTime > state.lastTick) {
+      if (state.gameplay.score.loseTime + dropGame.loseTime > state.lastTick) {
         calcNextLoseFrame(is, state);
         drawFrame(is, state);
       } else {
         gameEnder(0);
       }
     } else if (state.gameplay.score.wonTime) {
-      if (state.gameplay.score.wonTime + settings.dropGame.winTime > state.lastTick) {
+      if (state.gameplay.score.wonTime + dropGame.winTime > state.lastTick) {
         calcNextWonFrame(is, state);
         drawFrame(is, state);
       } else {
@@ -278,7 +278,7 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
       drawFrame(is, state);
     }
   };
-  const timer = setInterval(render, 1000 / settings.dropGame.fps);
+  const timer = setInterval(render, 1000 / dropGame.fps);
   // promise magic
   let promiseResolve: (healthCount: number) => void;
   const promise = new Promise<number>((resolve) => promiseResolve = resolve);

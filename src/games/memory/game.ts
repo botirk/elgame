@@ -1,45 +1,72 @@
 import { InitSettings } from "../..";
 import { LoadedImg } from "../../compileTime/generated";
 import { calcTextWidth } from "../../gui/text";
-import settings from "../../settings";
+import settings, { memoryGame } from "../../settings";
 import { drawState } from "./draw";
 
+const calculateCardSize = (is: InitSettings, imgs: LoadedImg[]) => {
+  let height = settings.fonts.fontSize + settings.gui.button.padding * 2;
+  let width = settings.gui.button.padding * 2;
+  is.ctx.font = settings.fonts.ctxFont;
+  imgs.forEach((img) => {
+    height = Math.max(height, img.img.height + settings.gui.button.padding * 2);
+    width = Math.max(width, calcTextWidth(is.ctx, img.name) + settings.gui.button.padding * 2, img.img.width + settings.gui.button.padding * 2);
+  });
+  return { height, width };
+}
+
+const calculateTable = (is: InitSettings, imgs: LoadedImg[], cardSize: { height: number, width: number }) => {
+  const columns = Math.max(1, Math.floor(is.prepared.gameWidth / (cardSize.width + memoryGame.margin)));
+  const rows = Math.max(1, Math.ceil((imgs.length * 2) / columns));
+  const lastRowColumns = (imgs.length * 2) - (columns * (rows - 1));
+  return { columns, rows, lastRowColumns };
+}
+
 const prepare = (is: InitSettings) => {
+  const card = calculateCardSize(is, is.prepared.fruits);
   return {
-    
-  }
+    card,
+    ...calculateTable(is, is.prepared.fruits, card),
+  };
 }
 type Prepared = ReturnType<typeof prepare>;
 
-const calculateSizes = (is: InitSettings, imgs: LoadedImg[]) => {
-  let maxHeight = settings.fonts.fontSize + settings.gui.button.padding * 2;
-  let maxWidth = settings.gui.button.padding * 2;
-  is.ctx.font = settings.fonts.ctxFont;
-  imgs.forEach((img) => {
-    maxHeight = Math.max(maxHeight, img.img.height + settings.gui.button.padding * 2);
-    maxWidth = Math.max(maxWidth, calcTextWidth(is.ctx, img.name) + settings.gui.button.padding * 2);
-  })
 
-  return { maxHeight, maxWidth };
-}
-
-const shuffleCards = (imgs: LoadedImg[]) => {
+const shuffleCards = (imgs: LoadedImg[], prepared: Prepared) => {
   const result: MemoryState["gameplay"]["cards"] = [];
   imgs.forEach((img) => {
     result.push({
       img,
-      row: 1, column: result.length + 1,
+      row: 0, column: 0,
       guessState: "img",
       gameState: "closed",
     });
     result.push({
       img,
-      row: 1, column: result.length + 1,
+      row: 0, column: 0,
       guessState: "word",
       gameState: "closed",
     });
   });
+  reshuffleCards(result, prepared);
   return result;
+}
+
+const reshuffleCards = (cards: MemoryState["gameplay"]["cards"], prepared: Prepared) => {
+  const freeCells: { row: number, column: number }[] = [];
+  for (let row = 1; row < prepared.rows; row++) {
+    for (let column = 1; column <= prepared.columns; column++) {
+      freeCells.push({ row, column });
+    }
+  }
+  for (let lastRowColumns = 1; lastRowColumns <= prepared.lastRowColumns; lastRowColumns++) {
+    freeCells.push({ row: prepared.rows, column: lastRowColumns });
+  }
+  cards.forEach((card) => {
+    const random = Math.floor(Math.random() * freeCells.length);
+    const cell = freeCells.splice(random, 1)[0];
+    card.row = cell.row, card.column = cell.column;
+  });
 }
 
 export interface MemoryState {
@@ -68,11 +95,12 @@ const memory = async (is: InitSettings) => {
 
 
   // state
+  const prepared = prepare(is);
   const state: MemoryState = {
     gameplay: {
-      cards: shuffleCards(is.prepared.fruits),
+      cards: shuffleCards(is.prepared.fruits, prepared),
       solvedCards: 0,
-      prepared: prepare(is),
+      prepared,
     },
     gui: {
       

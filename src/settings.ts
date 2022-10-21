@@ -1,5 +1,5 @@
 
-const dropGame = {
+export const dropGame = {
   acceleration: 2.1,
   mouseSpeed: 5.5,
   fps: 100,
@@ -41,6 +41,10 @@ const dropGame = {
     }
   },
   winTime: 4000, loseTime: 3000,
+}
+
+export const memoryGame = {
+  margin: 15,
 }
 
 export type DropGameDifficulty = typeof dropGame.difficulties.easy | typeof dropGame.difficulties.normal | typeof dropGame.difficulties.hard;
@@ -104,7 +108,6 @@ const settings = {
   colors, 
   fonts,
   dimensions,
-  dropGame,
   hero,
   gui,
 }

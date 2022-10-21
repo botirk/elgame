@@ -22,7 +22,6 @@ const click = (ctx: CanvasRenderingContext2D) => {
 
   ctx.canvas.addEventListener("mouseup", (e) => { if (e.button == 0) {
     const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
-    console.log(e);
     requesters.forEach((requester) => {
       if (requester.isPressed) {
         requester.onReleased(requester.isInArea(x, y));
