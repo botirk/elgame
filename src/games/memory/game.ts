@@ -76,7 +76,7 @@ export interface MemoryState {
       img: LoadedImg,
       row: number, column: number,
       guessState: "img" | "word",
-      gameState: "solved" | "open" | "closed",
+      gameState: "open" | "closed" | "failed" | "solved&open" | "solved&closed",
     }[],
     solvedCards: number,
     prepared: Prepared,
@@ -108,10 +108,38 @@ const memory = async (is: InitSettings) => {
     lastTick: 0,
   };
   // render
-  const render = () => {
-    drawState(is, state);
+  const closeOpenCards = () => {
+    const toClose = state.gameplay.cards.filter((card) => card.gameState == "open" || card.gameState == "failed");
   }
-  render();
+  const [stopDraw, redrawCards, redrawCard] = drawState(is, state, (card) => {
+    state.gameplay.cards.filter((card) => card.gameState == "failed").forEach((failed) => {
+      failed.gameState = "closed";
+      redrawCard(failed);
+    });
+    state.gameplay.cards.filter((card) => card.gameState == "solved&open").forEach((solvedOpen) => {
+      solvedOpen.gameState = "solved&closed";
+      redrawCard(solvedOpen);
+    });
+    // register click only for closed cards
+    if (card.gameState != "closed") return;
+    const open = state.gameplay.cards.filter((card) => card.gameState == "open");
+    if (open.length == 0) {
+      card.gameState = "open";
+      redrawCard(card);
+    } else if (open.length == 1) {
+      if (open[0].img.name == card.img.name) {
+        card.gameState = "solved&open";
+        redrawCard(card);
+        open[0].gameState = "solved&open";
+        redrawCard(open[0]);
+      } else {
+        card.gameState = "failed";
+        redrawCard(card);
+        open[0].gameState = "failed";
+        redrawCard(open[0]);
+      }
+    }
+  });
   // promise magic
   let promiseResolve: () => void;
   const promise = new Promise<void>((resolve) => promiseResolve = resolve);

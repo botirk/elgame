@@ -17,16 +17,16 @@ const drawMenu = (is: InitSettings) => {
     const health = await drop(is, dropGame.difficulties.easy);
     //alert(health);
     drawMenu(is);
-  }, x(), y(1), "Drop game", 175);
+  }, x(), y(1), "Drop game", { width: 175 });
   // memory game
   const y2 = () => 200 + settings.fonts.buttonDistance
   const [stop2, redraw2, move2] = drawButton(is, async () => {
     stop();
     await memory(is);
     drawMenu(is);
-  }, x(), y(2), "Memory game", 175);
+  }, x(), y(2), "Memory game", { width: 175 });
   // undone
-  const [stop3, redraw3, move3] = drawButton(is, () => 0, x(), y(3), "Not ready", 175);
+  const [stop3, redraw3, move3] = drawButton(is, () => 0, x(), y(3), "Not ready", { width: 175 });
   // redraw
   const redraw = () => { drawBackground(is.ctx); redraw1(); redraw2(); redraw3(); redrawFS(); }
   // fullscreen button

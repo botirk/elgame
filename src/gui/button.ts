@@ -1,41 +1,46 @@
 import { InitSettings } from "..";
 import settings from "../settings";
-import drawRoundedRect from "./roundedRect";
+import { drawRoundedRect } from "./roundedRect";
+import { calcTextWidth } from "./text";
 
-const drawButton = (is: InitSettings, onClick: () => void, x: number, y: number, text: string, width: number, height?: number): 
+const drawButton = (is: InitSettings, onClick: () => void, x: number, y: number, text: string, optional?: { width?: number, height?: number, bgColor?: string }): 
                    [(shouldRedraw: boolean) => void, () => void, (xTo: number, yTo: number) => void] => {
+  
   is.ctx.font = settings.fonts.ctxFont;
-  const metrics = is.ctx.measureText(text);
-
-  const textWidth = metrics.width;
+  const textWidth = calcTextWidth(is.ctx, text);
   const textHeight = settings.fonts.fontSize;
-  height ??= textHeight + settings.gui.button.padding * 2;
-  let buttonX = 0, buttonY = 0;
-  let textX = 0, textY = 0;
+  const state = {
+    width: optional?.width || textWidth + + settings.gui.button.padding * 2,
+    height: optional?.height || textHeight + settings.gui.button.padding * 2,
+    isHover: false, isPressed: false,
+    buttonX: 0, buttonY: 0,
+    textX: 0, textY: 0,
+  };
   const move = (xTo: number, yTo: number) => {
     x = xTo, y = yTo;
-    buttonX = (x - width / 2), buttonY = (y - (height as number) / 2);
-    textX = (x - textWidth / 2), textY = (buttonY + (height as number) / 2 + textHeight / 3);
+    state.buttonX = (x - state.width / 2), state.buttonY = (y - state.height / 2);
+    state.textX = (x - textWidth / 2), state.textY = (state.buttonY + state.height / 2 + textHeight / 3);
   }
   move(x, y);
-  const isInArea = (x: number, y: number) => x >= buttonX && x <= buttonX + width && y >= buttonY && y <= buttonY + (height as number);
+  const isInArea = (x: number, y: number) => x >= state.buttonX && x <= state.buttonX + state.width && y >= state.buttonY && y <= state.buttonY + state.height;
 
-  const state = { isHover: false, isPressed: false };
   const redraw = () => {
     is.ctx.font = settings.fonts.ctxFont;
-    if (state.isPressed) {
+    if (optional?.bgColor) {
+      is.ctx.fillStyle = optional.bgColor;
+    } else if (state.isPressed) {
       is.ctx.fillStyle = settings.colors.button.pressed;
     }
     if (!state.isHover) {
-      if (!state.isPressed) is.ctx.fillStyle = settings.colors.button.bg;
+      if (!state.isPressed && !optional?.bgColor) is.ctx.fillStyle = settings.colors.button.bg;
       is.ctx.canvas.style.cursor = "default";
     } else {
-      if (!state.isPressed) is.ctx.fillStyle = settings.colors.button.hover;
+      if (!state.isPressed && !optional?.bgColor) is.ctx.fillStyle = settings.colors.button.hover;
       is.ctx.canvas.style.cursor = "pointer";
     }
-    drawRoundedRect(is.ctx, buttonX, buttonY, width, (height as number), settings.gui.button.rounding);
+    drawRoundedRect(is.ctx, state.buttonX, state.buttonY, state.width, state.height, settings.gui.button.rounding);
     is.ctx.fillStyle = settings.colors.textColor;
-    is.ctx.fillText(text, textX, textY);
+    is.ctx.fillText(text, state.textX, state.textY);
   };
   redraw();
   const stopHover = is.addHoverRequest({
@@ -65,24 +70,38 @@ export const drawIcon = (is: InitSettings, x: number, y: number, img: HTMLImageE
   is.ctx.drawImage(img, x, y, img.width, img.height);
 }
 
-export const drawIconButton = (is: InitSettings, img: HTMLImageElement, x: number, y: number, onClick: () => void): 
+export const drawIconButton = (is: InitSettings, onClick: () => void, x: number, y: number, img: HTMLImageElement, optional?: { width?: number, height?: number, bgColor?: string }): 
                               [(shouldRedraw: boolean) => void, () => void, (xTo: number, yTo: number) => void] => {
-  const isInArea = (xA: number, yA: number) => xA >= x && xA <= x + img.width + settings.gui.button.padding * 2 && yA >= y && yA <= y + img.height + settings.gui.button.padding * 2;
 
-  const state = { isHover: false, isPressed: false };
+  const state = {
+    width: optional?.width || img.width + settings.gui.button.padding * 2,
+    height: optional?.height || img.height + settings.gui.button.padding * 2,
+    isHover: false, isPressed: false,
+    buttonX: 0, buttonY: 0,
+    iconX: 0, iconY: 0,
+  };
+  const move = (xTo: number, yTo: number) => {
+    x = xTo, y = yTo;
+    state.buttonX = (x - state.width / 2), state.buttonY = (y - state.height / 2);
+    state.iconX = (x - img.width / 2), state.iconY = (y - img.height / 2);
+  };
+  move(x, y);
+  const isInArea = (x: number, y: number) => x >= state.buttonX && x <= state.buttonX + state.width && y >= state.buttonY && y <= state.buttonY + state.height;
   const redraw = () => {
-    if (state.isPressed) {
+    if (optional?.bgColor) {
+      is.ctx.fillStyle = optional.bgColor;
+    } else if (state.isPressed) {
       is.ctx.fillStyle = settings.colors.button.pressed;
     }
     if (!state.isHover) {
-      if (!state.isPressed) is.ctx.fillStyle = settings.colors.button.bg;
+      if (!state.isPressed && !optional?.bgColor) is.ctx.fillStyle = settings.colors.button.bg;
       is.ctx.canvas.style.cursor = "default";
     } else {
-      if (!state.isPressed) is.ctx.fillStyle = settings.colors.button.hover;
+      if (!state.isPressed && !optional?.bgColor) is.ctx.fillStyle = settings.colors.button.hover;
       is.ctx.canvas.style.cursor = "pointer";
     }
-    drawRoundedRect(is.ctx, x, y, img.width + settings.gui.button.padding * 2, img.height + settings.gui.button.padding * 2, settings.gui.button.rounding);
-    drawIcon(is, x + settings.gui.button.padding, y + settings.gui.button.padding, img);
+    drawRoundedRect(is.ctx, state.buttonX, state.buttonY, state.width, state.height, settings.gui.button.rounding);
+    drawIcon(is, state.iconX, state.iconY, img);
   };
   redraw();
   const stopHover = is.addHoverRequest({
@@ -106,25 +125,23 @@ export const drawIconButton = (is: InitSettings, img: HTMLImageElement, x: numbe
     stopClick();
   }
 
-  const move = (xTo: number, yTo: number) => { x = xTo, y = yTo };
   return [stopDrawing, redraw, move];
 }
 
 export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): [(shouldRedraw: boolean) => void, () => void, () => void] => {
   let [stopDrawing, redraw, move]: [ReturnType<typeof drawIconButton>[0] | undefined, ReturnType<typeof drawIconButton>[1] | undefined, ReturnType<typeof drawIconButton>[2] | undefined] = [undefined, undefined, undefined];
-  const x = () => is.ctx.canvas.width - is.prepared.imgs.fullscreen.img.width - 25;
-  const y = () => is.ctx.canvas.height - is.prepared.imgs.fullscreen.img.height - 25;
+  const x = () => is.ctx.canvas.width - is.prepared.imgs.fullscreen.img.width / 2 - settings.gui.button.padding - 15;
+  const y = () => is.ctx.canvas.height - is.prepared.imgs.fullscreen.img.height / 2 - settings.gui.button.padding - 15;
 
   const display = () => {
     if (document.fullscreenElement) return;
     if (stopDrawing) stopDrawing(false);
     [stopDrawing, redraw, move] = drawIconButton(
-      is, is.prepared.imgs.fullscreen.img, 
-      x(), y(),
-      () => {
+      is, () => {
         is.ctx.canvas.requestFullscreen();
         stopDisplay();
       },
+      x(), y(), is.prepared.imgs.fullscreen.img,
     );
   }
   const stopDisplay = () => {
