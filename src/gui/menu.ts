@@ -10,23 +10,23 @@ const drawMenu = (is: InitSettings) => {
   drawBackground(is.ctx);
   // menu x/y
   const x = () => is.ctx.canvas.width / 2;
-  const y = (count: number) => 200 + (count - 1) * settings.fonts.buttonDistance;
+  const y = (count: number) => () => 200 + (count - 1) * settings.fonts.buttonDistance;
+  const opt = () => ({ width: 175 });
   // drop game
   const [stop1, redraw1, move1] = drawButton(is, async () => { 
     stop();
     const health = await drop(is, dropGame.difficulties.easy);
     //alert(health);
     drawMenu(is);
-  }, x(), y(1), "Drop game", { width: 175 });
+  }, x, y(1), "Drop game", opt);
   // memory game
-  const y2 = () => 200 + settings.fonts.buttonDistance
   const [stop2, redraw2, move2] = drawButton(is, async () => {
     stop();
-    await memory(is);
+    const timeRemamining = await memory(is);
     drawMenu(is);
-  }, x(), y(2), "Memory game", { width: 175 });
+  }, x, y(2), "Memory game", opt);
   // undone
-  const [stop3, redraw3, move3] = drawButton(is, () => 0, x(), y(3), "Not ready", { width: 175 });
+  const [stop3, redraw3, move3] = drawButton(is, () => 0, x, y(3), "Not ready", opt);
   // redraw
   const redraw = () => { drawBackground(is.ctx); redraw1(); redraw2(); redraw3(); redrawFS(); }
   // fullscreen button
@@ -34,9 +34,9 @@ const drawMenu = (is: InitSettings) => {
   // observer
   const stopResize = is.addResizeRequest(() => {
     is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
-    move1(x(), y(1));
-    move2(x(), y(2));
-    move3(x(), y(3));
+    move1();
+    move2();
+    move3();
     moveFS();
     redraw();
   });

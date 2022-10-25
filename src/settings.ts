@@ -44,6 +44,7 @@ export const dropGame = {
 }
 
 export const memoryGame = {
+  winTime: 2500,
   margin: 15,
 }
 

@@ -3,39 +3,44 @@ import settings from "../settings";
 import { drawRoundedRect } from "./roundedRect";
 import { calcTextWidth } from "./text";
 
-const drawButton = (is: InitSettings, onClick: () => void, x: number, y: number, text: string, optional?: { width?: number, height?: number, bgColor?: string }): 
-                   [(shouldRedraw: boolean) => void, () => void, (xTo: number, yTo: number) => void] => {
+const drawButton = (is: InitSettings, onClick: () => void, x: () => number, y: () => number, text: string, optional?: () => { width?: number, height?: number, bgColor?: string }): 
+                   [(shouldRedraw: boolean) => void, () => void, () => void] => {
   
   is.ctx.font = settings.fonts.ctxFont;
   const textWidth = calcTextWidth(is.ctx, text);
   const textHeight = settings.fonts.fontSize;
   const state = {
-    width: optional?.width || textWidth + + settings.gui.button.padding * 2,
-    height: optional?.height || textHeight + settings.gui.button.padding * 2,
     isHover: false, isPressed: false,
+    bgColor: undefined as string | undefined,
+    width: textWidth + settings.gui.button.padding * 2,
+    height: textHeight + settings.gui.button.padding * 2,
     buttonX: 0, buttonY: 0,
     textX: 0, textY: 0,
   };
-  const move = (xTo: number, yTo: number) => {
-    x = xTo, y = yTo;
-    state.buttonX = (x - state.width / 2), state.buttonY = (y - state.height / 2);
-    state.textX = (x - textWidth / 2), state.textY = (state.buttonY + state.height / 2 + textHeight / 3);
+  const move = () => {
+    const optionalLocal = optional?.();
+    state.bgColor = optionalLocal?.bgColor;
+    state.width = optionalLocal?.width || state.width;
+    state.height = optionalLocal?.height || state.height;
+    const xLocal = x();
+    state.buttonX = (xLocal - state.width / 2), state.buttonY = (y() - state.height / 2);
+    state.textX = (xLocal - textWidth / 2), state.textY = (state.buttonY + state.height / 2 + textHeight / 3);
   }
-  move(x, y);
+  move();
   const isInArea = (x: number, y: number) => x >= state.buttonX && x <= state.buttonX + state.width && y >= state.buttonY && y <= state.buttonY + state.height;
 
   const redraw = () => {
     is.ctx.font = settings.fonts.ctxFont;
-    if (optional?.bgColor) {
-      is.ctx.fillStyle = optional.bgColor;
+    if (state.bgColor) {
+      is.ctx.fillStyle = state.bgColor;
     } else if (state.isPressed) {
       is.ctx.fillStyle = settings.colors.button.pressed;
     }
     if (!state.isHover) {
-      if (!state.isPressed && !optional?.bgColor) is.ctx.fillStyle = settings.colors.button.bg;
+      if (!state.isPressed && !state.bgColor) is.ctx.fillStyle = settings.colors.button.bg;
       is.ctx.canvas.style.cursor = "default";
     } else {
-      if (!state.isPressed && !optional?.bgColor) is.ctx.fillStyle = settings.colors.button.hover;
+      if (!state.isPressed && !state.bgColor) is.ctx.fillStyle = settings.colors.button.hover;
       is.ctx.canvas.style.cursor = "pointer";
     }
     drawRoundedRect(is.ctx, state.buttonX, state.buttonY, state.width, state.height, settings.gui.button.rounding);
@@ -70,34 +75,39 @@ export const drawIcon = (is: InitSettings, x: number, y: number, img: HTMLImageE
   is.ctx.drawImage(img, x, y, img.width, img.height);
 }
 
-export const drawIconButton = (is: InitSettings, onClick: () => void, x: number, y: number, img: HTMLImageElement, optional?: { width?: number, height?: number, bgColor?: string }): 
-                              [(shouldRedraw: boolean) => void, () => void, (xTo: number, yTo: number) => void] => {
+export const drawIconButton = (is: InitSettings, onClick: () => void, x: () => number, y: () => number, img: HTMLImageElement, optional?: () => { width?: number, height?: number, bgColor?: string }): 
+                              [(shouldRedraw: boolean) => void, () => void, () => void] => {
 
   const state = {
-    width: optional?.width || img.width + settings.gui.button.padding * 2,
-    height: optional?.height || img.height + settings.gui.button.padding * 2,
     isHover: false, isPressed: false,
+    bgColor: undefined as string | undefined,
+    width: img.width + settings.gui.button.padding * 2,
+    height: img.height + settings.gui.button.padding * 2,
     buttonX: 0, buttonY: 0,
     iconX: 0, iconY: 0,
   };
-  const move = (xTo: number, yTo: number) => {
-    x = xTo, y = yTo;
-    state.buttonX = (x - state.width / 2), state.buttonY = (y - state.height / 2);
-    state.iconX = (x - img.width / 2), state.iconY = (y - img.height / 2);
+  const move = () => {
+    const optionalLocal = optional?.();
+    state.bgColor = optionalLocal?.bgColor;
+    state.width = optionalLocal?.width || state.width;
+    state.height = optionalLocal?.height || state.height;
+    const xLocal = x(), yLocal = y();
+    state.buttonX = (xLocal - state.width / 2), state.buttonY = (yLocal - state.height / 2);
+    state.iconX = (xLocal - img.width / 2), state.iconY = (yLocal - img.height / 2);
   };
-  move(x, y);
+  move();
   const isInArea = (x: number, y: number) => x >= state.buttonX && x <= state.buttonX + state.width && y >= state.buttonY && y <= state.buttonY + state.height;
   const redraw = () => {
-    if (optional?.bgColor) {
-      is.ctx.fillStyle = optional.bgColor;
+    if (state?.bgColor) {
+      is.ctx.fillStyle = state.bgColor;
     } else if (state.isPressed) {
       is.ctx.fillStyle = settings.colors.button.pressed;
     }
     if (!state.isHover) {
-      if (!state.isPressed && !optional?.bgColor) is.ctx.fillStyle = settings.colors.button.bg;
+      if (!state.isPressed && !state.bgColor) is.ctx.fillStyle = settings.colors.button.bg;
       is.ctx.canvas.style.cursor = "default";
     } else {
-      if (!state.isPressed && !optional?.bgColor) is.ctx.fillStyle = settings.colors.button.hover;
+      if (!state.isPressed && !state.bgColor) is.ctx.fillStyle = settings.colors.button.hover;
       is.ctx.canvas.style.cursor = "pointer";
     }
     drawRoundedRect(is.ctx, state.buttonX, state.buttonY, state.width, state.height, settings.gui.button.rounding);
@@ -141,7 +151,7 @@ export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): [(
         is.ctx.canvas.requestFullscreen();
         stopDisplay();
       },
-      x(), y(), is.prepared.imgs.fullscreen.img,
+      x, y, is.prepared.imgs.fullscreen.img,
     );
   }
   const stopDisplay = () => {
@@ -166,8 +176,7 @@ export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): [(
     if (redraw) redraw();
   }
   const newMove = () => {
-    if (move)
-      move(is.ctx.canvas.width - is.prepared.imgs.fullscreen.img.width - 25, is.ctx.canvas.height - is.prepared.imgs.fullscreen.img.height - 25);
+    if (move) move();
   }
 
   return [newStopDrawing, newRedraw, newMove];
