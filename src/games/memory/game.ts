@@ -1,5 +1,6 @@
 import { InitSettings } from "../..";
 import { LoadedImg } from "../../compileTime/generated";
+import { drawFullscreenButton } from "../../gui/button";
 import { reprepare as reprepareGui } from "../../gui/prepare";
 import { memoryGame } from "../../settings";
 import { prepare as prepareDraw, Prepared as PreparedDraw } from "../memory/draw";
@@ -88,13 +89,12 @@ export interface MemoryState {
   // gameplay
   gameplay: {
     cards: MemoryCard[],
-    solvedCards: number,
+    remainingCards: number,
   },
   // gui
   gui: {
     prepared: PreparedDraw,
   },
-  lastTick: number,
 }
 
 const memory = async (is: InitSettings) => {
@@ -103,19 +103,20 @@ const memory = async (is: InitSettings) => {
     state.gui.prepared = prepareDraw(is);
     reshuffleCards(state.gameplay.cards, state.gui.prepared);
     move();
+    moveFS();
     redraw();
+    redrawFS();
   });
   // state
   const preparedDraw = prepareDraw(is);
   const state: MemoryState = {
     gameplay: {
       cards: shuffleCards(is.prepared.fruits, preparedDraw),
-      solvedCards: 0,
+      remainingCards: is.prepared.fruits.length * 2,
     },
     gui: {
       prepared: preparedDraw,
     },
-    lastTick: 0,
   };
   // win animation
   const winAnimation = (timeRemaining?: number) => {
@@ -128,10 +129,12 @@ const memory = async (is: InitSettings) => {
       } else gameEnder(timeRemaining);
     }, memoryGame.winTime / state.gameplay.cards.length);
   }
+  // fs button
+  const [stopFS, redrawFS, moveFS] = drawFullscreenButton(is, () => redraw());
   // render
   let timeout: number | undefined;
   const [stopDraw, redraw, move, redrawCard] = drawState(is, state, (card) => {
-    if (state.gameplay.solvedCards == state.gameplay.cards.length) return;
+    if (state.gameplay.remainingCards <= 0) return;
     clearTimeout(timeout);
     for (const failed of state.gameplay.cards.filter((card) => card.gameState == "failed")) {
       failed.gameState = "closed";
@@ -140,7 +143,7 @@ const memory = async (is: InitSettings) => {
     for (const solvedOpen of state.gameplay.cards.filter((card) => card.gameState == "solved&open")) {
       solvedOpen.gameState = "solved&closed";
       redrawCard(solvedOpen);
-      if ((state.gameplay.solvedCards += 1) == state.gameplay.cards.length) {
+      if ((state.gameplay.remainingCards -= 1) <= 0) {
         winAnimation();
         break;
       }
@@ -162,7 +165,7 @@ const memory = async (is: InitSettings) => {
           redrawCard(card);
           open[0].gameState = "solved&closed";
           redrawCard(open[0]);
-          if ((state.gameplay.solvedCards += 2) == state.gameplay.cards.length) winAnimation(); 
+          if ((state.gameplay.remainingCards -= 2) <= 0) winAnimation(); 
         }, 2000);
       } else {
         card.gameState = "failed";
@@ -186,6 +189,7 @@ const memory = async (is: InitSettings) => {
     clearTimeout(timeout);
     stopDraw();
     stopResize();
+    stopFS(false);
     promiseResolve(timeRemaining);
   };
   return await promise;

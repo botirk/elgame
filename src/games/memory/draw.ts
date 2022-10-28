@@ -23,17 +23,18 @@ const calculateCardSize = (is: InitSettings, imgs: LoadedImg[]) => {
 
 const calculateTable = (is: InitSettings, imgs: LoadedImg[], cardSize: ReturnType<typeof calculateCardSize>) => {
   const gameWidth = is.prepared.gameWidth - memoryGame.margin * 2;
-  const columns = Math.max(1, Math.floor(gameWidth / (cardSize.width + memoryGame.margin)));
+  let columns = Math.max(1, Math.floor(gameWidth / (cardSize.width + memoryGame.margin)));
   const rows = Math.max(1, Math.ceil((imgs.length * 2) / columns));
   const lastRowColumns = (imgs.length * 2) - (columns * (rows - 1));
+  if (rows == 1) columns = lastRowColumns;
   // x 
   const totalWidth = columns * (cardSize.width + memoryGame.margin) - memoryGame.margin;
   const widthRemaining = Math.max(0, is.prepared.gameWidth - totalWidth);
-  const x = memoryGame.margin + widthRemaining / 2;
+  const x = memoryGame.margin + cardSize.width / 2 + widthRemaining / 2;
   // y
   const totalHeight = rows * (cardSize.height + memoryGame.margin) - memoryGame.margin;
   const heightRemaining = Math.max(0, is.ctx.canvas.height - totalHeight);
-  const y = memoryGame.margin + heightRemaining / 2;
+  const y = memoryGame.margin + cardSize.height / 2 + heightRemaining / 2;
 
   return { columns, rows, lastRowColumns, start: { x, y } };
 }

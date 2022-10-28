@@ -49,7 +49,7 @@ const drawHealths = (is: InitSettings, state: DropState) => {
 const drawQuest = (is: InitSettings, state: DropState) => {
   is.ctx.fillStyle = "black";
   is.ctx.font = settings.fonts.ctxFont;
-  is.ctx.fillText(state.gameplay.quest.word.name, is.prepared.gameX + (is.prepared.gameWidth - calcTextWidth(is.ctx, state.gameplay.quest.word.name)) / 2, state.gui.prepared.progressBarTextsY);
+  is.ctx.fillText(state.gameplay.quest.word.name, state.gui.prepared.questX, state.gui.prepared.progressBarTextsY);
 }
 
 const drawProgressBar = (is: InitSettings, state: DropState) => {

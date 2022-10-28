@@ -5,6 +5,7 @@ import drawBackground from "./background";
 import drawButton, { drawFullscreenButton } from "./button";
 import { reprepare as reprepareGui } from "../gui/prepare";
 import memory from "../games/memory/game";
+import form from "../games/form/game";
 
 const drawMenu = (is: InitSettings) => {
   drawBackground(is.ctx);
@@ -26,7 +27,10 @@ const drawMenu = (is: InitSettings) => {
     drawMenu(is);
   }, x, y(2), "Memory game", opt);
   // undone
-  const [stop3, redraw3, move3] = drawButton(is, () => 0, x, y(3), "Not ready", opt);
+  const [stop3, redraw3, move3] = drawButton(is, async () => {
+    stop();
+    await form(is);
+  }, x, y(3), "Form game", opt);
   // redraw
   const redraw = () => { drawBackground(is.ctx); redraw1(); redraw2(); redraw3(); redrawFS(); }
   // fullscreen button

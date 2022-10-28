@@ -48,6 +48,11 @@ export const memoryGame = {
   margin: 15,
 }
 
+export const formGame = {
+  margin: 15,
+  progressBarY: 100,
+}
+
 export type DropGameDifficulty = typeof dropGame.difficulties.easy | typeof dropGame.difficulties.normal | typeof dropGame.difficulties.hard;
 
 const colors = {

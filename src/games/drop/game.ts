@@ -4,6 +4,7 @@ import { LoadedImg, randomLoadedImg } from "../../compileTime/generated";
 import { InitSettings } from "../..";
 import { mergeDeep, RecursivePartial } from "../../gui/utils";
 import { reprepare as reprepareGui } from "../../gui/prepare";
+import { drawFullscreenButton } from "../../gui/button";
 
 const generateTarget = (is: InitSettings, state: DropState) => {
   const x = state.gameplay.prepared.clickableGameX + Math.random() * state.gameplay.prepared.clickableGameWidth, y = 1000;
@@ -203,6 +204,8 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
     // recalculate
     state.gui.prepared = prepareDraw(is, state.gameplay.quest.word.name);
     state.gameplay.prepared = prepare(is);
+    // move fs button
+    moveFS();
     // render
     render();
   });
@@ -221,6 +224,7 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
     onPressed: () => { state.gui.mouse.x = -Infinity; },
     onReleased: () => { state.gui.mouse.x = undefined; },
   });
+  const [stopFS, redrawFS, moveFS] = drawFullscreenButton(is, () => render());
 
   // general state
   const quest = generateQuest(is, is.prepared.fruits);
@@ -262,6 +266,7 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
       if (state.gameplay.score.loseTime + dropGame.loseTime > state.lastTick) {
         calcNextLoseFrame(is, state);
         drawFrame(is, state);
+        redrawFS();
       } else {
         gameEnder(0);
       }
@@ -269,6 +274,7 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
       if (state.gameplay.score.wonTime + dropGame.winTime > state.lastTick) {
         calcNextWonFrame(is, state);
         drawFrame(is, state);
+        redrawFS();
       } else {
         gameEnder(state.gameplay.score.health);
       }
@@ -276,6 +282,7 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
       calcNextFrame(is, state); 
       calcGameplay(is, state); 
       drawFrame(is, state);
+      redrawFS();
     }
   };
   const timer = setInterval(render, 1000 / dropGame.fps);
@@ -290,6 +297,7 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
     stopLeft();
     stopMove();
     stopResize();
+    stopFS(false);
     promiseResolve(healthCount);
   };
   return await promise;
