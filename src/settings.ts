@@ -43,6 +43,8 @@ export const dropGame = {
   winTime: 4000, loseTime: 3000,
 }
 
+export type DropGameDifficulty = typeof dropGame.difficulties.easy;
+
 export const memoryGame = {
   winTime: 2500,
   margin: 15,
@@ -51,9 +53,19 @@ export const memoryGame = {
 export const formGame = {
   margin: 15,
   progressBarY: 100,
+  difficulties: {
+    learning: {
+      startCount: 1,
+      endCount: 2,
+      stepCount: 1,
+      maxHealth: 3,
+    }
+  }
 }
 
-export type DropGameDifficulty = typeof dropGame.difficulties.easy | typeof dropGame.difficulties.normal | typeof dropGame.difficulties.hard;
+export type FormGameDifficulty = typeof formGame.difficulties.learning;
+
+
 
 const colors = {
   questColorBG: "#cae58e",

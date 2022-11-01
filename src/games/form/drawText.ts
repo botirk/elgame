@@ -4,9 +4,9 @@ import drawBackground from "../../gui/background";
 import drawButton, { drawIconButton } from "../../gui/button";
 import { calcTextWidth } from "../../gui/text";
 import settings, { formGame } from "../../settings";
-import { FormState } from "./game";
+import { FormCard, FormState } from "./game";
 
-interface FormImg extends LoadedImg {
+interface FormImg extends FormCard {
   row: number, column: number,
 }
 
@@ -17,7 +17,7 @@ const prepare = (is: InitSettings) => {
 }
 export type Prepared = ReturnType<typeof prepare>;
 
-const calculateCardSize = (is: InitSettings, imgs: LoadedImg[]) => {
+const calculateCardSize = (is: InitSettings, imgs: FormCard[]) => {
   let height = 0;
   let width = 0;
   imgs.forEach((img) => {
@@ -27,7 +27,7 @@ const calculateCardSize = (is: InitSettings, imgs: LoadedImg[]) => {
   return { height, width };
 }
 
-const calculateTable = (is: InitSettings, imgs: LoadedImg[], cardSize: ReturnType<typeof calculateCardSize>) => {
+const calculateTable = (is: InitSettings, imgs: FormCard[], cardSize: ReturnType<typeof calculateCardSize>) => {
   const gameWidth = is.prepared.gameWidth - formGame.margin * 2;
   let columns = Math.max(1, Math.floor(gameWidth / (cardSize.width + formGame.margin)));
   const rows = Math.max(1, Math.ceil(imgs.length / columns));
@@ -45,7 +45,7 @@ const calculateTable = (is: InitSettings, imgs: LoadedImg[], cardSize: ReturnTyp
   return { columns, rows, lastRowColumns, start: { x, y } };
 }
 
-const shuffleCards = (is: InitSettings, questions: LoadedImg[], tableSize: ReturnType<typeof calculateTable>): FormImg[] => {
+const shuffleCards = (is: InitSettings, questions: FormCard[], tableSize: ReturnType<typeof calculateTable>): FormImg[] => {
   const freeCells: { row: number, column: number }[] = [];
   for (let row = 1; row < tableSize.rows; row++) {
     for (let column = 1; column <= tableSize.columns; column++) {
@@ -101,18 +101,18 @@ const drawHealths = (is: InitSettings, state: FormState) => {
   }
 }*/
 
-const drawQuest = (is: InitSettings, quest: LoadedImg) => {
+const drawQuest = (is: InitSettings, quest: FormCard) => {
   is.ctx.fillStyle = "black";
   is.ctx.font = settings.fonts.ctxFont;
-  is.ctx.fillText(quest.name, is.prepared.gameX + (is.prepared.gameWidth - calcTextWidth(is.ctx, quest.name)) / 2, 30);
+  is.ctx.fillText(quest.name, is.prepared.gameX + (is.prepared.gameWidth - calcTextWidth(is.ctx, quest.img.name)) / 2, 30);
 }
 
-const drawStatus = (is: InitSettings, state: FormState, quest: LoadedImg) => {
+const drawStatus = (is: InitSettings, state: FormState, quest: FormCard) => {
   drawHealths(is, state);
   drawQuest(is, quest);
 }
 
-const drawForm = (is: InitSettings, state: FormState, quest: LoadedImg, falseAnswers: LoadedImg[], onClick: (text: string) => void) => {
+const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnswers: FormCard[], onClick: (card: FormCard) => void) => {
   drawBackground(is.ctx);
   drawStatus(is, state, quest);
   // imgs
@@ -128,7 +128,7 @@ const drawForm = (is: InitSettings, state: FormState, quest: LoadedImg, falseAns
     const x = () => is.prepared.gameX + tableSize.start.x + (q.column - 1) * (cardSize.width + formGame.margin);
     const y = () => tableSize.start.y + (q.row - 1) * (cardSize.height + formGame.margin);
     return drawIconButton(
-      is, () => onClick(q.name), x, y, q.img, () => cardSize
+      is, () => onClick(q), x, y, q.img, () => cardSize
     );
   });
 
