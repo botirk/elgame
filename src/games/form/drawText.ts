@@ -6,18 +6,20 @@ import { calcTextWidth } from "../../gui/text";
 import settings, { formGame } from "../../settings";
 import { FormCard, FormState } from "./game";
 
-interface FormImg extends FormCard {
+interface FormImg {
+  card: FormCard,
   row: number, column: number,
 }
 
-const prepare = (is: InitSettings) => {
+export const prepare = (is: InitSettings) => {
   return {
     progressBarTextsY: (formGame.progressBarY / 2 + settings.fonts.fontSize / 2),
+    card: calculateCardSize(is, is.prepared.fruits),
   }
 }
 export type Prepared = ReturnType<typeof prepare>;
 
-const calculateCardSize = (is: InitSettings, imgs: FormCard[]) => {
+const calculateCardSize = (is: InitSettings, imgs: LoadedImg[]) => {
   let height = 0;
   let width = 0;
   imgs.forEach((img) => {
@@ -27,20 +29,20 @@ const calculateCardSize = (is: InitSettings, imgs: FormCard[]) => {
   return { height, width };
 }
 
-const calculateTable = (is: InitSettings, imgs: FormCard[], cardSize: ReturnType<typeof calculateCardSize>) => {
+const calculateTable = (is: InitSettings, state: FormState, imgs: LoadedImg[]) => {
   const gameWidth = is.prepared.gameWidth - formGame.margin * 2;
-  let columns = Math.max(1, Math.floor(gameWidth / (cardSize.width + formGame.margin)));
+  let columns = Math.max(1, Math.floor(gameWidth / (state.gui.prepared.card.width + formGame.margin)));
   const rows = Math.max(1, Math.ceil(imgs.length / columns));
   const lastRowColumns = imgs.length - (columns * (rows - 1));
   if (rows == 1) columns = lastRowColumns;
   // x 
-  const totalWidth = columns * (cardSize.width + formGame.margin) - formGame.margin;
+  const totalWidth = columns * (state.gui.prepared.card.width + formGame.margin) - formGame.margin;
   const widthRemaining = Math.max(0, is.prepared.gameWidth - totalWidth);
-  const x = formGame.margin + cardSize.width / 2 + widthRemaining / 2;
+  const x = formGame.margin + state.gui.prepared.card.width / 2 + widthRemaining / 2;
   // y
-  const totalHeight = rows * (cardSize.height + formGame.margin) - formGame.margin;
+  const totalHeight = rows * (state.gui.prepared.card.height + formGame.margin) - formGame.margin;
   const heightRemaining = Math.max(0, is.ctx.canvas.height - formGame.progressBarY - totalHeight);
-  const y = formGame.progressBarY + cardSize.height / 2 + heightRemaining / 2;
+  const y = formGame.progressBarY + state.gui.prepared.card.height / 2 + heightRemaining / 2;
 
   return { columns, rows, lastRowColumns, start: { x, y } };
 }
@@ -58,7 +60,7 @@ const shuffleCards = (is: InitSettings, questions: FormCard[], tableSize: Return
   return questions.map((card) => {
     const cell = freeCells.splice(Math.floor(Math.random() * freeCells.length), 1)[0];
     return {
-      ...card,
+      card,
       ...cell,
     };
   });
@@ -76,59 +78,56 @@ const drawHealths = (is: InitSettings, state: FormState) => {
   }
 }
 
-/*const drawProgressBar = (is: InitSettings, state: FormState) => {
-  // state
-  const time = (state.gameplay.score.wonTime || state.gameplay.score.loseTime) ? (dropGame.difficulties.movie.targets.cd * 0.3) : state.gameplay.targets.cd * 0.3;
-  let isSuccess = ((state.gameplay.score?.lastScoreIncreasedTime || -10000) + time > state.lastTick);
-  let isFail = ((state.gameplay.score?.lastHealthLostTime || -10000) + time  > state.lastTick);
-  if (isSuccess && isFail) {
-    isSuccess = (state.gameplay.score.lastScoreIncreasedTime || 0) > (state.gameplay.score?.lastHealthLostTime || 0);
-    isFail = !isSuccess;
-  }
-  // bg
-  if (isSuccess) is.ctx.fillStyle = settings.colors.success;
-  else if (isFail) is.ctx.fillStyle = settings.colors.fail;
-  else is.ctx.fillStyle = settings.colors.questColorBG;
-  is.ctx.fillRect(is.prepared.gameX, 0, is.prepared.gameWidth, dropGame.progressBarY);
-  // bar
-  if (!isSuccess && !isFail) {
-    const progress = state.gameplay.score.total / state.gameplay.score.required;
-    if (progress < 0.25) is.ctx.fillStyle = settings.colors.questColor1;
-    else if (progress < 0.5) is.ctx.fillStyle = settings.colors.questColor2;
-    else if (progress < 0.75) is.ctx.fillStyle = settings.colors.questColor3;
-    else is.ctx.fillStyle = settings.colors.questColor4;
-    is.ctx.fillRect(is.prepared.gameX, 0, is.prepared.gameWidth * progress, dropGame.progressBarY);
-  }
-}*/
+const drawProgressBarSuccess = (is: InitSettings) => {
+  is.ctx.fillStyle = settings.colors.success;
+  is.ctx.fillRect(is.prepared.gameX, 0, is.prepared.gameWidth, formGame.progressBarY);
+}
 
-const drawQuest = (is: InitSettings, quest: FormCard) => {
+const drawProgressBarFail = (is: InitSettings) => {
+  is.ctx.fillStyle = settings.colors.fail;
+  is.ctx.fillRect(is.prepared.gameX, 0, is.prepared.gameWidth, formGame.progressBarY);
+}
+
+const drawProgressBar = (is: InitSettings, state: FormState) => {
+  // bg
+  is.ctx.fillStyle = settings.colors.questColorBG;
+  is.ctx.fillRect(0, 0, is.ctx.canvas.width, formGame.progressBarY);
+  // bar
+  const progress = state.gameplay.score.total / state.gameplay.score.required;
+  if (progress < 0.25) is.ctx.fillStyle = settings.colors.questColor1;
+  else if (progress < 0.5) is.ctx.fillStyle = settings.colors.questColor2;
+  else if (progress < 0.75) is.ctx.fillStyle = settings.colors.questColor3;
+  else is.ctx.fillStyle = settings.colors.questColor4;
+  is.ctx.fillRect(0, 0, is.ctx.canvas.width * progress, formGame.progressBarY);
+}
+
+const drawQuest = (is: InitSettings, state: FormState, quest: LoadedImg) => {
   is.ctx.fillStyle = "black";
   is.ctx.font = settings.fonts.ctxFont;
-  is.ctx.fillText(quest.name, is.prepared.gameX + (is.prepared.gameWidth - calcTextWidth(is.ctx, quest.img.name)) / 2, 30);
+  is.ctx.fillText(quest.name, is.prepared.gameX + (is.prepared.gameWidth - calcTextWidth(is.ctx, quest.name)) / 2, state.gui.prepared.progressBarTextsY);
 }
 
-const drawStatus = (is: InitSettings, state: FormState, quest: FormCard) => {
+const drawStatus = (is: InitSettings, state: FormState, quest: LoadedImg) => {
+  drawProgressBar(is, state);
   drawHealths(is, state);
-  drawQuest(is, quest);
+  drawQuest(is, state, quest);
 }
 
-const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnswers: FormCard[], onClick: (card: FormCard) => void) => {
+const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnswers: FormCard[], onClick: (card: FormCard) => void): ReturnType<typeof drawIconButton> => {
   drawBackground(is.ctx);
   drawStatus(is, state, quest);
   // imgs
   const imgs = [ quest, ...falseAnswers ];
   // sizes
-  const cardSize = calculateCardSize(is, imgs);
-  const tableSize = calculateTable(is, imgs, cardSize);
+  const tableSize = calculateTable(is, state, imgs);
   // shuffle
   const questions = shuffleCards(is, imgs, tableSize);
-  console.log(tableSize);
   // draw buttons
   const buttons = questions.map((q) => {
-    const x = () => is.prepared.gameX + tableSize.start.x + (q.column - 1) * (cardSize.width + formGame.margin);
-    const y = () => tableSize.start.y + (q.row - 1) * (cardSize.height + formGame.margin);
+    const x = () => is.prepared.gameX + tableSize.start.x + (q.column - 1) * (state.gui.prepared.card.width + formGame.margin);
+    const y = () => tableSize.start.y + (q.row - 1) * (state.gui.prepared.card.height + formGame.margin);
     return drawIconButton(
-      is, () => onClick(q), x, y, q.img, () => cardSize
+      is, () => onClick(q.card), x, y, q.card.img, () => state.gui.prepared.card
     );
   });
 

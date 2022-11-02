@@ -1,7 +1,7 @@
 import { InitSettings } from "../..";
 import { LoadedImg } from "../../compileTime/generated";
 import { formGame, FormGameDifficulty } from "../../settings";
-import drawForm from "./drawText";
+import drawForm, { prepare, Prepared as PreparedDraw } from "./drawText";
 
 const calcCardStep = (card: FormCard, dif: FormGameDifficulty) => {
   return dif.startCount + Math.floor(card.successCount / dif.stepCount);
@@ -41,6 +41,16 @@ const calcNextForm = (state: FormState, dif: FormGameDifficulty, prevQuestion?: 
   return [card, calcNextOthers(card, state, dif)];
 }
 
+const nextForm = (is: InitSettings, state: FormState, dif: FormGameDifficulty, prevQuestion?: LoadedImg) => {
+  const [target, others] = calcNextForm(state, formGame.difficulties.learning, prevQuestion);
+  if (target && others) return new Promise<[boolean, FormCard]>((resolve) => {
+    const [stopDrawing, redraw] = drawForm(is, state, target, others, (clickCard) => {
+      stopDrawing(false);
+      resolve([clickCard.name == target.name, clickCard]);
+    });
+  });
+}
+
 export interface FormCard extends LoadedImg {
   successCount: number,
 }
@@ -48,8 +58,8 @@ export interface FormState {
   // gameplay
   gameplay: {
     cards: FormCard[],
-    solvedCards: number,
     score: {
+      total: number, required: number,
       health: number,
       lastHealthLostTime?: number, lastScoreIncreasedTime?: number,
     }
@@ -57,7 +67,7 @@ export interface FormState {
   },
   // gui
   gui: {
-    
+    prepared: PreparedDraw,
   },
   lastTick: number,
 }
@@ -66,19 +76,24 @@ const form = async (is: InitSettings) => {
   const state: FormState = {
     gameplay: {
       cards: is.prepared.fruits.map((fruit) => ({ ...fruit, successCount: 0 })),
-      solvedCards: 0,
       score: {
+        total: 0, required: 0,
         health: 3,
       }
     },
     gui: {
-
+      prepared: prepare(is),
     },
     lastTick: 0,
   }
 
-  const [target, others] = calcNextForm(state, formGame.difficulties.learning);
-  if (target && others) drawForm(is, state, target, others, () => 0);
+  const onFormEnd = ([ok, card]: [boolean, FormCard | undefined]) => {
+    if (ok && card) card.successCount += 1;
+    else if (!ok) state.gameplay.score.health -= 1;
+    let form = nextForm(is, state, formGame.difficulties.learning, card);
+    if (form) form.then(onFormEnd);
+  }
+  onFormEnd([true, undefined]);
 }
 
 export default form;
