@@ -51,8 +51,10 @@ export const memoryGame = {
 }
 
 export const formGame = {
+  winTime: 2500,
   margin: 15,
   progressBarY: 100,
+  pause: 900,
   difficulties: {
     learning: {
       startCount: 1,

@@ -1,7 +1,7 @@
 import { InitSettings } from "../..";
 import { LoadedImg } from "../../compileTime/generated";
 import drawBackground from "../../gui/background";
-import drawButton, { drawIconButton } from "../../gui/button";
+import { drawIconButton } from "../../gui/button";
 import { calcTextWidth } from "../../gui/text";
 import settings, { formGame } from "../../settings";
 import { FormCard, FormState } from "./game";
@@ -80,12 +80,12 @@ const drawHealths = (is: InitSettings, state: FormState) => {
 
 const drawProgressBarSuccess = (is: InitSettings) => {
   is.ctx.fillStyle = settings.colors.success;
-  is.ctx.fillRect(is.prepared.gameX, 0, is.prepared.gameWidth, formGame.progressBarY);
+  is.ctx.fillRect(0, 0, is.ctx.canvas.width, formGame.progressBarY);
 }
 
 const drawProgressBarFail = (is: InitSettings) => {
   is.ctx.fillStyle = settings.colors.fail;
-  is.ctx.fillRect(is.prepared.gameX, 0, is.prepared.gameWidth, formGame.progressBarY);
+  is.ctx.fillRect(0, 0, is.ctx.canvas.width, formGame.progressBarY);
 }
 
 const drawProgressBar = (is: InitSettings, state: FormState) => {
@@ -113,7 +113,19 @@ const drawStatus = (is: InitSettings, state: FormState, quest: LoadedImg) => {
   drawQuest(is, state, quest);
 }
 
-const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnswers: FormCard[], onClick: (card: FormCard) => void): ReturnType<typeof drawIconButton> => {
+const drawStatusSuccess = (is: InitSettings, state: FormState, quest: LoadedImg) => {
+  drawProgressBarSuccess(is);
+  drawHealths(is, state);
+  drawQuest(is, state, quest);
+}
+
+const drawStatusFail = (is: InitSettings, state: FormState, quest: LoadedImg) => {
+  drawProgressBarFail(is);
+  drawHealths(is, state);
+  drawQuest(is, state, quest);
+}
+
+const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnswers: FormCard[], onClick: (card: FormCard) => void, onFinish: (card: FormCard) => void): ReturnType<typeof drawIconButton> => {
   drawBackground(is.ctx);
   drawStatus(is, state, quest);
   // imgs
@@ -122,13 +134,43 @@ const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnsw
   const tableSize = calculateTable(is, state, imgs);
   // shuffle
   const questions = shuffleCards(is, imgs, tableSize);
+  // timer on form end
+  let finishTimeout: number | undefined;
   // draw buttons
   const buttons = questions.map((q) => {
     const x = () => is.prepared.gameX + tableSize.start.x + (q.column - 1) * (state.gui.prepared.card.width + formGame.margin);
     const y = () => tableSize.start.y + (q.row - 1) * (state.gui.prepared.card.height + formGame.margin);
-    return drawIconButton(
-      is, () => onClick(q.card), x, y, q.card.img, () => state.gui.prepared.card
+    const bgColor = () => {
+      if (finishTimeout) {
+        if (q.card == quest) return settings.colors.success;
+        else return settings.colors.fail;
+      }
+    } 
+    const button = drawIconButton(
+      is,
+      () => {
+        if (finishTimeout) {
+          clearTimeout(finishTimeout);
+          stop(true);
+          onFinish(q.card);
+        } else {
+          onClick(q.card);
+          if (q.card == quest) {
+            drawStatusSuccess(is, state, quest);
+          } else {
+            drawStatusFail(is, state, quest);
+          }
+          finishTimeout = setTimeout(() => { 
+            stop(true);
+            onFinish(q.card);
+          }, formGame.pause);
+          button[2]();
+          button[1]();
+        }
+      },
+      x, y, q.card.img, () => ({ ...state.gui.prepared.card, bgColor: bgColor() })
     );
+    return button;
   });
 
   const stop = (shouldRedraw: boolean) => buttons.forEach((btn) => btn[0](shouldRedraw));

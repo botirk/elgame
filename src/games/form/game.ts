@@ -7,7 +7,7 @@ const calcCardStep = (card: FormCard, dif: FormGameDifficulty) => {
   return dif.startCount + Math.floor(card.successCount / dif.stepCount);
 }
 
-const calcNextCard = (cards: FormCard[]): FormCard | undefined => {
+const calcNextCard = (cards: FormCard[], previousCard?: FormCard): FormCard | undefined => {
   let candidates: FormCard[] = [];
   let successCount = Infinity;
 
@@ -21,8 +21,13 @@ const calcNextCard = (cards: FormCard[]): FormCard | undefined => {
     }
   });
 
-  
-  if (candidates.length > 0) return candidates[Math.floor(Math.random() * candidates.length)];
+  if (candidates.length > 0) {
+    if (candidates.length >= 2 && previousCard) {
+      const prevI = candidates.indexOf(previousCard);
+      if (prevI != -1) candidates.splice(prevI, 1);
+    }
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
 }
 
 const calcNextOthers = (card: FormCard, state: FormState, dif: FormGameDifficulty): FormCard[] => {
@@ -35,19 +40,25 @@ const calcNextOthers = (card: FormCard, state: FormState, dif: FormGameDifficult
   return array.slice(0, calcCardStep(card, dif) - 1);
 }
 
-const calcNextForm = (state: FormState, dif: FormGameDifficulty, prevQuestion?: LoadedImg): [FormCard, FormCard[]] | [] => {
-  const card = calcNextCard(state.gameplay.cards);
+const calcNextForm = (state: FormState, dif: FormGameDifficulty, previousCard?: FormCard): [FormCard, FormCard[]] | [] => {
+  if (state.gameplay.score.total >= state.gameplay.score.required) return [];
+  const card = calcNextCard(state.gameplay.cards, previousCard);
   if (!card) return [];
   return [card, calcNextOthers(card, state, dif)];
 }
 
-const nextForm = (is: InitSettings, state: FormState, dif: FormGameDifficulty, prevQuestion?: LoadedImg) => {
-  const [target, others] = calcNextForm(state, formGame.difficulties.learning, prevQuestion);
-  if (target && others) return new Promise<[boolean, FormCard]>((resolve) => {
+const nextForm = (is: InitSettings, state: FormState, dif: FormGameDifficulty, previousCard?: FormCard) => {
+  const [target, others] = calcNextForm(state, dif, previousCard);
+  if (target && others) return new Promise<FormCard>((resolve) => {
     const [stopDrawing, redraw] = drawForm(is, state, target, others, (clickCard) => {
-      stopDrawing(false);
-      resolve([clickCard.name == target.name, clickCard]);
-    });
+      if (clickCard == target) {
+        clickCard.successCount += 1;
+        state.gameplay.score.total += 1;
+        state.gui.history.push(redraw);
+      } else {
+        state.gameplay.score.health -= 1;
+      }
+    }, (card) => resolve(card));
   });
 }
 
@@ -61,39 +72,58 @@ export interface FormState {
     score: {
       total: number, required: number,
       health: number,
-      lastHealthLostTime?: number, lastScoreIncreasedTime?: number,
     }
     
   },
   // gui
   gui: {
     prepared: PreparedDraw,
+    history: (() => void)[],
   },
   lastTick: number,
 }
 
-const form = async (is: InitSettings) => {
+const form = async (is: InitSettings, dif: FormGameDifficulty) => {
   const state: FormState = {
     gameplay: {
       cards: is.prepared.fruits.map((fruit) => ({ ...fruit, successCount: 0 })),
       score: {
-        total: 0, required: 0,
+        total: 0, required: (dif.endCount + 1 - dif.startCount) * dif.stepCount * is.prepared.fruits.length,
         health: 3,
       }
     },
     gui: {
       prepared: prepare(is),
+      history: [],
     },
     lastTick: 0,
   }
 
-  const onFormEnd = ([ok, card]: [boolean, FormCard | undefined]) => {
-    if (ok && card) card.successCount += 1;
-    else if (!ok) state.gameplay.score.health -= 1;
-    let form = nextForm(is, state, formGame.difficulties.learning, card);
+  const onFormEnd = (endCard?: FormCard) => {
+    let form = nextForm(is, state, dif, endCard);
     if (form) form.then(onFormEnd);
+    else if (state.gameplay.score.health >= 1) winAnimation(); 
+    else gameEnder();
   }
-  onFormEnd([true, undefined]);
+  onFormEnd();
+
+  // win
+  const winAnimation = () => {
+    setTimeout(() => {
+      if (state.gui.history.length > 0) {
+        (state.gui.history.pop() as () => void)();
+        winAnimation();
+      } else gameEnder();
+    }, formGame.winTime / state.gameplay.score.required);
+  }
+  // promise magic
+  let promiseResolve: (timeRemaining?: number) => void;
+  const promise = new Promise<number | undefined>((resolve) => promiseResolve = resolve);
+  // game ender
+  const gameEnder = () => {
+    promiseResolve(state.gameplay.score.health);
+  };
+  return await promise;
 }
 
 export default form;

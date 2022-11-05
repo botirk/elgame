@@ -1,6 +1,6 @@
 import { InitSettings } from "..";
 import drop from "../games/drop/game";
-import settings, { dropGame } from "../settings";
+import settings, { dropGame, formGame } from "../settings";
 import drawBackground from "./background";
 import drawButton, { drawFullscreenButton } from "./button";
 import { reprepare as reprepareGui } from "../gui/prepare";
@@ -29,7 +29,8 @@ const drawMenu = (is: InitSettings) => {
   // undone
   const [stop3, redraw3, move3] = drawButton(is, async () => {
     stop();
-    await form(is);
+    const health = await form(is, formGame.difficulties.learning);
+    drawMenu(is);
   }, x, y(3), "Form game", opt);
   // redraw
   const redraw = () => { drawBackground(is.ctx); redraw1(); redraw2(); redraw3(); redrawFS(); }
