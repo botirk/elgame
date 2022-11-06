@@ -1,5 +1,5 @@
 import { InitSettings } from "../..";
-import { LoadedImg } from "../../compileTime/generated";
+import { LoadedWord } from "../../data/word";
 import drawBackground from "../../gui/background";
 import { drawIconButton } from "../../gui/button";
 import { calcTextWidth } from "../../gui/text";
@@ -72,7 +72,7 @@ const drawHealth = (is: InitSettings, x: number, y: number) => {
 
 const drawHealths = (is: InitSettings, state: FormState) => {
   const y = (formGame.progressBarY - is.prepared.imgs.heart.img.height) / 2;
-  const startX = is.prepared.gameXMax - is.prepared.imgs.heart.img.width - formGame.margin;
+  const startX = is.ctx.canvas.width - is.prepared.imgs.heart.img.width - formGame.margin;
   for (let i = state.gameplay.score.health; i > 0; i--) {
     drawHealth(is, startX - (state.gameplay.score.health - i) * (is.prepared.imgs.heart.img.width + 5), y);
   }
@@ -134,15 +134,16 @@ const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnsw
   const tableSize = calculateTable(is, state, imgs);
   // shuffle
   const questions = shuffleCards(is, imgs, tableSize);
-  // timer on form end
+  // form end
   let finishTimeout: number | undefined;
+  let clickedCard: FormCard | undefined;
   // draw buttons
   const buttons = questions.map((q) => {
     const x = () => is.prepared.gameX + tableSize.start.x + (q.column - 1) * (state.gui.prepared.card.width + formGame.margin);
     const y = () => tableSize.start.y + (q.row - 1) * (state.gui.prepared.card.height + formGame.margin);
     const bgColor = () => {
-      if (finishTimeout) {
-        if (q.card == quest) return settings.colors.success;
+      if (clickedCard == q.card) {
+        if (clickedCard == quest) return settings.colors.success;
         else return settings.colors.fail;
       }
     } 
@@ -154,18 +155,14 @@ const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnsw
           stop(true);
           onFinish(q.card);
         } else {
+          clickedCard = q.card;
           onClick(q.card);
-          if (q.card == quest) {
-            drawStatusSuccess(is, state, quest);
-          } else {
-            drawStatusFail(is, state, quest);
-          }
           finishTimeout = setTimeout(() => { 
             stop(true);
             onFinish(q.card);
           }, formGame.pause);
-          button[2]();
-          button[1]();
+          button[2]();  // move
+          redraw();
         }
       },
       x, y, q.card.img, () => ({ ...state.gui.prepared.card, bgColor: bgColor() })
@@ -176,7 +173,13 @@ const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnsw
   const stop = (shouldRedraw: boolean) => buttons.forEach((btn) => btn[0](shouldRedraw));
   const redraw = () => {
     drawBackground(is.ctx);
-    drawStatus(is, state, quest);
+    if (clickedCard && clickedCard == quest) {
+      drawStatusSuccess(is, state, quest);
+    } else if (clickedCard && clickedCard != quest) {
+      drawStatusFail(is, state, quest);
+    } else {
+      drawStatus(is, state, quest);
+    }
     buttons.forEach((btn) => btn[1]());
   }
   const move = () => buttons.forEach((btn) => btn[2]());

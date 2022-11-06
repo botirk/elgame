@@ -51,7 +51,7 @@ export const memoryGame = {
 }
 
 export const formGame = {
-  winTime: 2500,
+  endAnimationTime: 3000,
   margin: 15,
   progressBarY: 100,
   pause: 900,
@@ -66,8 +66,6 @@ export const formGame = {
 }
 
 export type FormGameDifficulty = typeof formGame.difficulties.learning;
-
-
 
 const colors = {
   questColorBG: "#cae58e",

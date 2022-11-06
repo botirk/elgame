@@ -2,6 +2,9 @@ import { InitSettings } from "../..";
 import { LoadedImg } from "../../compileTime/generated";
 import { formGame, FormGameDifficulty } from "../../settings";
 import drawForm, { prepare, Prepared as PreparedDraw } from "./drawText";
+import { reprepare as reprepareGui } from "../../gui/prepare";
+import { promiseMagic } from "../../gui/utils";
+import { drawFullscreenButton } from "../../gui/button";
 
 const calcCardStep = (card: FormCard, dif: FormGameDifficulty) => {
   return dif.startCount + Math.floor(card.successCount / dif.stepCount);
@@ -41,25 +44,11 @@ const calcNextOthers = (card: FormCard, state: FormState, dif: FormGameDifficult
 }
 
 const calcNextForm = (state: FormState, dif: FormGameDifficulty, previousCard?: FormCard): [FormCard, FormCard[]] | [] => {
+  if (state.gameplay.score.health <= 0) return [];
   if (state.gameplay.score.total >= state.gameplay.score.required) return [];
   const card = calcNextCard(state.gameplay.cards, previousCard);
   if (!card) return [];
   return [card, calcNextOthers(card, state, dif)];
-}
-
-const nextForm = (is: InitSettings, state: FormState, dif: FormGameDifficulty, previousCard?: FormCard) => {
-  const [target, others] = calcNextForm(state, dif, previousCard);
-  if (target && others) return new Promise<FormCard>((resolve) => {
-    const [stopDrawing, redraw] = drawForm(is, state, target, others, (clickCard) => {
-      if (clickCard == target) {
-        clickCard.successCount += 1;
-        state.gameplay.score.total += 1;
-        state.gui.history.push(redraw);
-      } else {
-        state.gameplay.score.health -= 1;
-      }
-    }, (card) => resolve(card));
-  });
 }
 
 export interface FormCard extends LoadedImg {
@@ -73,12 +62,12 @@ export interface FormState {
       total: number, required: number,
       health: number,
     }
-    
   },
   // gui
   gui: {
     prepared: PreparedDraw,
-    history: (() => void)[],
+    winHistory: (() => void)[],
+    loseHistory: (() => void)[],
   },
   lastTick: number,
 }
@@ -94,35 +83,61 @@ const form = async (is: InitSettings, dif: FormGameDifficulty) => {
     },
     gui: {
       prepared: prepare(is),
-      history: [],
+      winHistory: [],
+      loseHistory: [],
     },
     lastTick: 0,
   }
 
+  let resizeCurrent: () => void | undefined;
+  const stopResize = is.addResizeRequest(() => {
+    is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
+    resizeCurrent?.();
+    moveFS();
+    redrawFS();
+  });
+  const [stopFS, redrawFS, moveFS] = drawFullscreenButton(is, () => resizeCurrent?.());
+
+  const nextForm = (previousCard?: FormCard) => {
+    const [target, others] = calcNextForm(state, dif, previousCard);
+    if (target && others) return new Promise<FormCard>((resolve) => {
+      const [_, redraw, move] = drawForm(is, state, target, others, (clickCard) => {
+        if (clickCard == target) {
+          clickCard.successCount += 1;
+          state.gameplay.score.total += 1;
+          state.gui.winHistory.push(() => { move(); redraw(); });
+        } else {
+          state.gui.loseHistory.push(() => { move(); redraw(); });
+          state.gameplay.score.health -= 1;
+        }
+      }, (card) => resolve(card));
+      resizeCurrent = () => { move(); redraw(); };
+    });
+  }
+
   const onFormEnd = (endCard?: FormCard) => {
-    let form = nextForm(is, state, dif, endCard);
+    let form = nextForm(endCard);
     if (form) form.then(onFormEnd);
-    else if (state.gameplay.score.health >= 1) winAnimation(); 
-    else gameEnder();
+    else endAnimation();
   }
   onFormEnd();
 
   // win
-  const winAnimation = () => {
-    setTimeout(() => {
-      if (state.gui.history.length > 0) {
-        (state.gui.history.pop() as () => void)();
-        winAnimation();
-      } else gameEnder();
-    }, formGame.winTime / state.gameplay.score.required);
+  const endAnimation = () => {
+    const history = 
+        (state.gameplay.score.health >= 1 && state.gui.winHistory.length > 0) ? state.gui.winHistory 
+        : (state.gameplay.score.health <= 0 && state.gui.loseHistory.length > 0) ? state.gui.loseHistory
+        : undefined;
+    const totalScreens = (state.gameplay.score.health >= 1) ? state.gameplay.score.required : dif.maxHealth;
+    
+    if (history) (resizeCurrent = (history.pop() as () => void))(); else gameEnder(state.gameplay.score.health);
+    setTimeout(endAnimation, formGame.endAnimationTime / totalScreens);
   }
-  // promise magic
-  let promiseResolve: (timeRemaining?: number) => void;
-  const promise = new Promise<number | undefined>((resolve) => promiseResolve = resolve);
-  // game ender
-  const gameEnder = () => {
-    promiseResolve(state.gameplay.score.health);
-  };
+
+  const [promise, gameEnder] = promiseMagic<number>(() => {
+    stopFS(false);
+    stopResize();
+  });
   return await promise;
 }
 

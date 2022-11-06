@@ -21,3 +21,12 @@ export const mergeDeep = <T extends Object>(target: T, ...sources): T => {
 
   return mergeDeep(target, ...sources);
 }
+
+export const promiseMagic = <T>(onResolve: (value: T) => void): [Promise<T>, (value: T) => void] => {
+  let promiseResolve: (value: T) => void;
+  const promise = new Promise<T>((resolve) => promiseResolve = (value: T) => {
+    onResolve(value);
+    resolve(value);
+  });
+  return [promise, (value: T) => promiseResolve(value)];
+}
