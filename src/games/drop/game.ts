@@ -1,14 +1,15 @@
 import settings, { dropGame, DropGameDifficulty } from "../../settings";
 import { drawFrame, Prepared as PreparedDraw, prepare as prepareDraw, prepareQuestX } from "./draw";
-import { LoadedImg, randomLoadedImg } from "../../compileTime/generated";
 import { InitSettings } from "../..";
-import { mergeDeep, RecursivePartial } from "../../gui/utils";
+import { mergeDeep, promiseMagic, randomInArray, RecursivePartial } from "../../gui/utils";
 import { reprepare as reprepareGui } from "../../gui/prepare";
 import { drawFullscreenButton } from "../../gui/button";
+import { WordWithImage } from "../word";
+import { EndGameStats } from "..";
 
 const generateTarget = (is: InitSettings, state: DropState) => {
   const x = state.gameplay.prepared.clickableGameX + Math.random() * state.gameplay.prepared.clickableGameWidth, y = 1000;
-  const word = randomLoadedImg(state.gameplay.targets.candidates);
+  const word = randomInArray(state.gameplay.targets.candidates);
   if (state.gameplay.targets.candidates.length == 0 || (state.gameplay.targets.candidates.length == 1 && state.gameplay.words.length <= 2)) {
     state.gameplay.targets.candidates = [...state.gameplay.words];
   } else if (state.gameplay.targets.candidates.length == 1) {
@@ -19,29 +20,29 @@ const generateTarget = (is: InitSettings, state: DropState) => {
   return { word, x, y, timeGenerated: state.lastTick };
 }
 
-const generateQuest = (is: InitSettings, words: LoadedImg[], state?: DropState) => {
+const generateQuest = (is: InitSettings, words: WordWithImage[], state?: DropState) => {
   is.ctx.font = settings.fonts.ctxFont;
   let wordsAvailable = words;
   if (state) {
-    const remaining = state.gameplay.words.filter((word) => state.gameplay.score.perWord[word.name] < state.gameplay.score.requiredPerWord);
+    const remaining = state.gameplay.words.filter((word) => state.gameplay.score.perWord[word.toLearnText] < state.gameplay.score.requiredPerWord);
     if (remaining.length == 1) {
       wordsAvailable = remaining;
     } else if (remaining.length > 0) {
       wordsAvailable = remaining.filter((word) => word != state.gameplay.quest.word);
     }
   }
-  const word = randomLoadedImg(wordsAvailable);
+  const word = randomInArray(wordsAvailable);
   return { word, timeGenerated: state?.lastTick || Date.now() };
 }
 
 const calcGameplay = (is: InitSettings, state: DropState) => {
   state.gameplay.targets.a.forEach((target, i) => {
-    const isMiss = (target.y < dropGame.progressBarY - target.word.img.height);
+    const isMiss = (target.y < dropGame.progressBarY - target.word.toLearnImg.height);
     const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= settings.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= settings.hero.height);
     const isQuest = (target.word == state.gameplay.quest.word);
     if (isHit && isQuest) {
-      if (state.gameplay.score.perWord[state.gameplay.quest.word.name] < state.gameplay.score.requiredPerWord) {
-        state.gameplay.score.perWord[state.gameplay.quest.word.name] += 1;
+      if (state.gameplay.score.perWord[state.gameplay.quest.word.toLearnText] < state.gameplay.score.requiredPerWord) {
+        state.gameplay.score.perWord[state.gameplay.quest.word.toLearnText] += 1;
         state.gameplay.score.total += 1;
         state.gameplay.score.lastScoreIncreasedTime = state.lastTick;
       }
@@ -49,7 +50,7 @@ const calcGameplay = (is: InitSettings, state: DropState) => {
         state.gameplay.score.wonTime = state.lastTick;
       } else {
         state.gameplay.quest = generateQuest(is, state.gameplay.words, state);
-        state.gui.prepared.questX = prepareQuestX(is, state.gameplay.quest.word.name);
+        state.gui.prepared.questX = prepareQuestX(is, state.gameplay.quest.word.toLearnText);
       }
     } else if ((isMiss && isQuest) || (isHit && !isQuest)) {
       state.gameplay.score.health = state.gameplay.score.health - 1;
@@ -85,7 +86,7 @@ const calcNextLoseFrame = (is: InitSettings, state: DropState) => {
   // move & remove
   let speed = dropGame.difficulties.movie.targets.speed;
   state.gameplay.targets.a.forEach((target, i) => {
-    if (target.y < dropGame.progressBarY - target.word.img.height) {
+    if (target.y < dropGame.progressBarY - target.word.toLearnImg.height) {
       state.gameplay.targets.a.splice(i, 1);
       state.gameplay.score.lastHealthLostTime = state.lastTick;
     } 
@@ -147,12 +148,12 @@ export interface DropState {
   // gameplay
   gameplay: {
     direction?: "left" | "right",
-    words: LoadedImg[],
-    quest: { word: LoadedImg, timeGenerated: number },
+    words: WordWithImage[],
+    quest: { word: WordWithImage, timeGenerated: number },
     prevQuest?: DropState["gameplay"]["quest"],
     targets: {
-      a: { word: LoadedImg, x: number, y: number, timeGenerated: number }[],
-      candidates: LoadedImg[],
+      a: { word: WordWithImage, x: number, y: number, timeGenerated: number }[],
+      candidates: WordWithImage[],
       speed: number,
       lastTimeGenerated: number,
       cd: number,
@@ -176,7 +177,7 @@ export interface DropState {
   lastTick: number,
 }
 
-const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: RecursivePartial<DropState>) => {
+const drop = async (is: InitSettings, words: WordWithImage[], dif: DropGameDifficulty, optional?: RecursivePartial<DropState>): Promise<EndGameStats> => {
   const stopMove = is.addMoveRequest((x, y) => {
     state.gui.mouse.x = x, state.gui.mouse.y = y;
     state.gui.accelerationMouse = (y <= dropGame.progressBarY);
@@ -202,7 +203,7 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
       state.gui.mouse.x = newX + (coef * newWidth);
     }
     // recalculate
-    state.gui.prepared = prepareDraw(is, state.gameplay.quest.word.name);
+    state.gui.prepared = prepareDraw(is, state.gameplay.quest.word.toLearnText);
     state.gameplay.prepared = prepare(is);
     // move fs button
     moveFS();
@@ -227,10 +228,10 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
   const [stopFS, redrawFS, moveFS] = drawFullscreenButton(is, () => render());
 
   // general state
-  const quest = generateQuest(is, is.prepared.fruits);
+  const quest = generateQuest(is, words);
   const state: DropState = mergeDeep({
     gameplay: {
-      words: is.prepared.fruits,
+      words,
       hero: { 
         x: is.prepared.gameX + is.prepared.gameWidth / 2, y: dropGame.heroY, 
         speed: dropGame.mouseSpeed * is.prepared.verticalSpeedMultiplier 
@@ -238,23 +239,23 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
       quest,
       targets: {
         a: [],
-        candidates: [...is.prepared.fruits],
+        candidates: [...words],
         lastTimeGenerated: Date.now(),
         speed: dif.targets.speed,
         cd: dif.targets.cd,
       },
       score: {
         health: dif.maxHealth,
-        required: dif.successCountPerWord * is.prepared.fruits.length, total: 0,
+        required: dif.successCountPerWord * words.length, total: 0,
         requiredPerWord: dif.successCountPerWord,
-        perWord: is.prepared.fruits.reduce((prev, word) => { prev[word.name] = 0; return prev; }, {}),
+        perWord: words.reduce((prev, word) => { prev[word.toLearnText] = 0; return prev; }, {}),
       },
       prepared: prepare(is),
     },
     gui: {
       mouse: { x: -1, y: -1 },
       accelerationKB: false,  accelerationMouse: false,
-      prepared: prepareDraw(is, quest.word.name),
+      prepared: prepareDraw(is, quest.word.toLearnText),
     },
     lastTick: 0,
   }, optional);
@@ -268,7 +269,7 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
         drawFrame(is, state);
         redrawFS();
       } else {
-        gameEnder(0);
+        gameEnder({ isSuccess: false });
       }
     } else if (state.gameplay.score.wonTime) {
       if (state.gameplay.score.wonTime + dropGame.winTime > state.lastTick) {
@@ -276,7 +277,7 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
         drawFrame(is, state);
         redrawFS();
       } else {
-        gameEnder(state.gameplay.score.health);
+        gameEnder({ isSuccess: true });
       }
     } else {
       calcNextFrame(is, state); 
@@ -286,11 +287,9 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
     }
   };
   const timer = setInterval(render, 1000 / dropGame.fps);
-  // promise magic
-  let promiseResolve: (healthCount: number) => void;
-  const promise = new Promise<number>((resolve) => promiseResolve = resolve);
-  // game ender
-  const gameEnder = (healthCount: number) => {
+
+  // promise
+  const [promise, gameEnder] = promiseMagic<EndGameStats>(() => {
     clearInterval(timer);
     stopButton();
     stopRight();
@@ -298,8 +297,7 @@ const drop = async (is: InitSettings, dif: DropGameDifficulty, optional?: Recurs
     stopMove();
     stopResize();
     stopFS(false);
-    promiseResolve(healthCount);
-  };
+  });
   return await promise;
 }
 

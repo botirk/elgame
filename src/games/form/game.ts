@@ -1,10 +1,11 @@
 import { InitSettings } from "../..";
-import { LoadedImg } from "../../compileTime/generated";
 import { formGame, FormGameDifficulty } from "../../settings";
 import drawForm, { prepare, Prepared as PreparedDraw } from "./drawText";
 import { reprepare as reprepareGui } from "../../gui/prepare";
 import { promiseMagic } from "../../gui/utils";
 import { drawFullscreenButton } from "../../gui/button";
+import { WordWithImage } from "../word";
+import { EndGameStats } from "..";
 
 const calcCardStep = (card: FormCard, dif: FormGameDifficulty) => {
   return dif.startCount + Math.floor(card.successCount / dif.stepCount);
@@ -51,7 +52,8 @@ const calcNextForm = (state: FormState, dif: FormGameDifficulty, previousCard?: 
   return [card, calcNextOthers(card, state, dif)];
 }
 
-export interface FormCard extends LoadedImg {
+export interface FormCard {
+  word: WordWithImage,
   successCount: number,
 }
 export interface FormState {
@@ -72,17 +74,17 @@ export interface FormState {
   lastTick: number,
 }
 
-const form = async (is: InitSettings, dif: FormGameDifficulty) => {
+const form = async (is: InitSettings, words: WordWithImage[], dif: FormGameDifficulty): Promise<EndGameStats> => {
   const state: FormState = {
     gameplay: {
-      cards: is.prepared.fruits.map((fruit) => ({ ...fruit, successCount: 0 })),
+      cards: words.map((word) => ({ word, successCount: 0 })),
       score: {
-        total: 0, required: (dif.endCount + 1 - dif.startCount) * dif.stepCount * is.prepared.fruits.length,
+        total: 0, required: (dif.endCount + 1 - dif.startCount) * dif.stepCount * words.length,
         health: 3,
       }
     },
     gui: {
-      prepared: prepare(is),
+      prepared: prepare(is, words),
       winHistory: [],
       loseHistory: [],
     },
@@ -130,11 +132,11 @@ const form = async (is: InitSettings, dif: FormGameDifficulty) => {
         : undefined;
     const totalScreens = (state.gameplay.score.health >= 1) ? state.gameplay.score.required : dif.maxHealth;
     
-    if (history) (resizeCurrent = (history.pop() as () => void))(); else gameEnder(state.gameplay.score.health);
+    if (history) (resizeCurrent = (history.pop() as () => void))(); else gameEnder({ isSuccess: state.gameplay.score.health >= 1 });
     setTimeout(endAnimation, formGame.endAnimationTime / totalScreens);
   }
 
-  const [promise, gameEnder] = promiseMagic<number>(() => {
+  const [promise, gameEnder] = promiseMagic<EndGameStats>(() => {
     stopFS(false);
     stopResize();
   });

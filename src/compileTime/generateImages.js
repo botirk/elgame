@@ -8,11 +8,15 @@ const getImgNames = (dirPath) => readdirSync(`${__dirname}/../data/img/${dirPath
 
 // const generateArray = (dirPath) => getImgNames(dirPath).reduce((a, name) => { a.push({ imgB64: imgToB64(`${dirPath}/${name}.png`), name }); return a; }, []);
 
-const generateObject = (dirPath) => getImgNames(dirPath).reduce((a, name) => { a[name] = { imgB64: imgToB64(`${dirPath}/${name}.png`), name }; return a; }, {});
+const generateAssets = (dirPath) => getImgNames(dirPath).reduce((a, name) => { a[name] = imgToB64(`${dirPath}/${name}.png`); return a; }, {});
 
-const writeData = (dirPath) => writeFileSync(`${__dirname}/generated/${dirPath}.json`, JSON.stringify(generateObject(dirPath)));
+const generateWords = (dirPath) => getImgNames(dirPath).reduce((a, name) => { a[name] = { toLearnImgB64: imgToB64(`${dirPath}/${name}.png`), toLearnText: name }; return a; }, {});
+
+const convertAssets = () => writeFileSync(`${__dirname}/generated/assets.json`, JSON.stringify(generateAssets('assets')));
+
+const convertWords = () => writeFileSync(`${__dirname}/generated/words.json`, JSON.stringify(generateWords('words')));
 
 module.exports = () => {
-  writeData('words');
-  writeData('game');
+  convertAssets();
+  convertWords();
 };

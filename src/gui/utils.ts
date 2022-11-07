@@ -30,3 +30,7 @@ export const promiseMagic = <T>(onResolve: (value: T) => void): [Promise<T>, (va
   });
   return [promise, (value: T) => promiseResolve(value)];
 }
+
+export const randomInArray = <T>(a: Array<T>) => {
+  return a[Math.floor(Math.random() * a.length)];
+}

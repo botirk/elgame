@@ -1,31 +1,31 @@
 import { InitSettings } from "../..";
-import { LoadedImg } from "../../compileTime/generated";
 import drawBackground from "../../gui/background";
 import drawButton, { drawIconButton } from "../../gui/button";
 import { drawRoundedBorder, drawRoundedRect } from "../../gui/roundedRect";
 import { calcTextWidth } from "../../gui/text";
 import settings, { memoryGame } from "../../settings";
+import { WordWithImage } from "../word";
 import { MemoryCard, MemoryState } from "./game";
 
 
 type OnClick = (card: MemoryCard) => void;
 
-const calculateCardSize = (is: InitSettings, imgs: LoadedImg[]) => {
+const calculateCardSize = (is: InitSettings, words: WordWithImage[]) => {
   let height = settings.fonts.fontSize + settings.gui.button.padding * 2;
   let width = settings.gui.button.padding * 2;
   is.ctx.font = settings.fonts.ctxFont;
-  imgs.forEach((img) => {
-    height = Math.max(height, img.img.height + settings.gui.button.padding * 2);
-    width = Math.max(width, calcTextWidth(is.ctx, img.name) + settings.gui.button.padding * 2, img.img.width + settings.gui.button.padding * 2);
+  words.forEach((img) => {
+    height = Math.max(height, img.toLearnImg.height + settings.gui.button.padding * 2);
+    width = Math.max(width, calcTextWidth(is.ctx, img.toLearnText) + settings.gui.button.padding * 2, img.toLearnImg.width + settings.gui.button.padding * 2);
   });
   return { height, width };
 }
 
-const calculateTable = (is: InitSettings, imgs: LoadedImg[], cardSize: ReturnType<typeof calculateCardSize>) => {
+const calculateTable = (is: InitSettings, words: WordWithImage[], cardSize: ReturnType<typeof calculateCardSize>) => {
   const gameWidth = is.prepared.gameWidth - memoryGame.margin * 2;
   let columns = Math.max(1, Math.floor(gameWidth / (cardSize.width + memoryGame.margin)));
-  const rows = Math.max(1, Math.ceil((imgs.length * 2) / columns));
-  const lastRowColumns = (imgs.length * 2) - (columns * (rows - 1));
+  const rows = Math.max(1, Math.ceil((words.length * 2) / columns));
+  const lastRowColumns = (words.length * 2) - (columns * (rows - 1));
   if (rows == 1) columns = lastRowColumns;
   // x 
   const totalWidth = columns * (cardSize.width + memoryGame.margin) - memoryGame.margin;
@@ -39,11 +39,11 @@ const calculateTable = (is: InitSettings, imgs: LoadedImg[], cardSize: ReturnTyp
   return { columns, rows, lastRowColumns, start: { x, y } };
 }
 
-export const prepare = (is: InitSettings) => {
-  const card = calculateCardSize(is, is.prepared.fruits);
+export const prepare = (is: InitSettings, words: WordWithImage[]) => {
+  const card = calculateCardSize(is, words);
   return {
     card,
-    ...calculateTable(is, is.prepared.fruits, card),
+    ...calculateTable(is, words, card),
   };
 }
 export type Prepared = ReturnType<typeof prepare>;
@@ -62,12 +62,12 @@ const drawCard = (is: InitSettings, card: MemoryCard, state: MemoryState, onClic
     if (card.gameState == "failed") bgColor = settings.colors.fail; else if (card.gameState == "solved&open") bgColor = settings.colors.success;
     if (card.guessState == "word") {
       return drawButton(
-        is, () => onClick(card), x, y, card.img.name, 
+        is, () => onClick(card), x, y, card.word.toLearnText, 
         () => ({ width: state.gui.prepared.card.width, height: state.gui.prepared.card.height, bgColor })
       );
     } else {
       return drawIconButton(
-        is, () => onClick(card), x, y, card.img.img,
+        is, () => onClick(card), x, y, card.word.toLearnImg,
         () => ({ width: state.gui.prepared.card.width, height: state.gui.prepared.card.height, bgColor })
       );
     }

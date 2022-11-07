@@ -140,8 +140,8 @@ export const drawIconButton = (is: InitSettings, onClick: () => void, x: () => n
 
 export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): [(shouldRedraw: boolean) => void, () => void, () => void] => {
   let [stopDrawing, redraw, move]: [ReturnType<typeof drawIconButton>[0] | undefined, ReturnType<typeof drawIconButton>[1] | undefined, ReturnType<typeof drawIconButton>[2] | undefined] = [undefined, undefined, undefined];
-  const x = () => is.ctx.canvas.width - is.prepared.imgs.fullscreen.img.width / 2 - settings.gui.button.padding - 15;
-  const y = () => is.ctx.canvas.height - is.prepared.imgs.fullscreen.img.height / 2 - settings.gui.button.padding - 15;
+  const x = () => is.ctx.canvas.width - is.prepared.imgs.fullscreen.width / 2 - settings.gui.button.padding - 15;
+  const y = () => is.ctx.canvas.height - is.prepared.imgs.fullscreen.height / 2 - settings.gui.button.padding - 15;
 
   const display = () => {
     if (document.fullscreenElement) return;
@@ -151,7 +151,7 @@ export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): [(
         is.ctx.canvas.requestFullscreen();
         stopDisplay();
       },
-      x, y, is.prepared.imgs.fullscreen.img,
+      x, y, is.prepared.imgs.fullscreen,
     );
   }
   const stopDisplay = () => {

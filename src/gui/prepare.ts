@@ -1,8 +1,7 @@
-import gameJSON from "../compileTime/generated/game.json";
-import fruitsJSON from "../compileTime/generated/fruits.json";
 
-import { loadImgs } from "../compileTime/generated";
+
 import settings from "../settings";
+import { loadAssets, loadWords } from "./asset";
 
 export const reprepare = (ctx: CanvasRenderingContext2D) => {
   // set height to fixed
@@ -35,8 +34,8 @@ export const reprepare = (ctx: CanvasRenderingContext2D) => {
 const prepare = async (ctx: CanvasRenderingContext2D) => {
   return {
     ...reprepare(ctx),
-    imgs: await loadImgs(gameJSON, settings.hero.width, "width"),
-    fruits: await loadImgs(fruitsJSON, settings.hero.width, "width"),
+    imgs: await loadAssets(settings.hero.width, "width"),
+    words: await loadWords(settings.hero.width, "width"),
   }
 }
 export type Prepared = Awaited<ReturnType<typeof prepare>>;

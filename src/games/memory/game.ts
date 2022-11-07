@@ -1,25 +1,27 @@
+import { EndGameStats } from "..";
 import { InitSettings } from "../..";
-import { LoadedImg } from "../../compileTime/generated";
 import { drawFullscreenButton } from "../../gui/button";
 import { reprepare as reprepareGui } from "../../gui/prepare";
+import { promiseMagic } from "../../gui/utils";
 import { memoryGame } from "../../settings";
 import { prepare as prepareDraw, Prepared as PreparedDraw } from "../memory/draw";
+import { WordWithImage } from "../word";
 import { drawState } from "./draw";
 
 
 
 
-const shuffleCards = (imgs: LoadedImg[], prepared: PreparedDraw) => {
+const shuffleCards = (imgs: WordWithImage[], prepared: PreparedDraw) => {
   const result: MemoryState["gameplay"]["cards"] = [];
   imgs.forEach((img) => {
     result.push({
-      img,
+      word: img,
       row: 0, column: 0,
       guessState: "img",
       gameState: "closed",
     });
     result.push({
-      img,
+      word: img,
       row: 0, column: 0,
       guessState: "word",
       gameState: "closed",
@@ -80,7 +82,7 @@ const reshuffleCards = (cards: MemoryCard[], prepared: PreparedDraw) => {
 }
 
 export interface MemoryCard {
-  img: LoadedImg,
+  word: WordWithImage,
   row: number, column: number,
   guessState: "img" | "word",
   gameState: "open" | "closed" | "failed" | "solved&open" | "solved&closed",
@@ -97,10 +99,10 @@ export interface MemoryState {
   },
 }
 
-const memory = async (is: InitSettings) => {
+const memory = async (is: InitSettings, words: WordWithImage[]) => {
   const stopResize = is.addResizeRequest(() => {
     is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
-    state.gui.prepared = prepareDraw(is);
+    state.gui.prepared = prepareDraw(is, words);
     reshuffleCards(state.gameplay.cards, state.gui.prepared);
     move();
     moveFS();
@@ -108,11 +110,11 @@ const memory = async (is: InitSettings) => {
     redrawFS();
   });
   // state
-  const preparedDraw = prepareDraw(is);
+  const preparedDraw = prepareDraw(is, words);
   const state: MemoryState = {
     gameplay: {
-      cards: shuffleCards(is.prepared.fruits, preparedDraw),
-      remainingCards: is.prepared.fruits.length * 2,
+      cards: shuffleCards(words, preparedDraw),
+      remainingCards: words.length * 2,
     },
     gui: {
       prepared: preparedDraw,
@@ -126,7 +128,7 @@ const memory = async (is: InitSettings) => {
         unopenSolved[0].gameState = "solved&open";
         redrawCard(unopenSolved[0]);
         winAnimation(timeRemaining);
-      } else gameEnder(timeRemaining);
+      } else gameEnder({ isSuccess: true });
     }, memoryGame.winTime / state.gameplay.cards.length);
   }
   // fs button
@@ -155,7 +157,7 @@ const memory = async (is: InitSettings) => {
       card.gameState = "open";
       redrawCard(card);
     } else if (open.length == 1) {
-      if (open[0].img.name == card.img.name) {
+      if (open[0].word == card.word) {
         card.gameState = "solved&open";
         redrawCard(card);
         open[0].gameState = "solved&open";
@@ -181,17 +183,13 @@ const memory = async (is: InitSettings) => {
       }
     }
   });
-  // promise magic
-  let promiseResolve: (timeRemaining?: number) => void;
-  const promise = new Promise<number | undefined>((resolve) => promiseResolve = resolve);
-  // game ender
-  const gameEnder = (timeRemaining?: number) => {
+
+  const [promise, gameEnder] = promiseMagic<EndGameStats>(() => {
     clearTimeout(timeout);
     stopDraw();
     stopResize();
     stopFS(false);
-    promiseResolve(timeRemaining);
-  };
+  });
   return await promise;
 }
 

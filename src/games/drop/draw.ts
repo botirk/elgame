@@ -1,5 +1,5 @@
 import { InitSettings } from "../..";
-import { LoadedImg } from "../../compileTime/generated";
+import { WordWithImage } from "../word";
 import drawBackground from "../../gui/background";
 import { calcTextWidth } from "../../gui/text";
 import settings, { dropGame } from "../../settings";
@@ -21,8 +21,8 @@ const drawGameBackground = (is: InitSettings) => {
   is.ctx.fillRect(is.prepared.gameX, 0, is.prepared.gameWidth, settings.dimensions.heigth);
 }
 
-const drawWord = (is: InitSettings, word: LoadedImg, x: number, y: number) => {
-  is.ctx.drawImage(word.img, x, y, word.img.width, word.img.height);
+const drawWord = (is: InitSettings, word: WordWithImage, x: number, y: number) => {
+  is.ctx.drawImage(word.toLearnImg, x, y, word.toLearnImg.width, word.toLearnImg.height);
 }
 
 const drawTargets = (is: InitSettings, state: DropState) => {
@@ -35,21 +35,21 @@ const drawHero = (is: InitSettings, state: DropState) => {
 }
 
 const drawHealth = (is: InitSettings, x: number, y: number) => {
-  is.ctx.drawImage(is.prepared.imgs.heart.img, x, y, is.prepared.imgs.heart.img.width, is.prepared.imgs.heart.img.height);
+  is.ctx.drawImage(is.prepared.imgs.heart, x, y, is.prepared.imgs.heart.width, is.prepared.imgs.heart.height);
 }
 
 const drawHealths = (is: InitSettings, state: DropState) => {
-  const y = (dropGame.progressBarY - is.prepared.imgs.heart.img.height) / 2;
-  const startX = state.gameplay.prepared.clickableGameXMax - is.prepared.imgs.heart.img.width;
+  const y = (dropGame.progressBarY - is.prepared.imgs.heart.height) / 2;
+  const startX = state.gameplay.prepared.clickableGameXMax - is.prepared.imgs.heart.width;
   for (let i = state.gameplay.score.health; i > 0; i--) {
-    drawHealth(is, startX - (state.gameplay.score.health - i) * (is.prepared.imgs.heart.img.width + 5), y);
+    drawHealth(is, startX - (state.gameplay.score.health - i) * (is.prepared.imgs.heart.width + 5), y);
   }
 }
 
 const drawQuest = (is: InitSettings, state: DropState) => {
   is.ctx.fillStyle = "black";
   is.ctx.font = settings.fonts.ctxFont;
-  is.ctx.fillText(state.gameplay.quest.word.name, state.gui.prepared.questX, state.gui.prepared.progressBarTextsY);
+  is.ctx.fillText(state.gameplay.quest.word.toLearnText, state.gui.prepared.questX, state.gui.prepared.progressBarTextsY);
 }
 
 const drawProgressBar = (is: InitSettings, state: DropState) => {

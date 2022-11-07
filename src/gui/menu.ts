@@ -1,9 +1,12 @@
 import { InitSettings } from "..";
-import drop from "../games/drop/game";
+
 import settings, { dropGame, formGame } from "../settings";
 import drawBackground from "./background";
 import drawButton, { drawFullscreenButton } from "./button";
 import { reprepare as reprepareGui } from "../gui/prepare";
+
+import drop from "../games/drop/game";
+import { WordWithImage } from "../games/word";
 import memory from "../games/memory/game";
 import form from "../games/form/game";
 
@@ -16,20 +19,20 @@ const drawMenu = (is: InitSettings) => {
   // drop game
   const [stop1, redraw1, move1] = drawButton(is, async () => { 
     stop();
-    const health = await drop(is, dropGame.difficulties.easy);
+    const stat = await drop(is, Object.values(is.prepared.words) as WordWithImage[], dropGame.difficulties.easy);
     //alert(health);
     drawMenu(is);
   }, x, y(1), "Drop game", opt);
   // memory game
   const [stop2, redraw2, move2] = drawButton(is, async () => {
     stop();
-    const timeRemamining = await memory(is);
+    const stat = await memory(is, Object.values(is.prepared.words) as WordWithImage[]);
     drawMenu(is);
   }, x, y(2), "Memory game", opt);
   // undone
   const [stop3, redraw3, move3] = drawButton(is, async () => {
     stop();
-    const health = await form(is, formGame.difficulties.learning);
+    const stat = await form(is, Object.values(is.prepared.words) as WordWithImage[], formGame.difficulties.learning);
     drawMenu(is);
   }, x, y(3), "Form game", opt);
   // redraw
