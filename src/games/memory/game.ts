@@ -99,15 +99,17 @@ export interface MemoryState {
   },
 }
 
-const memory = async (is: InitSettings, words: WordWithImage[]) => {
+export type MemoryPlan = { words: WordWithImage[] }
+
+const memory = async (is: InitSettings, { words }: MemoryPlan) => {
   const stopResize = is.addResizeRequest(() => {
     is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
     state.gui.prepared = prepareDraw(is, words);
     reshuffleCards(state.gameplay.cards, state.gui.prepared);
     move();
-    moveFS();
+    buttonFS.move();
     redraw();
-    redrawFS();
+    buttonFS.redraw();
   });
   // state
   const preparedDraw = prepareDraw(is, words);
@@ -132,7 +134,7 @@ const memory = async (is: InitSettings, words: WordWithImage[]) => {
     }, memoryGame.winTime / state.gameplay.cards.length);
   }
   // fs button
-  const [stopFS, redrawFS, moveFS] = drawFullscreenButton(is, () => redraw());
+  const buttonFS = drawFullscreenButton(is, () => redraw());
   // render
   let timeout: number | undefined;
   const [stopDraw, redraw, move, redrawCard] = drawState(is, state, (card) => {
@@ -188,7 +190,7 @@ const memory = async (is: InitSettings, words: WordWithImage[]) => {
     clearTimeout(timeout);
     stopDraw();
     stopResize();
-    stopFS(false);
+    buttonFS.stop(false);
   });
   return await promise;
 }

@@ -55,7 +55,7 @@ const drawCard = (is: InitSettings, card: MemoryCard, state: MemoryState, onClic
   if (card.gameState == "closed") {
     return drawButton(
       is, () => onClick(card), x, y, "", 
-      () => ({ width: state.gui.prepared.card.width, height: state.gui.prepared.card.height })
+      () => ({ minWidth: state.gui.prepared.card.width, height: state.gui.prepared.card.height })
     );
   } else if (card.gameState == "open" || card.gameState == "failed" || card.gameState == "solved&open") {
     let bgColor: string | undefined;
@@ -63,12 +63,12 @@ const drawCard = (is: InitSettings, card: MemoryCard, state: MemoryState, onClic
     if (card.guessState == "word") {
       return drawButton(
         is, () => onClick(card), x, y, card.word.toLearnText, 
-        () => ({ width: state.gui.prepared.card.width, height: state.gui.prepared.card.height, bgColor })
+        () => ({ minWidth: state.gui.prepared.card.width, height: state.gui.prepared.card.height, bgColor })
       );
     } else {
       return drawIconButton(
         is, () => onClick(card), x, y, card.word.toLearnImg,
-        () => ({ width: state.gui.prepared.card.width, height: state.gui.prepared.card.height, bgColor })
+        () => ({ minWidth: state.gui.prepared.card.width, height: state.gui.prepared.card.height, bgColor })
       );
     }
   } else {

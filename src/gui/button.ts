@@ -3,9 +3,20 @@ import settings from "../settings";
 import { drawRoundedRect } from "./roundedRect";
 import { calcTextWidth } from "./text";
 
-const drawButton = (is: InitSettings, onClick: () => void, x: () => number, y: () => number, text: string, optional?: () => { width?: number, height?: number, bgColor?: string }): 
-                   [(shouldRedraw: boolean) => void, () => void, () => void] => {
-  
+interface ButtonOptional {
+  minWidth?: number,
+  height?: number,
+  bgColor?: string,
+  onWidthSet?: (value: number) => void,
+}
+
+interface ButtonManager {
+  stop: (shouldRedraw: boolean) => void,
+  redraw: () => void,
+  move: () => void,
+}
+
+const drawButton = (is: InitSettings, onClick: () => void, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional) => {
   is.ctx.font = settings.fonts.ctxFont;
   const textWidth = calcTextWidth(is.ctx, text);
   const textHeight = settings.fonts.fontSize;
@@ -20,7 +31,8 @@ const drawButton = (is: InitSettings, onClick: () => void, x: () => number, y: (
   const move = () => {
     const optionalLocal = optional?.();
     state.bgColor = optionalLocal?.bgColor;
-    state.width = optionalLocal?.width || state.width;
+    state.width = Math.max(state.width, optionalLocal?.minWidth as number);
+    optionalLocal?.onWidthSet?.(state.width);
     state.height = optionalLocal?.height || state.height;
     const xLocal = x();
     state.buttonX = (xLocal - state.width / 2), state.buttonY = (y() - state.height / 2);
@@ -59,7 +71,7 @@ const drawButton = (is: InitSettings, onClick: () => void, x: () => number, y: (
     onPressed: () => { state.isPressed = true; redraw(); },
   });
 
-  const stopDrawing = (shouldRedrawToDefault?: boolean) => {
+  const stop = (shouldRedrawToDefault?: boolean) => {
     if (shouldRedrawToDefault && (state.isHover || state.isPressed)) {
       state.isHover = false;
       state.isPressed = false;
@@ -68,16 +80,19 @@ const drawButton = (is: InitSettings, onClick: () => void, x: () => number, y: (
     stopHover();
     stopClick();
   }
-  return [stopDrawing, redraw, move];
+
+  const setMinWidth = (value: number) => {
+
+  }
+
+  return { stop, redraw, move };
 }
 
 export const drawIcon = (is: InitSettings, x: number, y: number, img: HTMLImageElement) => {
   is.ctx.drawImage(img, x, y, img.width, img.height);
 }
 
-export const drawIconButton = (is: InitSettings, onClick: () => void, x: () => number, y: () => number, img: HTMLImageElement, optional?: () => { width?: number, height?: number, bgColor?: string }): 
-                              [(shouldRedraw: boolean) => void, () => void, () => void] => {
-
+export const drawIconButton = (is: InitSettings, onClick: () => void, x: () => number, y: () => number, img: HTMLImageElement, optional?: () => ButtonOptional): ButtonManager => {
   const state = {
     isHover: false, isPressed: false,
     bgColor: undefined as string | undefined,
@@ -89,7 +104,8 @@ export const drawIconButton = (is: InitSettings, onClick: () => void, x: () => n
   const move = () => {
     const optionalLocal = optional?.();
     state.bgColor = optionalLocal?.bgColor;
-    state.width = optionalLocal?.width || state.width;
+    state.width = Math.max(state.width, optionalLocal?.minWidth as number);
+    optionalLocal?.onWidthSet?.(state.width);
     state.height = optionalLocal?.height || state.height;
     const xLocal = x(), yLocal = y();
     state.buttonX = (xLocal - state.width / 2), state.buttonY = (yLocal - state.height / 2);
@@ -125,7 +141,7 @@ export const drawIconButton = (is: InitSettings, onClick: () => void, x: () => n
     onPressed: () => { state.isPressed = true; redraw(); },
   });
 
-  const stopDrawing = (shouldRedrawToDefault?: boolean) => {
+  const stop = (shouldRedrawToDefault?: boolean) => {
     if (shouldRedrawToDefault && (state.isHover || state.isPressed)) {
       state.isHover = false;
       state.isPressed = false;
@@ -135,18 +151,18 @@ export const drawIconButton = (is: InitSettings, onClick: () => void, x: () => n
     stopClick();
   }
 
-  return [stopDrawing, redraw, move];
+  return { stop, redraw, move };
 }
 
-export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): [(shouldRedraw: boolean) => void, () => void, () => void] => {
-  let [stopDrawing, redraw, move]: [ReturnType<typeof drawIconButton>[0] | undefined, ReturnType<typeof drawIconButton>[1] | undefined, ReturnType<typeof drawIconButton>[2] | undefined] = [undefined, undefined, undefined];
+export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): ButtonManager => {
+  let button: ButtonManager | undefined;
   const x = () => is.ctx.canvas.width - is.prepared.imgs.fullscreen.width / 2 - settings.gui.button.padding - 15;
   const y = () => is.ctx.canvas.height - is.prepared.imgs.fullscreen.height / 2 - settings.gui.button.padding - 15;
 
   const display = () => {
     if (document.fullscreenElement) return;
-    if (stopDrawing) stopDrawing(false);
-    [stopDrawing, redraw, move] = drawIconButton(
+    if (button?.stop) button.stop(false);
+    button = drawIconButton(
       is, () => {
         is.ctx.canvas.requestFullscreen();
         stopDisplay();
@@ -155,10 +171,8 @@ export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): [(
     );
   }
   const stopDisplay = () => {
-    if (stopDrawing) stopDrawing(false);
-    stopDrawing = undefined;
-    redraw = undefined;
-    move = undefined;
+    if (button?.stop) button.stop(false);
+    button = undefined;
     onRedraw();
   }
 
@@ -168,18 +182,18 @@ export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): [(
     onLeave: stopDisplay,
   });
 
-  const newStopDrawing = (shouldRedraw: boolean) => {
-    if (stopDrawing) stopDrawing(shouldRedraw);
+  const newStop = (shouldRedraw: boolean) => {
+    if (button?.stop) button.stop(shouldRedraw);
     stopHover();
   }
   const newRedraw = () => {
-    if (redraw) redraw();
+    if (button?.redraw) button.redraw();
   }
   const newMove = () => {
-    if (move) move();
+    if (button?.move) button.move();
   }
 
-  return [newStopDrawing, newRedraw, newMove];
+  return { stop: newStop, redraw: newRedraw, move: newMove };
 }
 
 export default drawButton;

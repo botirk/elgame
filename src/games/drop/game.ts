@@ -5,7 +5,7 @@ import { mergeDeep, promiseMagic, randomInArray, RecursivePartial } from "../../
 import { reprepare as reprepareGui } from "../../gui/prepare";
 import { drawFullscreenButton } from "../../gui/button";
 import { WordWithImage } from "../word";
-import { EndGameStats } from "..";
+import { EndGameStats, Game } from "..";
 
 const generateTarget = (is: InitSettings, state: DropState) => {
   const x = state.gameplay.prepared.clickableGameX + Math.random() * state.gameplay.prepared.clickableGameWidth, y = 1000;
@@ -177,7 +177,9 @@ export interface DropState {
   lastTick: number,
 }
 
-const drop = async (is: InitSettings, words: WordWithImage[], dif: DropGameDifficulty, optional?: RecursivePartial<DropState>): Promise<EndGameStats> => {
+export type DropPlan = { words: WordWithImage[], dif: DropGameDifficulty };
+
+const drop = async (is: InitSettings, { words, dif }: DropPlan, optional?: RecursivePartial<DropState>) => {
   const stopMove = is.addMoveRequest((x, y) => {
     state.gui.mouse.x = x, state.gui.mouse.y = y;
     state.gui.accelerationMouse = (y <= dropGame.progressBarY);

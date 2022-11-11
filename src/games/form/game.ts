@@ -74,7 +74,9 @@ export interface FormState {
   lastTick: number,
 }
 
-const form = async (is: InitSettings, words: WordWithImage[], dif: FormGameDifficulty): Promise<EndGameStats> => {
+export type FormPlan = { words: WordWithImage[], dif: FormGameDifficulty };
+
+const form = async (is: InitSettings, { words, dif }: FormPlan): Promise<EndGameStats> => {
   const state: FormState = {
     gameplay: {
       cards: words.map((word) => ({ word, successCount: 0 })),

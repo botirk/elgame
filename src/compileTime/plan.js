@@ -1,12 +1,24 @@
 import wordsJSON from "../compileTime/generated/words.json";
 
-import { formGame } from "../settings"
+import { dropGame, formGame, memoryGame } from "../settings";
 
 const plan = [
   {
     game: "form",
-    label: "learn first words",
-    diff: formGame.difficulties.learning,
+    label: "Learn first words",
+    dif: formGame.difficulties.learning,
+    words: Object.keys(wordsJSON),
+  },
+  {
+    game: "memory",
+    label: "Memorize first words",
+    dif: undefined,
+    words: Object.keys(wordsJSON),
+  },
+  {
+    game: "drop",
+    label: "More speed",
+    dif: dropGame.difficulties.easy,
     words: Object.keys(wordsJSON),
   }
 ]
