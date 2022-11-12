@@ -8,9 +8,10 @@ interface ButtonOptional {
   height?: number,
   bgColor?: string,
   onWidthSet?: (value: number) => void,
+  likeLabel?: boolean,
 }
 
-interface ButtonManager {
+export interface ButtonManager {
   stop: (shouldRedraw: boolean) => void,
   redraw: () => void,
   move: () => void,
@@ -27,21 +28,35 @@ const drawButton = (is: InitSettings, onClick: () => void, x: () => number, y: (
     height: textHeight + settings.gui.button.padding * 2,
     buttonX: 0, buttonY: 0,
     textX: 0, textY: 0,
+    likeLabel: false,
   };
   const move = () => {
     const optionalLocal = optional?.();
     state.bgColor = optionalLocal?.bgColor;
-    state.width = Math.max(state.width, optionalLocal?.minWidth as number);
+    state.width = Math.max(state.width, optionalLocal?.minWidth || 0);
     optionalLocal?.onWidthSet?.(state.width);
     state.height = optionalLocal?.height || state.height;
     const xLocal = x();
     state.buttonX = (xLocal - state.width / 2), state.buttonY = (y() - state.height / 2);
     state.textX = (xLocal - textWidth / 2), state.textY = (state.buttonY + state.height / 2 + textHeight / 3);
+    state.likeLabel = false;
   }
   move();
   const isInArea = (x: number, y: number) => x >= state.buttonX && x <= state.buttonX + state.width && y >= state.buttonY && y <= state.buttonY + state.height;
+  
+  const redrawLabel = () => {
+    is.ctx.font = settings.fonts.ctxFont;
+    if (state.bgColor) {
+      is.ctx.fillStyle = state.bgColor;
+    } else {
+      is.ctx.fillStyle = settings.colors.button.bg;
+    }
+    is.ctx.fillRect(state.buttonX, state.buttonY, state.width, state.height);
 
-  const redraw = () => {
+    is.ctx.fillStyle = settings.colors.textColor;
+    is.ctx.fillText(text, state.textX, state.textY);
+  }
+  const redrawText = () => {
     is.ctx.font = settings.fonts.ctxFont;
     if (state.bgColor) {
       is.ctx.fillStyle = state.bgColor;
@@ -56,9 +71,11 @@ const drawButton = (is: InitSettings, onClick: () => void, x: () => number, y: (
       is.ctx.canvas.style.cursor = "pointer";
     }
     drawRoundedRect(is.ctx, state.buttonX, state.buttonY, state.width, state.height, settings.gui.button.rounding);
+    
     is.ctx.fillStyle = settings.colors.textColor;
     is.ctx.fillText(text, state.textX, state.textY);
   };
+  const redraw = () => state.likeLabel ? redrawLabel() : redrawText();
   redraw();
   const stopHover = is.addHoverRequest({
     isInArea, 
@@ -81,10 +98,6 @@ const drawButton = (is: InitSettings, onClick: () => void, x: () => number, y: (
     stopClick();
   }
 
-  const setMinWidth = (value: number) => {
-
-  }
-
   return { stop, redraw, move };
 }
 
@@ -104,7 +117,7 @@ export const drawIconButton = (is: InitSettings, onClick: () => void, x: () => n
   const move = () => {
     const optionalLocal = optional?.();
     state.bgColor = optionalLocal?.bgColor;
-    state.width = Math.max(state.width, optionalLocal?.minWidth as number);
+    state.width = Math.max(state.width, optionalLocal?.minWidth || 0);
     optionalLocal?.onWidthSet?.(state.width);
     state.height = optionalLocal?.height || state.height;
     const xLocal = x(), yLocal = y();
@@ -186,12 +199,8 @@ export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): Bu
     if (button?.stop) button.stop(shouldRedraw);
     stopHover();
   }
-  const newRedraw = () => {
-    if (button?.redraw) button.redraw();
-  }
-  const newMove = () => {
-    if (button?.move) button.move();
-  }
+  const newRedraw = () => { if (button?.redraw) button.redraw(); }
+  const newMove = () => { if (button?.move) button.move(); }
 
   return { stop: newStop, redraw: newRedraw, move: newMove };
 }

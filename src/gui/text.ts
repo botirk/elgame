@@ -13,11 +13,3 @@ export const drawTextAtCenter = (ctx: CanvasRenderingContext2D, x: number, y: nu
 export const calcTextWidth = (ctx: CanvasRenderingContext2D, text: string) => {
   return ctx.measureText(text).width;
 }
-
-export const drawQuestAtCenter = (ctx: CanvasRenderingContext2D, x: number, y: number, text: string) => {
-  ctx.font = settings.fonts.ctxFont;
-  const textWidth = calcTextWidth(ctx, text);
-  const textX = (x - textWidth / 2), textY = (y + settings.fonts.fontSize / 2);
-  ctx.fillStyle = settings.colors.questColorText;
-  ctx.fillText("! " + text, textX, textY);
-}

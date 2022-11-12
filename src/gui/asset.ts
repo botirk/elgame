@@ -1,7 +1,13 @@
+import { InitSettings } from "..";
 import assetsJSON from "../compileTime/generated/assets.json";
 import wordsJSON from "../compileTime/generated/words.json";
+import { dropPlan, formPlan, memoryPlan } from "../compileTime/plan";
+import { Game } from "../games";
+import drop from "../games/drop/game";
+import form from "../games/form/game";
+import memory from "../games/memory/game";
 
-import { UnloadedWord, Word } from "../games/word";
+import { UnloadedWord, Word, WordWithImage } from "../games/word";
 
 const loadAsset = async (b64: string, pxValue: number, side: "width" | "heigth"): Promise<HTMLImageElement> => {
   return new Promise<HTMLImageElement>((resolve) => {
@@ -17,7 +23,6 @@ const loadAsset = async (b64: string, pxValue: number, side: "width" | "heigth")
 }
 
 export type Assets = { [K in keyof typeof assetsJSON]: HTMLImageElement };
-
 export const loadAssets = async (maxWidth: number, side: "width" | "heigth" = "width"): Promise<Assets> => {
   const result = {};
   await Promise.all(Object.entries(assetsJSON).map(async (entry) => {
@@ -46,5 +51,50 @@ export const loadWords = async (maxWidth: number, side: "width" | "heigth" = "wi
     result[entry[0]] = await loadWord(entry[1], maxWidth, side);
   }));
   return result as Words;
+}
+
+export const loadWordsWithImage = (is: InitSettings, words: string[]) => {
+  const [found, missing] = words.reduce((prev, cur) => {
+    if (is.prepared.words[cur]?.toLearnImg) prev[0].push(is.prepared.words[cur]);
+    else prev[1].push(cur);
+    return prev;
+  }, [[], []] as [WordWithImage[], string[]]);
+  if (missing.length > 0) return `Words not found in collection: ${missing.join(', ')}`;
+  return found;
+}
+
+export const loadPlans = (is: InitSettings) => {
+  const plans = [] as { place: number, label: string, game: Game }[];
+  for (const plan of formPlan) {
+    const words = loadWordsWithImage(is, plan.words);
+    if (typeof(words) == "string") return words;
+    plans.push({
+      place: plan.place,
+      label: plan.label,
+      game: form(is, words, plan.dif),
+    });
+  }
+
+  for (const plan of dropPlan) {
+    const words = loadWordsWithImage(is, plan.words);
+    if (typeof(words) == "string") return words;
+    plans.push({
+      place: plan.place,
+      label: plan.label,
+      game: drop(is, words, plan.dif),
+    });
+  }
+
+  for (const plan of memoryPlan) {
+    const words = loadWordsWithImage(is, plan.words);
+    if (typeof(words) == "string") return words;
+    plans.push({
+      place: plan.place,
+      label: plan.label,
+      game: memory(is, words),
+    });
+  }
+
+  return plans;
 }
 

@@ -2,25 +2,29 @@ import wordsJSON from "../compileTime/generated/words.json";
 
 import { dropGame, formGame, memoryGame } from "../settings";
 
-const plan = [
+export const formPlan = [
   {
-    game: "form",
+    place: 1,
     label: "Learn first words",
     dif: formGame.difficulties.learning,
     words: Object.keys(wordsJSON),
   },
+];
+
+export const memoryPlan = [
   {
-    game: "memory",
+    place: 2,
     label: "Memorize first words",
     dif: undefined,
     words: Object.keys(wordsJSON),
   },
+];
+
+export const dropPlan = [
   {
-    game: "drop",
+    place: 3,
     label: "More speed",
     dif: dropGame.difficulties.easy,
     words: Object.keys(wordsJSON),
-  }
-]
-
-export default plan;
+  },
+];

@@ -1,6 +1,6 @@
 import { InitSettings } from "../..";
 import drawBackground from "../../gui/background";
-import drawButton, { drawIconButton } from "../../gui/button";
+import drawButton, { ButtonManager, drawIconButton } from "../../gui/button";
 import { drawRoundedBorder, drawRoundedRect } from "../../gui/roundedRect";
 import { calcTextWidth } from "../../gui/text";
 import settings, { memoryGame } from "../../settings";
@@ -48,7 +48,7 @@ export const prepare = (is: InitSettings, words: WordWithImage[]) => {
 }
 export type Prepared = ReturnType<typeof prepare>;
 
-const drawCard = (is: InitSettings, card: MemoryCard, state: MemoryState, onClick: OnClick): [(shouldRedraw: boolean) => void, () => void, () => void] => {
+const drawCard = (is: InitSettings, card: MemoryCard, state: MemoryState, onClick: OnClick): ButtonManager => {
   const x = () => is.prepared.gameX + state.gui.prepared.start.x + (card.column - 1) * (state.gui.prepared.card.width + memoryGame.margin);
   const y = () => state.gui.prepared.start.y + (card.row - 1) * (state.gui.prepared.card.height + memoryGame.margin);
 
@@ -79,7 +79,7 @@ const drawCard = (is: InitSettings, card: MemoryCard, state: MemoryState, onClic
       drawRoundedBorder(is.ctx, x() - state.gui.prepared.card.width / 2, y() - state.gui.prepared.card.height / 2, state.gui.prepared.card.width, state.gui.prepared.card.height, settings.gui.button.rounding);
     }
     redraw();
-    return [() => {}, redraw, () => {}] as ReturnType<typeof drawButton>;
+    return { stop: () => {}, redraw, move: () => {} } as ButtonManager;
   }
 }
 
@@ -88,19 +88,18 @@ const drawCards = (is: InitSettings, state: MemoryState, onClick: OnClick): [() 
     const btn = buttons[i];
     if (btn) {
       // stop drawing
-      const stopPrevDraw = btn[0];
-      stopPrevDraw(false);
+      btn.stop(false);
       // new draw
-      const card = btn[3];
-      buttons[i] = [...drawCard(is, card, state, onClick), card];
+      const card = btn.card;
+      buttons[i] = { ...drawCard(is, card, state, onClick), card };
     }
   }
   
-  const buttons: [...ReturnType<typeof drawCard>, MemoryCard][] = state.gameplay.cards.map((card) => [...drawCard(is, card, state, onClick), card]);
-  const stopDraw = () => buttons.forEach((btn) => btn[0](false));
-  const redraw = () => buttons.forEach((btn) => btn[1]());
-  const move = () => buttons.forEach((btn) => btn[2]());
-  const redrawCard = (card: MemoryCard) => redrawBtn(buttons.findIndex((btn) => btn[3] == card));
+  const buttons = state.gameplay.cards.map((card) => ({ ...drawCard(is, card, state, onClick), card }));
+  const stopDraw = () => buttons.forEach((btn) => btn.stop(false));
+  const redraw = () => buttons.forEach((btn) => btn.redraw());
+  const move = () => buttons.forEach((btn) => btn.move());
+  const redrawCard = (card: MemoryCard) => redrawBtn(buttons.findIndex((btn) => btn.card == card));
   return [stopDraw, redraw, move, redrawCard];
 }
 

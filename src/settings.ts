@@ -42,7 +42,6 @@ export const dropGame = {
   },
   winTime: 4000, loseTime: 3000,
 }
-
 export type DropGameDifficulty = typeof dropGame.difficulties.easy;
 
 export const memoryGame = {
@@ -64,8 +63,11 @@ export const formGame = {
     }
   }
 }
-
 export type FormGameDifficulty = typeof formGame.difficulties.learning;
+
+export const viewerGame = {
+  margin: 10,
+}
 
 const colors = {
   questColorBG: "#cae58e",

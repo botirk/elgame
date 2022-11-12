@@ -99,9 +99,7 @@ export interface MemoryState {
   },
 }
 
-export type MemoryPlan = { words: WordWithImage[] }
-
-const memory = async (is: InitSettings, { words }: MemoryPlan) => {
+const memory = (is: InitSettings, words: WordWithImage[]) => async () => {
   const stopResize = is.addResizeRequest(() => {
     is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
     state.gui.prepared = prepareDraw(is, words);

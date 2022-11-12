@@ -1,6 +1,6 @@
 import { InitSettings } from "../..";
 import drawBackground from "../../gui/background";
-import { drawIconButton } from "../../gui/button";
+import { ButtonManager, drawIconButton } from "../../gui/button";
 import { calcTextWidth } from "../../gui/text";
 import settings, { formGame } from "../../settings";
 import { Word, WordWithImage } from "../word";
@@ -125,7 +125,7 @@ const drawStatusFail = (is: InitSettings, state: FormState, quest: WordWithImage
   drawQuest(is, state, quest);
 }
 
-const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnswers: FormCard[], onClick: (card: FormCard) => void, onFinish: (card: FormCard) => void): ReturnType<typeof drawIconButton> => {
+const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnswers: FormCard[], onClick: (card: FormCard) => void, onFinish: (card: FormCard) => void): ButtonManager => {
   drawBackground(is.ctx);
   drawStatus(is, state, quest.word);
   // imgs
@@ -161,8 +161,8 @@ const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnsw
             stop(true);
             onFinish(q.card);
           }, formGame.pause);
-          button[2]();  // move
-          redraw();
+          button.move();
+          button.redraw();
         }
       },
       x, y, q.card.word.toLearnImg, () => ({ ...state.gui.prepared.card, bgColor: bgColor() })
@@ -170,7 +170,7 @@ const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnsw
     return button;
   });
 
-  const stop = (shouldRedraw: boolean) => buttons.forEach((btn) => btn[0](shouldRedraw));
+  const stop = (shouldRedraw: boolean) => buttons.forEach((btn) => btn.stop(shouldRedraw));
   const redraw = () => {
     drawBackground(is.ctx);
     if (clickedCard && clickedCard == quest) {
@@ -180,11 +180,11 @@ const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnsw
     } else {
       drawStatus(is, state, quest.word);
     }
-    buttons.forEach((btn) => btn[1]());
+    buttons.forEach((btn) => btn.redraw());
   }
-  const move = () => buttons.forEach((btn) => btn[2]());
+  const move = () => buttons.forEach((btn) => btn.move());
 
-  return [stop, redraw, move];
+  return { stop, redraw, move };
 }
 
 export default drawForm;

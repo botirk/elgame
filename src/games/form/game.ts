@@ -74,9 +74,7 @@ export interface FormState {
   lastTick: number,
 }
 
-export type FormPlan = { words: WordWithImage[], dif: FormGameDifficulty };
-
-const form = async (is: InitSettings, { words, dif }: FormPlan): Promise<EndGameStats> => {
+const form = (is: InitSettings, words: WordWithImage[], dif: FormGameDifficulty) => async () => {
   const state: FormState = {
     gameplay: {
       cards: words.map((word) => ({ word, successCount: 0 })),
@@ -97,25 +95,25 @@ const form = async (is: InitSettings, { words, dif }: FormPlan): Promise<EndGame
   const stopResize = is.addResizeRequest(() => {
     is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
     resizeCurrent?.();
-    moveFS();
-    redrawFS();
+    buttonFS.move();
+    buttonFS.redraw();
   });
-  const [stopFS, redrawFS, moveFS] = drawFullscreenButton(is, () => resizeCurrent?.());
+  const buttonFS = drawFullscreenButton(is, () => resizeCurrent?.());
 
   const nextForm = (previousCard?: FormCard) => {
     const [target, others] = calcNextForm(state, dif, previousCard);
     if (target && others) return new Promise<FormCard>((resolve) => {
-      const [_, redraw, move] = drawForm(is, state, target, others, (clickCard) => {
+      const form = drawForm(is, state, target, others, (clickCard) => {
         if (clickCard == target) {
           clickCard.successCount += 1;
           state.gameplay.score.total += 1;
-          state.gui.winHistory.push(() => { move(); redraw(); });
+          state.gui.winHistory.push(() => { form.move(); form.redraw(); });
         } else {
-          state.gui.loseHistory.push(() => { move(); redraw(); });
+          state.gui.loseHistory.push(() => { form.move(); form.redraw(); });
           state.gameplay.score.health -= 1;
         }
       }, (card) => resolve(card));
-      resizeCurrent = () => { move(); redraw(); };
+      resizeCurrent = () => { form.move(); form.redraw(); };
     });
   }
 
@@ -139,7 +137,7 @@ const form = async (is: InitSettings, { words, dif }: FormPlan): Promise<EndGame
   }
 
   const [promise, gameEnder] = promiseMagic<EndGameStats>(() => {
-    stopFS(false);
+    buttonFS.stop(false);
     stopResize();
   });
   return await promise;
