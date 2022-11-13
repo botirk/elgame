@@ -19,11 +19,15 @@ const drawMenu = (is: InitSettings) => {
   const x = () => is.ctx.canvas.width / 2;
   const y = (count: number) => () => 200 + (count - 1) * settings.fonts.buttonDistance;
   let minWidth = 225;
-  const buttons = plans.map((plan, i) => drawButton(is, async () => { 
-    stop();
-    const stat = await plan.game();
-    drawMenu(is);
-  }, x, y(plan.place), plan.label, () => ({ minWidth: minWidth, onWidthSet: (value) => { minWidth = Math.max(minWidth, value); } })));
+  const buttons = plans.map((plan) => drawButton(is, x, y(plan.place), plan.label, () => ({ 
+    minWidth: minWidth, 
+    onWidthSet: (value) => { minWidth = Math.max(minWidth, value); },
+    onClick: async () => { 
+      stop();
+      const stat = await plan.game();
+      drawMenu(is);
+    },
+  })));
   // observer
   const stopResize = is.addResizeRequest(() => {
     is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
@@ -33,7 +37,7 @@ const drawMenu = (is: InitSettings) => {
   // actions
   const stop = () => { buttons.forEach(({ stop }) => stop(true)); buttonFS.stop(true); stopResize(); };
   const redraw = () => { drawBackground(is.ctx); buttons.forEach(({ redraw }) => redraw()); buttonFS.redraw(); };
-  const move = () => { buttons.forEach(({ move }) => move()); buttonFS.move(); }
+  const move = () => { buttons.forEach(({ update: move }) => move()); buttonFS.update(); }
   // fullscreen button
   const buttonFS = drawFullscreenButton(is, redraw);
   // change button sizes

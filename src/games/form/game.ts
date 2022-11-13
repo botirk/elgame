@@ -95,7 +95,7 @@ const form = (is: InitSettings, words: WordWithImage[], dif: FormGameDifficulty)
   const stopResize = is.addResizeRequest(() => {
     is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
     resizeCurrent?.();
-    buttonFS.move();
+    buttonFS.update();
     buttonFS.redraw();
   });
   const buttonFS = drawFullscreenButton(is, () => resizeCurrent?.());
@@ -107,13 +107,13 @@ const form = (is: InitSettings, words: WordWithImage[], dif: FormGameDifficulty)
         if (clickCard == target) {
           clickCard.successCount += 1;
           state.gameplay.score.total += 1;
-          state.gui.winHistory.push(() => { form.move(); form.redraw(); });
+          state.gui.winHistory.push(() => { form.update(); form.redraw(); });
         } else {
-          state.gui.loseHistory.push(() => { form.move(); form.redraw(); });
+          state.gui.loseHistory.push(() => { form.update(); form.redraw(); });
           state.gameplay.score.health -= 1;
         }
       }, (card) => resolve(card));
-      resizeCurrent = () => { form.move(); form.redraw(); };
+      resizeCurrent = () => { form.update(); form.redraw(); };
     });
   }
 

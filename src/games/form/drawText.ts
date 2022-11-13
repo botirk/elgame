@@ -148,24 +148,26 @@ const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnsw
       }
     } 
     const button = drawIconButton(
-      is,
-      () => {
-        if (finishTimeout) {
-          clearTimeout(finishTimeout);
-          stop(true);
-          onFinish(q.card);
-        } else {
-          clickedCard = q.card;
-          onClick(q.card);
-          finishTimeout = setTimeout(() => { 
+      is, x, y, q.card.word.toLearnImg, () => ({ 
+        ...state.gui.prepared.card, 
+        bgColor: bgColor(),
+        onClick: () => {
+          if (finishTimeout) {
+            clearTimeout(finishTimeout);
             stop(true);
             onFinish(q.card);
-          }, formGame.pause);
-          button.move();
-          button.redraw();
-        }
-      },
-      x, y, q.card.word.toLearnImg, () => ({ ...state.gui.prepared.card, bgColor: bgColor() })
+          } else {
+            clickedCard = q.card;
+            onClick(q.card);
+            finishTimeout = setTimeout(() => { 
+              stop(true);
+              onFinish(q.card);
+            }, formGame.pause);
+            button.update();
+            button.redraw();
+          }
+        },
+      })
     );
     return button;
   });
@@ -182,9 +184,9 @@ const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnsw
     }
     buttons.forEach((btn) => btn.redraw());
   }
-  const move = () => buttons.forEach((btn) => btn.move());
+  const move = () => buttons.forEach((btn) => btn.update());
 
-  return { stop, redraw, move };
+  return { stop, redraw, update: move };
 }
 
 export default drawForm;

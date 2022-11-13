@@ -1,13 +1,14 @@
-import { InitSettings } from "..";
 import assetsJSON from "../compileTime/generated/assets.json";
 import wordsJSON from "../compileTime/generated/words.json";
-import { dropPlan, formPlan, memoryPlan } from "../compileTime/plan";
+import { dropPlan, formPlan, memoryPlan, viewerPlan } from "../compileTime/plan";
+
+import { InitSettings } from "..";
 import { Game } from "../games";
 import drop from "../games/drop/game";
 import form from "../games/form/game";
 import memory from "../games/memory/game";
-
 import { UnloadedWord, Word, WordWithImage } from "../games/word";
+import viewer from "../games/viewer/game";
 
 const loadAsset = async (b64: string, pxValue: number, side: "width" | "heigth"): Promise<HTMLImageElement> => {
   return new Promise<HTMLImageElement>((resolve) => {
@@ -53,9 +54,9 @@ export const loadWords = async (maxWidth: number, side: "width" | "heigth" = "wi
   return result as Words;
 }
 
-export const loadWordsWithImage = (is: InitSettings, words: string[]) => {
+const getWordsWithImage = (is: InitSettings, words: string[]) => {
   const [found, missing] = words.reduce((prev, cur) => {
-    if (is.prepared.words[cur]?.toLearnImg) prev[0].push(is.prepared.words[cur]);
+    if (is.prepared.words[cur] && is.prepared.words[cur]?.toLearnImg) prev[0].push(is.prepared.words[cur]);
     else prev[1].push(cur);
     return prev;
   }, [[], []] as [WordWithImage[], string[]]);
@@ -63,10 +64,31 @@ export const loadWordsWithImage = (is: InitSettings, words: string[]) => {
   return found;
 }
 
+const getWords = (is: InitSettings, words: string[]) => {
+  const [found, missing] = words.reduce((prev, cur) => {
+    if (is.prepared.words[cur]) prev[0].push(is.prepared.words[cur]);
+    else prev[1].push(cur);
+    return prev;
+  }, [[], []] as [Word[], string[]]);
+  if (missing.length > 0) return `Words not found in collection: ${missing.join(', ')}`;
+  return found;
+}
+
 export const loadPlans = (is: InitSettings) => {
   const plans = [] as { place: number, label: string, game: Game }[];
+
+  for (const plan of viewerPlan) {
+    const words = getWords(is, plan.words);
+    if (typeof(words) == "string") return words;
+    plans.push({
+      place: plan.place,
+      label: plan.label,
+      game: viewer(is, words),
+    });
+  }
+
   for (const plan of formPlan) {
-    const words = loadWordsWithImage(is, plan.words);
+    const words = getWordsWithImage(is, plan.words);
     if (typeof(words) == "string") return words;
     plans.push({
       place: plan.place,
@@ -76,7 +98,7 @@ export const loadPlans = (is: InitSettings) => {
   }
 
   for (const plan of dropPlan) {
-    const words = loadWordsWithImage(is, plan.words);
+    const words = getWordsWithImage(is, plan.words);
     if (typeof(words) == "string") return words;
     plans.push({
       place: plan.place,
@@ -86,7 +108,7 @@ export const loadPlans = (is: InitSettings) => {
   }
 
   for (const plan of memoryPlan) {
-    const words = loadWordsWithImage(is, plan.words);
+    const words = getWordsWithImage(is, plan.words);
     if (typeof(words) == "string") return words;
     plans.push({
       place: plan.place,

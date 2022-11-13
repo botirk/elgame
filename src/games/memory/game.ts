@@ -105,7 +105,7 @@ const memory = (is: InitSettings, words: WordWithImage[]) => async () => {
     state.gui.prepared = prepareDraw(is, words);
     reshuffleCards(state.gameplay.cards, state.gui.prepared);
     move();
-    buttonFS.move();
+    buttonFS.update();
     redraw();
     buttonFS.redraw();
   });

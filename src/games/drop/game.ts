@@ -206,7 +206,7 @@ const drop = (is: InitSettings, words: WordWithImage[], dif: DropGameDifficulty,
     state.gui.prepared = prepareDraw(is, state.gameplay.quest.word.toLearnText);
     state.gameplay.prepared = prepare(is);
     // move fs button
-    buttonFS.move();
+    buttonFS.update();
     // render
     render();
   });

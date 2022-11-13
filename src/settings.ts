@@ -66,7 +66,7 @@ export const formGame = {
 export type FormGameDifficulty = typeof formGame.difficulties.learning;
 
 export const viewerGame = {
-  margin: 10,
+  margin: 12,
 }
 
 const colors = {

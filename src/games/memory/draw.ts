@@ -54,21 +54,20 @@ const drawCard = (is: InitSettings, card: MemoryCard, state: MemoryState, onClic
 
   if (card.gameState == "closed") {
     return drawButton(
-      is, () => onClick(card), x, y, "", 
-      () => ({ minWidth: state.gui.prepared.card.width, height: state.gui.prepared.card.height })
+      is, x, y, "", () => ({ minWidth: state.gui.prepared.card.width, height: state.gui.prepared.card.height, onClick: () => onClick(card) })
     );
   } else if (card.gameState == "open" || card.gameState == "failed" || card.gameState == "solved&open") {
     let bgColor: string | undefined;
     if (card.gameState == "failed") bgColor = settings.colors.fail; else if (card.gameState == "solved&open") bgColor = settings.colors.success;
     if (card.guessState == "word") {
       return drawButton(
-        is, () => onClick(card), x, y, card.word.toLearnText, 
-        () => ({ minWidth: state.gui.prepared.card.width, height: state.gui.prepared.card.height, bgColor })
+        is, x, y, card.word.toLearnText,
+        () => ({ minWidth: state.gui.prepared.card.width, height: state.gui.prepared.card.height, bgColor, onClick: () => onClick(card) })
       );
     } else {
       return drawIconButton(
-        is, () => onClick(card), x, y, card.word.toLearnImg,
-        () => ({ minWidth: state.gui.prepared.card.width, height: state.gui.prepared.card.height, bgColor })
+        is, x, y, card.word.toLearnImg,
+        () => ({ minWidth: state.gui.prepared.card.width, height: state.gui.prepared.card.height, bgColor, onClick: () => onClick(card) })
       );
     }
   } else {
@@ -79,7 +78,7 @@ const drawCard = (is: InitSettings, card: MemoryCard, state: MemoryState, onClic
       drawRoundedBorder(is.ctx, x() - state.gui.prepared.card.width / 2, y() - state.gui.prepared.card.height / 2, state.gui.prepared.card.width, state.gui.prepared.card.height, settings.gui.button.rounding);
     }
     redraw();
-    return { stop: () => {}, redraw, move: () => {} } as ButtonManager;
+    return { stop: () => {}, redraw, update: () => {} } as ButtonManager;
   }
 }
 
@@ -98,7 +97,7 @@ const drawCards = (is: InitSettings, state: MemoryState, onClick: OnClick): [() 
   const buttons = state.gameplay.cards.map((card) => ({ ...drawCard(is, card, state, onClick), card }));
   const stopDraw = () => buttons.forEach((btn) => btn.stop(false));
   const redraw = () => buttons.forEach((btn) => btn.redraw());
-  const move = () => buttons.forEach((btn) => btn.move());
+  const move = () => buttons.forEach((btn) => btn.update());
   const redrawCard = (card: MemoryCard) => redrawBtn(buttons.findIndex((btn) => btn.card == card));
   return [stopDraw, redraw, move, redrawCard];
 }
