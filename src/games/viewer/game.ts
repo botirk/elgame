@@ -1,7 +1,9 @@
+import { EndGameStats } from "..";
 import { InitSettings } from "../..";
 import drawBackground from "../../gui/background";
-import drawButton, { drawIconButton } from "../../gui/button";
+import drawButton, { ButtonManager, drawIconButton } from "../../gui/button";
 import { calcTextWidth } from "../../gui/text";
+import { promiseMagic } from "../../gui/utils";
 import settings, { viewerGame } from "../../settings";
 import { Word, WordWithImage } from "../word";
 
@@ -61,25 +63,28 @@ const calculateTable = (is: InitSettings, words: Word[]) => {
 const viewer = (is: InitSettings, words: Word[]) => async () => {
   const table = calculateTable(is, words);
   drawBackground(is.ctx);
+  const buttons: ButtonManager[] = [];
   // words
-  words.map((word, i) => drawButton(
+  buttons.push(...words.map((word, i) => drawButton(
     is, () => table.wordX, () => table.columnY + ((table.rowHeight + viewerGame.margin) * i), word.toLearnText, 
     () => ({ likeLabel: true, height: table.rowHeight, minWidth: table.wordColumnWidth }))
-  );
+  ));
   // imgs
-  const withImg = words.filter((word) => word.toLearnImg) as WordWithImage[];
-  withImg.map((word, i) => drawIconButton(
+  buttons.push(...(words.filter((word) => word.toLearnImg) as WordWithImage[]).map((word, i) => drawIconButton(
     is, () => table.imgX, () => table.columnY + ((table.rowHeight + viewerGame.margin) * i), word.toLearnImg, 
     () => ({ likeLabel: true, height: table.rowHeight, minWidth: table.imgColumnWidth })
-  ));
+  )));
   // clicks
   const stopClick = is.addClickRequest({ 
     isInArea: () => true, 
-    onReleased: () => {},
+    onReleased: (isInside) => { if (isInside) gameEnder({ isSuccess: true }); },
   });
   
-  await new Promise(() => 0);
-  return { isSuccess: true };
+  const [promise, gameEnder] = promiseMagic<EndGameStats>(() => {
+    stopClick();
+    buttons.forEach((btn) => btn.stop(false));
+  });
+  return await promise;
 }
 
 export default viewer;

@@ -92,7 +92,6 @@ const colors = {
 const fonts = {
   fontSize: 22,
   font: 'Georgia',
-  buttonDistance: 22 * 3,
   ctxFont: `22px Georgia`,
 }
 
@@ -100,6 +99,7 @@ const gui = {
   button: {
     rounding: 4,
     padding: 6,
+    distance: fonts.fontSize * 3,
   }
 }
 

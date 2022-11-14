@@ -128,6 +128,7 @@ export const drawIconButton = (is: InitSettings, x: () => number, y: () => numbe
     const xLocal = x(), yLocal = y();
     state.buttonX = (xLocal - state.width / 2), state.buttonY = (yLocal - state.height / 2);
     state.iconX = (xLocal - img.width / 2), state.iconY = (yLocal - img.height / 2);
+    state.onClick = optionalLocal?.onClick;
     state.likeLabel = optionalLocal?.likeLabel;
   };
   update();

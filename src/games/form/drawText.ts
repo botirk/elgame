@@ -146,7 +146,7 @@ const drawForm = (is: InitSettings, state: FormState, quest: FormCard, falseAnsw
         if (clickedCard == quest) return settings.colors.success;
         else return settings.colors.fail;
       }
-    } 
+    }
     const button = drawIconButton(
       is, x, y, q.card.word.toLearnImg, () => ({ 
         ...state.gui.prepared.card, 

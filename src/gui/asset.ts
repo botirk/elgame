@@ -75,7 +75,7 @@ const getWords = (is: InitSettings, words: string[]) => {
 }
 
 export const loadPlans = (is: InitSettings) => {
-  const plans = [] as { place: number, label: string, game: Game }[];
+  const plans = [] as { place: number, label: string, game: Game, viewer?: Game }[];
 
   for (const plan of viewerPlan) {
     const words = getWords(is, plan.words);
@@ -94,6 +94,7 @@ export const loadPlans = (is: InitSettings) => {
       place: plan.place,
       label: plan.label,
       game: form(is, words, plan.dif),
+      viewer: viewer(is, words),
     });
   }
 
@@ -104,6 +105,7 @@ export const loadPlans = (is: InitSettings) => {
       place: plan.place,
       label: plan.label,
       game: drop(is, words, plan.dif),
+      viewer: viewer(is, words),
     });
   }
 
@@ -114,6 +116,7 @@ export const loadPlans = (is: InitSettings) => {
       place: plan.place,
       label: plan.label,
       game: memory(is, words),
+      viewer: viewer(is, words),
     });
   }
 
