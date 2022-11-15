@@ -5,11 +5,11 @@ import { calcTextWidth } from "./text";
 
 interface ButtonOptional {
   minWidth?: number,
-  height?: number,
+  minHeight?: number,
   bgColor?: string,
-  onWidthSet?: (value: number) => void,
   likeLabel?: boolean,
   onClick?: () => void,
+  disabled?: boolean,
 }
 
 export interface ButtonManager {
@@ -18,78 +18,94 @@ export interface ButtonManager {
   update: () => void,
 }
 
-const drawButton = (is: InitSettings, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional) => {
-  is.ctx.font = settings.fonts.ctxFont;
-  const textWidth = calcTextWidth(is.ctx, text);
-  const textHeight = settings.fonts.fontSize;
-  const state = {
-    isHover: false, isPressed: false,
-    bgColor: undefined as string | undefined,
-    width: textWidth + settings.gui.button.padding * 2,
-    height: textHeight + settings.gui.button.padding * 2,
-    buttonX: 0, buttonY: 0,
-    textX: 0, textY: 0,
-    likeLabel: undefined as boolean | undefined,
-    onClick: undefined as (() => void) | undefined,
-  };
-  const update = () => {
+interface ButtonAbstractCache {
+  contentWidth: number, 
+  contentHeight: number,
+}
+
+const drawAbstractButton = <TCache extends ButtonAbstractCache>(is: InitSettings, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cache: TCache) => void, optional?: () => ButtonOptional) => {
+  const isInArea = (x: number, y: number) => x >= state.startX && x <= state.endX && y >= state.startY && y <= state.endY;
+  const getState = (isPressed: boolean, isHover: boolean, stopClick?: () => void, stopHover?: () => void) => {
+    const contentX = x();
+    const contentY = y();
+    const contentCache = cache(contentX, contentY);
     const optionalLocal = optional?.();
-    state.bgColor = optionalLocal?.bgColor;
-    state.width = Math.max(state.width, optionalLocal?.minWidth || 0);
-    optionalLocal?.onWidthSet?.(state.width);
-    state.height = optionalLocal?.height || state.height;
-    const xLocal = x();
-    state.buttonX = (xLocal - state.width / 2), state.buttonY = (y() - state.height / 2);
-    state.textX = (xLocal - textWidth / 2), state.textY = (state.buttonY + state.height / 2 + textHeight / 3);
-    state.likeLabel = optionalLocal?.likeLabel;
-    state.onClick = optionalLocal?.onClick;
-  }
-  update();
-  const isInArea = (x: number, y: number) => !state.likeLabel && x >= state.buttonX && x <= state.buttonX + state.width && y >= state.buttonY && y <= state.buttonY + state.height;
-  
+    const width = Math.max(contentCache.contentWidth + settings.gui.button.padding * 2, optionalLocal?.minWidth || 0);
+    const height = Math.max(contentCache.contentHeight + settings.gui.button.padding * 2, optionalLocal?.minHeight || 0);
+    const startX = contentX - width / 2;
+    const startY = contentY - height / 2;
+    const endX = startX + width;
+    const endY = startY + height;
+    const bgColor = optionalLocal?.bgColor;
+    const likeLabel = optionalLocal?.likeLabel;
+    const onClick = optionalLocal?.onClick;
+    const disabled = optionalLocal?.disabled;
+    // state
+    const state = {
+      contentX, contentY, contentCache, width, height, startX, startY, endX, endY, bgColor, likeLabel, disabled, isPressed, isHover, stopHover, stopClick
+    }
+    // update callbacks
+    if (state.likeLabel || state.disabled) {
+      state.isHover = false;
+      state.isPressed = false;
+      state.stopClick?.();
+      state.stopClick = undefined;
+      state.stopHover?.();
+      state.stopHover = undefined;
+    } else {
+      if (!state.stopClick) {
+        state.stopClick = is.addClickRequest({
+          isInArea,
+          onReleased: (isInArea) => { state.isPressed = false; redraw(); if (isInArea) onClick?.(); },
+          onPressed: () => { state.isPressed = true; redraw(); },
+        });
+      }
+      if (!state.stopHover) {
+        state.stopHover = is.addHoverRequest({
+          isInArea,
+          onHover: () => { state.isHover = true; redraw(); },
+          onLeave: () => { state.isHover = false; redraw(); },
+        });
+      }
+    }
+
+    return state;
+  };
+  let state = getState(false, false);
+
   const redrawLabel = () => {
-    is.ctx.font = settings.fonts.ctxFont;
     if (state.bgColor) {
       is.ctx.fillStyle = state.bgColor;
+    } else if (state.disabled) {
+      is.ctx.fillStyle = settings.colors.button.disabled;
     } else {
       is.ctx.fillStyle = settings.colors.button.bg;
     }
-    is.ctx.fillRect(state.buttonX, state.buttonY, state.width, state.height);
-
-    is.ctx.fillStyle = settings.colors.textColor;
-    is.ctx.fillText(text, state.textX, state.textY);
-  }
-  const redrawText = () => {
-    is.ctx.font = settings.fonts.ctxFont;
+    is.ctx.fillRect(state.startX, state.startY, state.width, state.height);
+    drawer(state.contentX, state.contentY, state.contentCache);
+  };
+  const redrawContent = () => {
     if (state.bgColor) {
       is.ctx.fillStyle = state.bgColor;
+    } else if (state.disabled) {
+      is.ctx.fillStyle = settings.colors.button.disabled;
     } else if (state.isPressed) {
       is.ctx.fillStyle = settings.colors.button.pressed;
-    }
-    if (!state.isHover) {
-      if (!state.isPressed && !state.bgColor) is.ctx.fillStyle = settings.colors.button.bg;
-      is.ctx.canvas.style.cursor = "default";
+    } else if (state.isHover) {
+      is.ctx.fillStyle = settings.colors.button.hover;
     } else {
-      if (!state.isPressed && !state.bgColor) is.ctx.fillStyle = settings.colors.button.hover;
-      is.ctx.canvas.style.cursor = "pointer";
+      is.ctx.fillStyle = settings.colors.button.bg;
     }
-    drawRoundedRect(is.ctx, state.buttonX, state.buttonY, state.width, state.height, settings.gui.button.rounding);
-    
-    is.ctx.fillStyle = settings.colors.textColor;
-    is.ctx.fillText(text, state.textX, state.textY);
+    if (state.isHover && !state.disabled) {
+      is.ctx.canvas.style.cursor = "pointer";
+    } else {
+      is.ctx.canvas.style.cursor = "default";
+    }
+    drawRoundedRect(is.ctx, state.startX, state.startY, state.width, state.height, settings.gui.button.rounding);
+    drawer(state.contentX, state.contentY, state.contentCache);
   };
-  const redraw = () => state.likeLabel ? redrawLabel() : redrawText();
+  const redraw = () => state.likeLabel ? redrawLabel() : redrawContent();
   redraw();
-  const stopHover = is.addHoverRequest({
-    isInArea, 
-    onHover: () => { state.isHover = true; redraw(); },
-    onLeave: () => { state.isHover = false; redraw(); },
-  });
-  const stopClick = is.addClickRequest({
-    isInArea,
-    onReleased: (isInArea) => { state.isPressed = false; redraw(); if (isInArea) state.onClick?.(); },
-    onPressed: () => { state.isPressed = true; redraw(); },
-  });
 
   const stop = (shouldRedrawToDefault?: boolean) => {
     if (shouldRedrawToDefault && (state.isHover || state.isPressed)) {
@@ -97,11 +113,32 @@ const drawButton = (is: InitSettings, x: () => number, y: () => number, text: st
       state.isPressed = false;
       redraw();
     }
-    stopHover();
-    stopClick();
+    state.stopClick?.();
+    state.stopHover?.();
+  };
+
+  const update = () => {
+    state = getState(state.isPressed, state.isHover, state.stopClick, state.stopHover);
   }
 
-  return { stop, redraw, update };
+  return { redraw, stop, update };
+}
+
+export const drawButton = (is: InitSettings, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional) => {
+  return drawAbstractButton(is, x, y, (x, y) => {
+    is.ctx.font = settings.fonts.ctxFont;
+    const contentWidth = calcTextWidth(is.ctx, text);
+    return {
+      contentWidth, 
+      contentHeight: settings.fonts.fontSize,
+      textX: x - contentWidth / 2,
+      textY: y + settings.fonts.fontSize / 3,
+    };
+  }, (x, y, cache) => {
+    is.ctx.font = settings.fonts.ctxFont;
+    is.ctx.fillStyle = settings.colors.textColor;
+    is.ctx.fillText(text, cache.textX, cache.textY);
+  }, optional);
 }
 
 export const drawIcon = (is: InitSettings, x: number, y: number, img: HTMLImageElement) => {
@@ -109,80 +146,16 @@ export const drawIcon = (is: InitSettings, x: number, y: number, img: HTMLImageE
 }
 
 export const drawIconButton = (is: InitSettings, x: () => number, y: () => number, img: HTMLImageElement, optional?: () => ButtonOptional): ButtonManager => {
-  const state = {
-    isHover: false, isPressed: false,
-    bgColor: undefined as string | undefined,
-    width: img.width + settings.gui.button.padding * 2,
-    height: img.height + settings.gui.button.padding * 2,
-    buttonX: 0, buttonY: 0,
-    iconX: 0, iconY: 0,
-    onClick: undefined as (() => void) | undefined,
-    likeLabel: undefined as boolean | undefined,
-  };
-  const update = () => {
-    const optionalLocal = optional?.();
-    state.bgColor = optionalLocal?.bgColor;
-    state.width = Math.max(state.width, optionalLocal?.minWidth || 0);
-    optionalLocal?.onWidthSet?.(state.width);
-    state.height = optionalLocal?.height || state.height;
-    const xLocal = x(), yLocal = y();
-    state.buttonX = (xLocal - state.width / 2), state.buttonY = (yLocal - state.height / 2);
-    state.iconX = (xLocal - img.width / 2), state.iconY = (yLocal - img.height / 2);
-    state.onClick = optionalLocal?.onClick;
-    state.likeLabel = optionalLocal?.likeLabel;
-  };
-  update();
-  const isInArea = (x: number, y: number) => !state.likeLabel && x >= state.buttonX && x <= state.buttonX + state.width && y >= state.buttonY && y <= state.buttonY + state.height;
-  
-  const redrawIconLabel = () => {
-    if (state.bgColor) {
-      is.ctx.fillStyle = state.bgColor;
-    } else {
-      is.ctx.fillStyle = settings.colors.button.bg;
+  return drawAbstractButton(is, x, y, (x, y) => {
+    return {
+      contentHeight: img.height,
+      contentWidth: img.width,
+      iconX: x - img.width / 2,
+      iconY: y - img.height / 2,
     }
-    is.ctx.fillRect(state.buttonX, state.buttonY, state.width, state.height);
-    drawIcon(is, state.iconX, state.iconY, img);
-  }
-  const redrawIcon = () => {
-    if (state?.bgColor) {
-      is.ctx.fillStyle = state.bgColor;
-    } else if (state.isPressed) {
-      is.ctx.fillStyle = settings.colors.button.pressed;
-    }
-    if (!state.isHover) {
-      if (!state.isPressed && !state.bgColor) is.ctx.fillStyle = settings.colors.button.bg;
-      is.ctx.canvas.style.cursor = "default";
-    } else {
-      if (!state.isPressed && !state.bgColor) is.ctx.fillStyle = settings.colors.button.hover;
-      is.ctx.canvas.style.cursor = "pointer";
-    }
-    drawRoundedRect(is.ctx, state.buttonX, state.buttonY, state.width, state.height, settings.gui.button.rounding);
-    drawIcon(is, state.iconX, state.iconY, img);
-  };
-  const redraw = () => state.likeLabel ? redrawIconLabel() : redrawIcon();
-  redraw();
-  const stopHover = is.addHoverRequest({
-    isInArea,
-    onHover: () => { state.isHover = true; redraw(); },
-    onLeave: () => { state.isHover = false; redraw(); },
-  });
-  const stopClick = is.addClickRequest({
-    isInArea,
-    onReleased: (isInArea) => { state.isPressed = false; redraw(); if (isInArea) state.onClick?.(); },
-    onPressed: () => { state.isPressed = true; redraw(); },
-  });
-
-  const stop = (shouldRedrawToDefault?: boolean) => {
-    if (shouldRedrawToDefault && (state.isHover || state.isPressed)) {
-      state.isHover = false;
-      state.isPressed = false;
-      redraw();
-    }
-    stopHover();
-    stopClick();
-  }
-
-  return { stop, redraw, update };
+  }, (x, y, cache) => {
+    drawIcon(is, cache.iconX, cache.iconY, img);
+  }, optional);
 }
 
 export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): ButtonManager => {
@@ -222,5 +195,3 @@ export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): Bu
 
   return { stop: newStop, redraw: newRedraw, update: newUpdate };
 }
-
-export default drawButton;

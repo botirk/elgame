@@ -1,12 +1,10 @@
 import { InitSettings } from "..";
-import settings, { DropGameDifficulty, FormGameDifficulty } from "../settings";
+import settings from "../settings";
 import drawBackground from "./background";
-import drawButton, { ButtonManager, drawFullscreenButton } from "./button";
+import { drawButton, ButtonManager, drawFullscreenButton } from "./button";
 import { reprepare as reprepareGui } from "../gui/prepare";
-import { WordWithImage } from "../games/word";
 import { loadPlans } from "./asset";
 import { calcTextWidth } from "./text";
-import viewer from "../games/viewer/game";
 
 const drawMenu = (is: InitSettings) => {
   // load plan
@@ -29,8 +27,10 @@ const drawMenu = (is: InitSettings) => {
   // drawing
   const buttons: ButtonManager[] = [];
   plans.forEach((plan) => {
+    const isOpen = (plan.place == 1);
     buttons.push(drawButton(is, xGame, y(plan.place), plan.label, () => ({ 
       minWidth: minWidthGame,
+      disabled: !isOpen,
       onClick: async () => { 
         stop();
         const stat = await plan.game();
@@ -39,6 +39,7 @@ const drawMenu = (is: InitSettings) => {
     })));
     if (plan.viewer) buttons.push(drawButton(is, xDesc, y(plan.place), desc, () => ({ 
       minWidth: minWidthDesc,
+      disabled: !isOpen,
       onClick: async () => { 
         stop();
         await plan.viewer?.();

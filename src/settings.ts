@@ -83,6 +83,7 @@ const colors = {
     bg: "#ffffff",
     hover: "#d6d98b",
     pressed: "#c2c754",
+    disabled: "#cccccc",
   },
   label: "#ffffff",
   bg: "#483C46",

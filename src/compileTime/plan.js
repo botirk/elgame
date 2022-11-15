@@ -5,6 +5,7 @@ import { dropGame, formGame, memoryGame } from "../settings";
 export const viewerPlan = [
   {
     place: 1,
+    openPlace: 2,
     label: "Слова для изучения",
     words: Object.keys(wordsJSON),
   }
@@ -13,6 +14,7 @@ export const viewerPlan = [
 export const formPlan = [
   {
     place: 2,
+    openPlace: 3,
     label: "Анкета - ознакомтесь с первыми словами",
     dif: formGame.difficulties.learning,
     words: Object.keys(wordsJSON),
@@ -22,6 +24,7 @@ export const formPlan = [
 export const memoryPlan = [
   {
     place: 3,
+    openPlace: 4,
     label: "Карточки - запомните первые слова",
     dif: undefined,
     words: Object.keys(wordsJSON),
