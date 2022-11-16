@@ -1,11 +1,11 @@
 import { EndGameStats } from "..";
-import { InitSettings } from "../..";
+import { Init } from "../../init";
 import { drawFullscreenButton } from "../../gui/button";
-import { reprepare as reprepareGui } from "../../gui/prepare";
+import { reprepareInit } from "../../init";
 import { promiseMagic } from "../../gui/utils";
 import { memoryGame } from "../../settings";
 import { prepare as prepareDraw, Prepared as PreparedDraw } from "../memory/draw";
-import { WordWithImage } from "../word";
+import { WordWithImage } from "..";
 import { drawState } from "./draw";
 
 
@@ -99,10 +99,10 @@ export interface MemoryState {
   },
 }
 
-const memory = (is: InitSettings, words: WordWithImage[]) => async () => {
-  const stopResize = is.addResizeRequest(() => {
-    is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
-    state.gui.prepared = prepareDraw(is, words);
+const memory = (init: Init, words: WordWithImage[]) => async () => {
+  const stopResize = init.addResizeRequest(() => {
+    init.prepared = reprepareInit(init);
+    state.gui.prepared = prepareDraw(init, words);
     reshuffleCards(state.gameplay.cards, state.gui.prepared);
     move();
     buttonFS.update();
@@ -110,7 +110,7 @@ const memory = (is: InitSettings, words: WordWithImage[]) => async () => {
     buttonFS.redraw();
   });
   // state
-  const preparedDraw = prepareDraw(is, words);
+  const preparedDraw = prepareDraw(init, words);
   const state: MemoryState = {
     gameplay: {
       cards: shuffleCards(words, preparedDraw),
@@ -132,10 +132,10 @@ const memory = (is: InitSettings, words: WordWithImage[]) => async () => {
     }, memoryGame.winTime / state.gameplay.cards.length);
   }
   // fs button
-  const buttonFS = drawFullscreenButton(is, () => redraw());
+  const buttonFS = drawFullscreenButton(init, () => redraw());
   // render
   let timeout: number | undefined;
-  const [stopDraw, redraw, move, redrawCard] = drawState(is, state, (card) => {
+  const [stopDraw, redraw, move, redrawCard] = drawState(init, state, (card) => {
     if (state.gameplay.remainingCards <= 0) return;
     clearTimeout(timeout);
     for (const failed of state.gameplay.cards.filter((card) => card.gameState == "failed")) {

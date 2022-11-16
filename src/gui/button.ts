@@ -1,4 +1,4 @@
-import { InitSettings } from "..";
+import { Init } from "../init";
 import settings from "../settings";
 import { drawRoundedRect } from "./roundedRect";
 import { calcTextWidth } from "./text";
@@ -23,7 +23,7 @@ interface ButtonAbstractCache {
   contentHeight: number,
 }
 
-const drawAbstractButton = <TCache extends ButtonAbstractCache>(is: InitSettings, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cache: TCache) => void, optional?: () => ButtonOptional) => {
+const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cache: TCache) => void, optional?: () => ButtonOptional) => {
   const isInArea = (x: number, y: number) => x >= state.startX && x <= state.endX && y >= state.startY && y <= state.endY;
   const getState = (isPressed: boolean, isHover: boolean, stopClick?: () => void, stopHover?: () => void) => {
     const contentX = x();
@@ -44,29 +44,26 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(is: InitSettings
     const state = {
       contentX, contentY, contentCache, width, height, startX, startY, endX, endY, bgColor, likeLabel, disabled, isPressed, isHover, stopHover, stopClick
     }
+    // new callbacks
+    state.stopClick?.();
+    state.stopClick = undefined;
+    state.stopHover?.();
+    state.stopHover = undefined;
     // update callbacks
     if (state.likeLabel || state.disabled) {
       state.isHover = false;
       state.isPressed = false;
-      state.stopClick?.();
-      state.stopClick = undefined;
-      state.stopHover?.();
-      state.stopHover = undefined;
     } else {
-      if (!state.stopClick) {
-        state.stopClick = is.addClickRequest({
-          isInArea,
-          onReleased: (isInArea) => { state.isPressed = false; redraw(); if (isInArea) onClick?.(); },
-          onPressed: () => { state.isPressed = true; redraw(); },
-        });
-      }
-      if (!state.stopHover) {
-        state.stopHover = is.addHoverRequest({
-          isInArea,
-          onHover: () => { state.isHover = true; redraw(); },
-          onLeave: () => { state.isHover = false; redraw(); },
-        });
-      }
+      state.stopClick = init.addClickRequest({
+        isInArea,
+        onReleased: (isInArea) => { state.isPressed = false; redraw(); if (isInArea) onClick?.(); },
+        onPressed: () => { state.isPressed = true; redraw(); },
+      });
+      state.stopHover = init.addHoverRequest({
+        isInArea,
+        onHover: () => { state.isHover = true; redraw(); },
+        onLeave: () => { state.isHover = false; redraw(); },
+      });
     }
 
     return state;
@@ -75,33 +72,33 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(is: InitSettings
 
   const redrawLabel = () => {
     if (state.bgColor) {
-      is.ctx.fillStyle = state.bgColor;
+      init.ctx.fillStyle = state.bgColor;
     } else if (state.disabled) {
-      is.ctx.fillStyle = settings.colors.button.disabled;
+      init.ctx.fillStyle = settings.colors.button.disabled;
     } else {
-      is.ctx.fillStyle = settings.colors.button.bg;
+      init.ctx.fillStyle = settings.colors.button.bg;
     }
-    is.ctx.fillRect(state.startX, state.startY, state.width, state.height);
+    init.ctx.fillRect(state.startX, state.startY, state.width, state.height);
     drawer(state.contentX, state.contentY, state.contentCache);
   };
   const redrawContent = () => {
     if (state.bgColor) {
-      is.ctx.fillStyle = state.bgColor;
+      init.ctx.fillStyle = state.bgColor;
     } else if (state.disabled) {
-      is.ctx.fillStyle = settings.colors.button.disabled;
+      init.ctx.fillStyle = settings.colors.button.disabled;
     } else if (state.isPressed) {
-      is.ctx.fillStyle = settings.colors.button.pressed;
+      init.ctx.fillStyle = settings.colors.button.pressed;
     } else if (state.isHover) {
-      is.ctx.fillStyle = settings.colors.button.hover;
+      init.ctx.fillStyle = settings.colors.button.hover;
     } else {
-      is.ctx.fillStyle = settings.colors.button.bg;
+      init.ctx.fillStyle = settings.colors.button.bg;
     }
     if (state.isHover && !state.disabled) {
-      is.ctx.canvas.style.cursor = "pointer";
+      init.ctx.canvas.style.cursor = "pointer";
     } else {
-      is.ctx.canvas.style.cursor = "default";
+      init.ctx.canvas.style.cursor = "default";
     }
-    drawRoundedRect(is.ctx, state.startX, state.startY, state.width, state.height, settings.gui.button.rounding);
+    drawRoundedRect(init.ctx, state.startX, state.startY, state.width, state.height, settings.gui.button.rounding);
     drawer(state.contentX, state.contentY, state.contentCache);
   };
   const redraw = () => state.likeLabel ? redrawLabel() : redrawContent();
@@ -124,10 +121,10 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(is: InitSettings
   return { redraw, stop, update };
 }
 
-export const drawButton = (is: InitSettings, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional) => {
-  return drawAbstractButton(is, x, y, (x, y) => {
-    is.ctx.font = settings.fonts.ctxFont;
-    const contentWidth = calcTextWidth(is.ctx, text);
+export const drawButton = (init: Init, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional) => {
+  return drawAbstractButton(init, x, y, (x, y) => {
+    init.ctx.font = settings.fonts.ctxFont;
+    const contentWidth = calcTextWidth(init.ctx, text);
     return {
       contentWidth, 
       contentHeight: settings.fonts.fontSize,
@@ -135,18 +132,18 @@ export const drawButton = (is: InitSettings, x: () => number, y: () => number, t
       textY: y + settings.fonts.fontSize / 3,
     };
   }, (x, y, cache) => {
-    is.ctx.font = settings.fonts.ctxFont;
-    is.ctx.fillStyle = settings.colors.textColor;
-    is.ctx.fillText(text, cache.textX, cache.textY);
+    init.ctx.font = settings.fonts.ctxFont;
+    init.ctx.fillStyle = settings.colors.textColor;
+    init.ctx.fillText(text, cache.textX, cache.textY);
   }, optional);
 }
 
-export const drawIcon = (is: InitSettings, x: number, y: number, img: HTMLImageElement) => {
-  is.ctx.drawImage(img, x, y, img.width, img.height);
+export const drawIcon = (init: Init, x: number, y: number, img: HTMLImageElement) => {
+  init.ctx.drawImage(img, x, y, img.width, img.height);
 }
 
-export const drawIconButton = (is: InitSettings, x: () => number, y: () => number, img: HTMLImageElement, optional?: () => ButtonOptional): ButtonManager => {
-  return drawAbstractButton(is, x, y, (x, y) => {
+export const drawIconButton = (init: Init, x: () => number, y: () => number, img: HTMLImageElement, optional?: () => ButtonOptional): ButtonManager => {
+  return drawAbstractButton(init, x, y, (x, y) => {
     return {
       contentHeight: img.height,
       contentWidth: img.width,
@@ -154,22 +151,22 @@ export const drawIconButton = (is: InitSettings, x: () => number, y: () => numbe
       iconY: y - img.height / 2,
     }
   }, (x, y, cache) => {
-    drawIcon(is, cache.iconX, cache.iconY, img);
+    drawIcon(init, cache.iconX, cache.iconY, img);
   }, optional);
 }
 
-export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): ButtonManager => {
+export const drawFullscreenButton = (init: Init, onRedraw: () => void): ButtonManager => {
   let button: ButtonManager | undefined;
-  const x = () => is.ctx.canvas.width - is.prepared.imgs.fullscreen.width / 2 - settings.gui.button.padding - 15;
-  const y = () => is.ctx.canvas.height - is.prepared.imgs.fullscreen.height / 2 - settings.gui.button.padding - 15;
+  const x = () => init.ctx.canvas.width - init.prepared.imgs.fullscreen.width / 2 - settings.gui.button.padding - 15;
+  const y = () => init.ctx.canvas.height - init.prepared.imgs.fullscreen.height / 2 - settings.gui.button.padding - 15;
 
   const display = () => {
     if (document.fullscreenElement) return;
     if (button?.stop) button.stop(false);
     button = drawIconButton(
-      is,x, y, is.prepared.imgs.fullscreen,
+      init,x, y, init.prepared.imgs.fullscreen,
       () => ({ onClick: () => {
-        is.ctx.canvas.requestFullscreen();
+        init.ctx.canvas.requestFullscreen();
         stopDisplay();
       }})
     );
@@ -180,7 +177,7 @@ export const drawFullscreenButton = (is: InitSettings, onRedraw: () => void): Bu
     onRedraw();
   };
 
-  const stopHover = is.addHoverRequest({ 
+  const stopHover = init.addHoverRequest({ 
     isInArea: (xIn, yIn) => xIn >= x() - 70 && yIn >= y() - 70,
     onHover: () => { if (!document.fullscreenElement) display(); },
     onLeave: stopDisplay,

@@ -1,10 +1,9 @@
-import { InitSettings } from "../..";
+import { Init,reprepareInit } from "../../init";
 import { formGame, FormGameDifficulty } from "../../settings";
 import drawForm, { prepare, Prepared as PreparedDraw } from "./drawText";
-import { reprepare as reprepareGui } from "../../gui/prepare";
 import { promiseMagic } from "../../gui/utils";
 import { drawFullscreenButton } from "../../gui/button";
-import { WordWithImage } from "../word";
+import { WordWithImage } from "..";
 import { EndGameStats } from "..";
 
 const calcCardStep = (card: FormCard, dif: FormGameDifficulty) => {
@@ -74,7 +73,7 @@ export interface FormState {
   lastTick: number,
 }
 
-const form = (is: InitSettings, words: WordWithImage[], dif: FormGameDifficulty) => async () => {
+const form = (init: Init, words: WordWithImage[], dif: FormGameDifficulty) => async () => {
   const state: FormState = {
     gameplay: {
       cards: words.map((word) => ({ word, successCount: 0 })),
@@ -84,7 +83,7 @@ const form = (is: InitSettings, words: WordWithImage[], dif: FormGameDifficulty)
       }
     },
     gui: {
-      prepared: prepare(is, words),
+      prepared: prepare(init, words),
       winHistory: [],
       loseHistory: [],
     },
@@ -92,18 +91,18 @@ const form = (is: InitSettings, words: WordWithImage[], dif: FormGameDifficulty)
   }
 
   let resizeCurrent: () => void | undefined;
-  const stopResize = is.addResizeRequest(() => {
-    is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
+  const stopResize = init.addResizeRequest(() => {
+    init.prepared = reprepareInit(init);
     resizeCurrent?.();
     buttonFS.update();
     buttonFS.redraw();
   });
-  const buttonFS = drawFullscreenButton(is, () => resizeCurrent?.());
+  const buttonFS = drawFullscreenButton(init, () => resizeCurrent?.());
 
   const nextForm = (previousCard?: FormCard) => {
     const [target, others] = calcNextForm(state, dif, previousCard);
     if (target && others) return new Promise<FormCard>((resolve) => {
-      const form = drawForm(is, state, target, others, (clickCard) => {
+      const form = drawForm(init, state, target, others, (clickCard) => {
         if (clickCard == target) {
           clickCard.successCount += 1;
           state.gameplay.score.total += 1;

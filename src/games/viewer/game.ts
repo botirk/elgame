@@ -1,13 +1,13 @@
 import { EndGameStats } from "..";
-import { InitSettings } from "../..";
+import { Init } from "../../init";
 import drawBackground from "../../gui/background";
 import { ButtonManager, drawIconButton, drawButton } from "../../gui/button";
 import { calcTextWidth } from "../../gui/text";
 import { promiseMagic } from "../../gui/utils";
 import settings, { viewerGame } from "../../settings";
-import { Word, WordWithImage } from "../word";
+import { Word, WordWithImage } from "..";
 
-const calculateTable = (is: InitSettings, words: Word[]) => {
+const calculateTable = (init: Init, words: Word[]) => {
   // height / total height
   let rowHeight = settings.fonts.fontSize;
   let columnHeight = 0;
@@ -18,12 +18,12 @@ const calculateTable = (is: InitSettings, words: Word[]) => {
   words.forEach((word) => {
     if (columnHeight > 0) columnHeight += viewerGame.margin;
     columnHeight += settings.fonts.fontSize;
-    wordColumnWidth = Math.max(wordColumnWidth, calcTextWidth(is.ctx, word.toLearnText) + settings.gui.button.padding * 2);
+    wordColumnWidth = Math.max(wordColumnWidth, calcTextWidth(init.ctx, word.toLearnText) + settings.gui.button.padding * 2);
     if (word.toLearnImg) {
       rowHeight = Math.max(rowHeight, word.toLearnImg.height + settings.gui.button.padding * 2);
       imgColumnWidth = Math.max(imgColumnWidth, word.toLearnImg.width + settings.gui.button.padding * 2);
     }
-    if (word.translation) translationColumnWidth = Math.max(translationColumnWidth, calcTextWidth(is.ctx, word.translation) + settings.gui.button.padding * 2);
+    if (word.translation) translationColumnWidth = Math.max(translationColumnWidth, calcTextWidth(init.ctx, word.translation) + settings.gui.button.padding * 2);
   });
   // x coords
   let totalWidth = 0;
@@ -40,12 +40,12 @@ const calculateTable = (is: InitSettings, words: Word[]) => {
     imgX = totalWidth + viewerGame.margin + imgColumnWidth / 2;
     totalWidth += viewerGame.margin + imgColumnWidth;
   }
-  const beta  = is.ctx.canvas.width / 2 - totalWidth / 2;
+  const beta  = init.ctx.canvas.width / 2 - totalWidth / 2;
   wordX += beta;
   translationX += beta;
   imgX += beta;
   // y coords
-  let columnY = is.ctx.canvas.height / 2;
+  let columnY = init.ctx.canvas.height / 2;
   let scrollNeeeded = false;
   if (columnHeight > 0) {
     columnY -= columnHeight / 2;
@@ -60,22 +60,22 @@ const calculateTable = (is: InitSettings, words: Word[]) => {
     wordEnd: wordX + wordColumnWidth / 2, imgStart: imgX - imgColumnWidth / 2 };
 }
 
-const viewer = (is: InitSettings, words: Word[]) => async () => {
-  const table = calculateTable(is, words);
-  drawBackground(is.ctx);
+const viewer = (init: Init, words: Word[]) => async () => {
+  const table = calculateTable(init, words);
+  drawBackground(init.ctx);
   const buttons: ButtonManager[] = [];
   // words
   buttons.push(...words.map((word, i) => drawButton(
-    is, () => table.wordX, () => table.columnY + ((table.rowHeight + viewerGame.margin) * i), word.toLearnText, 
+    init, () => table.wordX, () => table.columnY + ((table.rowHeight + viewerGame.margin) * i), word.toLearnText, 
     () => ({ likeLabel: true, minHeight: table.rowHeight, minWidth: table.wordColumnWidth }))
   ));
   // imgs
   buttons.push(...(words.filter((word) => word.toLearnImg) as WordWithImage[]).map((word, i) => drawIconButton(
-    is, () => table.imgX, () => table.columnY + ((table.rowHeight + viewerGame.margin) * i), word.toLearnImg, 
+    init, () => table.imgX, () => table.columnY + ((table.rowHeight + viewerGame.margin) * i), word.toLearnImg, 
     () => ({ likeLabel: true, minHeight: table.rowHeight, minWidth: table.imgColumnWidth })
   )));
   // clicks
-  const stopClick = is.addClickRequest({ 
+  const stopClick = init.addClickRequest({ 
     isInArea: () => true, 
     onReleased: (isInside) => { if (isInside) gameEnder({ isSuccess: true }); },
   });

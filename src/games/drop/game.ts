@@ -1,13 +1,13 @@
 import settings, { dropGame, DropGameDifficulty } from "../../settings";
 import { drawFrame, Prepared as PreparedDraw, prepare as prepareDraw, prepareQuestX } from "./draw";
-import { InitSettings } from "../..";
+import { Init } from "../../init";
 import { mergeDeep, promiseMagic, randomInArray, RecursivePartial } from "../../gui/utils";
-import { reprepare as reprepareGui } from "../../gui/prepare";
+import { reprepareInit } from "../../init";
 import { drawFullscreenButton } from "../../gui/button";
-import { WordWithImage } from "../word";
+import { WordWithImage } from "..";
 import { EndGameStats, Game } from "..";
 
-const generateTarget = (is: InitSettings, state: DropState) => {
+const generateTarget = (init: Init, state: DropState) => {
   const x = state.gameplay.prepared.clickableGameX + Math.random() * state.gameplay.prepared.clickableGameWidth, y = 1000;
   const word = randomInArray(state.gameplay.targets.candidates);
   if (state.gameplay.targets.candidates.length == 0 || (state.gameplay.targets.candidates.length == 1 && state.gameplay.words.length <= 2)) {
@@ -20,8 +20,8 @@ const generateTarget = (is: InitSettings, state: DropState) => {
   return { word, x, y, timeGenerated: state.lastTick };
 }
 
-const generateQuest = (is: InitSettings, words: WordWithImage[], state?: DropState) => {
-  is.ctx.font = settings.fonts.ctxFont;
+const generateQuest = (init: Init, words: WordWithImage[], state?: DropState) => {
+  init.ctx.font = settings.fonts.ctxFont;
   let wordsAvailable = words;
   if (state) {
     const remaining = state.gameplay.words.filter((word) => state.gameplay.score.perWord[word.toLearnText] < state.gameplay.score.requiredPerWord);
@@ -35,7 +35,7 @@ const generateQuest = (is: InitSettings, words: WordWithImage[], state?: DropSta
   return { word, timeGenerated: state?.lastTick || Date.now() };
 }
 
-const calcGameplay = (is: InitSettings, state: DropState) => {
+const calcGameplay = (init: Init, state: DropState) => {
   state.gameplay.targets.a.forEach((target, i) => {
     const isMiss = (target.y < dropGame.progressBarY - target.word.toLearnImg.height);
     const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= settings.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= settings.hero.height);
@@ -49,8 +49,8 @@ const calcGameplay = (is: InitSettings, state: DropState) => {
       if (state.gameplay.score.total == state.gameplay.score.required) {
         state.gameplay.score.wonTime = state.lastTick;
       } else {
-        state.gameplay.quest = generateQuest(is, state.gameplay.words, state);
-        state.gui.prepared.questX = prepareQuestX(is, state.gameplay.quest.word.toLearnText);
+        state.gameplay.quest = generateQuest(init, state.gameplay.words, state);
+        state.gui.prepared.questX = prepareQuestX(init, state.gameplay.quest.word.toLearnText);
       }
     } else if ((isMiss && isQuest) || (isHit && !isQuest)) {
       state.gameplay.score.health = state.gameplay.score.health - 1;
@@ -63,26 +63,26 @@ const calcGameplay = (is: InitSettings, state: DropState) => {
   });
   // generate new
   if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= state.gameplay.targets.cd) {
-    state.gameplay.targets.a.push(generateTarget(is, state));
+    state.gameplay.targets.a.push(generateTarget(init, state));
     state.gameplay.targets.lastTimeGenerated = state.lastTick;
   }
 }
 
-const calcNextFrame = (is: InitSettings, state: DropState) => {
+const calcNextFrame = (init: Init, state: DropState) => {
   if (state.gui.mouse.x) {
     if (state.gameplay.hero.x > state.gui.mouse.x - settings.hero.width / 2)
       state.gameplay.hero.x = Math.max(state.gameplay.hero.x - state.gameplay.hero.speed, state.gui.mouse.x - settings.hero.width / 2); 
     else 
       state.gameplay.hero.x = Math.min(state.gameplay.hero.x + state.gameplay.hero.speed, state.gui.mouse.x- settings.hero.width / 2);
     // fix
-    state.gameplay.hero.x = Math.max(is.prepared.gameX, Math.min(state.gameplay.prepared.clickableGameXMax, state.gameplay.hero.x));
+    state.gameplay.hero.x = Math.max(init.prepared.gameX, Math.min(state.gameplay.prepared.clickableGameXMax, state.gameplay.hero.x));
   }
   let speed = state.gameplay.targets.speed;
   if (state.gui.accelerationKB || state.gui.accelerationMouse) speed *= dropGame.acceleration;
   state.gameplay.targets.a.forEach((target) => target.y -= speed);
 }
 
-const calcNextLoseFrame = (is: InitSettings, state: DropState) => {
+const calcNextLoseFrame = (init: Init, state: DropState) => {
   // move & remove
   let speed = dropGame.difficulties.movie.targets.speed;
   state.gameplay.targets.a.forEach((target, i) => {
@@ -94,15 +94,15 @@ const calcNextLoseFrame = (is: InitSettings, state: DropState) => {
   });
   // generate new
   if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= dropGame.difficulties.movie.targets.cd) {
-    let target = generateTarget(is, state);
+    let target = generateTarget(init, state);
     for (let i = 0; i < 10 && Math.abs(target.x - state.gameplay.hero.x) < settings.hero.width * 2; i++)
-      target.x = is.prepared.gameX + Math.random() * state.gameplay.prepared.clickableGameWidth;
+      target.x = init.prepared.gameX + Math.random() * state.gameplay.prepared.clickableGameWidth;
     state.gameplay.targets.a.push(target);
     state.gameplay.targets.lastTimeGenerated = state.lastTick;
   }
 }
 
-const calcNextWonFrame = (is: InitSettings, state: DropState) => {
+const calcNextWonFrame = (init: Init, state: DropState) => {
   // move & remove
   state.gameplay.targets.a.forEach((target, i) => {
     const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= settings.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= settings.hero.height);
@@ -128,18 +128,18 @@ const calcNextWonFrame = (is: InitSettings, state: DropState) => {
   });
   // generate new
   if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= dropGame.difficulties.movie.targets.cd) {
-    state.gameplay.targets.a.push(generateTarget(is, state));
+    state.gameplay.targets.a.push(generateTarget(init, state));
     state.gameplay.targets.lastTimeGenerated = state.lastTick;
   }
 }
 
-const prepare = (is: InitSettings) => {
+const prepare = (init: Init) => {
   return {
-    maxXHero: is.prepared.gameXMax - settings.hero.width, 
-    maxXTarget: is.prepared.gameXMax - settings.hero.width,
-    clickableGameX: (is.ctx.canvas.width - is.prepared.gameWidth) / 2 + settings.hero.width,
-    clickableGameXMax: (is.ctx.canvas.width + is.prepared.gameWidth) / 2 - settings.hero.width,
-    clickableGameWidth: is.prepared.gameWidth - settings.hero.width * 2,
+    maxXHero: init.prepared.gameXMax - settings.hero.width, 
+    maxXTarget: init.prepared.gameXMax - settings.hero.width,
+    clickableGameX: (init.ctx.canvas.width - init.prepared.gameWidth) / 2 + settings.hero.width,
+    clickableGameXMax: (init.ctx.canvas.width + init.prepared.gameWidth) / 2 - settings.hero.width,
+    clickableGameWidth: init.prepared.gameWidth - settings.hero.width * 2,
   };
 }
 type Prepared = ReturnType<typeof prepare>;
@@ -177,16 +177,16 @@ export interface DropState {
   lastTick: number,
 }
 
-const drop = (is: InitSettings, words: WordWithImage[], dif: DropGameDifficulty, optional?: RecursivePartial<DropState>) => async () => {
-  const stopMove = is.addMoveRequest((x, y) => {
+const drop = (init: Init, words: WordWithImage[], dif: DropGameDifficulty, optional?: RecursivePartial<DropState>) => async () => {
+  const stopMove = init.addMoveRequest((x, y) => {
     state.gui.mouse.x = x, state.gui.mouse.y = y;
     state.gui.accelerationMouse = (y <= dropGame.progressBarY);
   });
-  const stopResize = is.addResizeRequest(() => {
+  const stopResize = init.addResizeRequest(() => {
     // change canvas size
-    const {gameX: oldX, gameWidth: oldWidth } = is.prepared;
-    is.prepared = { ...is.prepared, ...reprepareGui(is.ctx) };
-    const {gameX: newX, gameWidth: newWidth } = is.prepared;
+    const {gameX: oldX, gameWidth: oldWidth } = init.prepared;
+    init.prepared = reprepareInit(init);
+    const {gameX: newX, gameWidth: newWidth } = init.prepared;
     // change targets
     state.gameplay.targets.a.forEach((target) => {
       const coef = (target.x - oldX) / oldWidth;
@@ -203,38 +203,38 @@ const drop = (is: InitSettings, words: WordWithImage[], dif: DropGameDifficulty,
       state.gui.mouse.x = newX + (coef * newWidth);
     }
     // recalculate
-    state.gui.prepared = prepareDraw(is, state.gameplay.quest.word.toLearnText);
-    state.gameplay.prepared = prepare(is);
+    state.gui.prepared = prepareDraw(init, state.gameplay.quest.word.toLearnText);
+    state.gameplay.prepared = prepare(init);
     // move fs button
     buttonFS.update();
     // render
     render();
   });
-  const stopButton = is.addButtonRequest({
+  const stopButton = init.addButtonRequest({
     button: " ", 
     onReleased: () => state.gui.accelerationKB = false,
     onPressed: () => state.gui.accelerationKB = true,
   });
-  const stopRight = is.addButtonRequest({
+  const stopRight = init.addButtonRequest({
     button: "ArrowRight",
     onPressed: () => { state.gui.mouse.x = Infinity; },
     onReleased: () => { state.gui.mouse.x = undefined; },
   });
-  const stopLeft = is.addButtonRequest({
+  const stopLeft = init.addButtonRequest({
     button: "ArrowLeft",
     onPressed: () => { state.gui.mouse.x = -Infinity; },
     onReleased: () => { state.gui.mouse.x = undefined; },
   });
-  const buttonFS = drawFullscreenButton(is, () => render());
+  const buttonFS = drawFullscreenButton(init, () => render());
 
   // general state
-  const quest = generateQuest(is, words);
+  const quest = generateQuest(init, words);
   const state: DropState = mergeDeep({
     gameplay: {
       words,
       hero: { 
-        x: is.prepared.gameX + is.prepared.gameWidth / 2, y: dropGame.heroY, 
-        speed: dropGame.mouseSpeed * is.prepared.verticalSpeedMultiplier 
+        x: init.prepared.gameX + init.prepared.gameWidth / 2, y: dropGame.heroY, 
+        speed: dropGame.mouseSpeed * init.prepared.verticalSpeedMultiplier 
       },
       quest,
       targets: {
@@ -250,12 +250,12 @@ const drop = (is: InitSettings, words: WordWithImage[], dif: DropGameDifficulty,
         requiredPerWord: dif.successCountPerWord,
         perWord: words.reduce((prev, word) => { prev[word.toLearnText] = 0; return prev; }, {}),
       },
-      prepared: prepare(is),
+      prepared: prepare(init),
     },
     gui: {
       mouse: { x: -1, y: -1 },
       accelerationKB: false,  accelerationMouse: false,
-      prepared: prepareDraw(is, quest.word.toLearnText),
+      prepared: prepareDraw(init, quest.word.toLearnText),
     },
     lastTick: 0,
   }, optional);
@@ -265,24 +265,24 @@ const drop = (is: InitSettings, words: WordWithImage[], dif: DropGameDifficulty,
     state.lastTick = Date.now();
     if (state.gameplay.score.loseTime) {
       if (state.gameplay.score.loseTime + dropGame.loseTime > state.lastTick) {
-        calcNextLoseFrame(is, state);
-        drawFrame(is, state);
+        calcNextLoseFrame(init, state);
+        drawFrame(init, state);
         buttonFS.redraw();
       } else {
         gameEnder({ isSuccess: false });
       }
     } else if (state.gameplay.score.wonTime) {
       if (state.gameplay.score.wonTime + dropGame.winTime > state.lastTick) {
-        calcNextWonFrame(is, state);
-        drawFrame(is, state);
+        calcNextWonFrame(init, state);
+        drawFrame(init, state);
         buttonFS.redraw();
       } else {
         gameEnder({ isSuccess: true });
       }
     } else {
-      calcNextFrame(is, state); 
-      calcGameplay(is, state); 
-      drawFrame(is, state);
+      calcNextFrame(init, state); 
+      calcGameplay(init, state); 
+      drawFrame(init, state);
       buttonFS.redraw();
     }
   };
