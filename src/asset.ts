@@ -74,8 +74,11 @@ const getWords = (init: Init, words: string[]) => {
   return found;
 }
 
+export interface Plan { place: number, label: string, game: Game, viewer?: Game, openPlace?: number }
+export type Plans = Plan[]
+
 export const loadPlans = (init: Init) => {
-  const plans = [] as { place: number, label: string, game: Game, viewer?: Game, openPlace?: number  }[];
+  const plans: Plans = [];
   const add = ({ place, label , openPlace }: { place: number, label: string, openPlace?: number }, game: Game, viewer?: Game) => {
     plans.push({
       place,

@@ -5,10 +5,12 @@ import { drawButton, ButtonManager, drawFullscreenButton } from "./button";
 import { reprepareInit } from "../init";
 import { loadPlans } from "../asset";
 import { calcTextWidth } from "./text";
+import { loadProgress } from "../progress";
 
 const drawMenu = (init: Init) => {
   // load plan
   const plans = loadPlans(init);
+  const progress = loadProgress();
   if (typeof(plans) == "string") {
     alert(plans);
     return;
@@ -30,7 +32,7 @@ const drawMenu = (init: Init) => {
     const isOpen = (plan.place == 1);
     buttons.push(drawButton(init, xGame, y(plan.place), plan.label, () => ({ 
       minWidth: minWidthGame,
-      disabled: !isOpen,
+      disabled: !progress[plan.place],
       onClick: async () => { 
         stop();
         const stat = await plan.game();
@@ -39,7 +41,7 @@ const drawMenu = (init: Init) => {
     })));
     if (plan.viewer) buttons.push(drawButton(init, xDesc, y(plan.place), desc, () => ({ 
       minWidth: minWidthDesc,
-      disabled: !isOpen,
+      disabled: !progress[plan.place],
       onClick: async () => { 
         stop();
         await plan.viewer?.();
