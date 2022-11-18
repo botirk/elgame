@@ -20,29 +20,29 @@ export const prepare = (init: Init, words: WordWithImage[]) => {
 export type Prepared = ReturnType<typeof prepare>;
 
 const calculateCardSize = (init: Init, words: WordWithImage[]) => {
-  let height = 0;
-  let width = 0;
+  let minHeight = 0;
+  let minWidth = 0;
   words.forEach((word) => {
-    height = Math.max(height, word.toLearnImg.height + settings.gui.button.padding * 2);
-    width = Math.max(width, word.toLearnImg.width + settings.gui.button.padding * 2);
+    minHeight = Math.max(minHeight, word.toLearnImg.height + settings.gui.button.padding * 2);
+    minWidth = Math.max(minWidth, word.toLearnImg.width + settings.gui.button.padding * 2);
   });
-  return { height, width };
+  return { minHeight, minWidth };
 }
 
 const calculateTable = (init: Init, state: FormState, words: WordWithImage[]) => {
   const gameWidth = init.prepared.gameWidth - formGame.margin * 2;
-  let columns = Math.max(1, Math.floor(gameWidth / (state.gui.prepared.card.width + formGame.margin)));
+  let columns = Math.max(1, Math.floor(gameWidth / (state.gui.prepared.card.minWidth + formGame.margin)));
   const rows = Math.max(1, Math.ceil(words.length / columns));
   const lastRowColumns = words.length - (columns * (rows - 1));
   if (rows == 1) columns = lastRowColumns;
   // x 
-  const totalWidth = columns * (state.gui.prepared.card.width + formGame.margin) - formGame.margin;
+  const totalWidth = columns * (state.gui.prepared.card.minWidth + formGame.margin) - formGame.margin;
   const widthRemaining = Math.max(0, init.prepared.gameWidth - totalWidth);
-  const x = formGame.margin + state.gui.prepared.card.width / 2 + widthRemaining / 2;
+  const x = formGame.margin + state.gui.prepared.card.minWidth / 2 + widthRemaining / 2;
   // y
-  const totalHeight = rows * (state.gui.prepared.card.height + formGame.margin) - formGame.margin;
+  const totalHeight = rows * (state.gui.prepared.card.minHeight + formGame.margin) - formGame.margin;
   const heightRemaining = Math.max(0, init.ctx.canvas.height - formGame.progressBarY - totalHeight);
-  const y = formGame.progressBarY + state.gui.prepared.card.height / 2 + heightRemaining / 2;
+  const y = formGame.progressBarY + state.gui.prepared.card.minHeight / 2 + heightRemaining / 2;
 
   return { columns, rows, lastRowColumns, start: { x, y } };
 }
@@ -139,8 +139,8 @@ const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: F
   let clickedCard: FormCard | undefined;
   // draw buttons
   const buttons = questions.map((q) => {
-    const x = () => init.prepared.gameX + tableSize.start.x + (q.column - 1) * (state.gui.prepared.card.width + formGame.margin);
-    const y = () => tableSize.start.y + (q.row - 1) * (state.gui.prepared.card.height + formGame.margin);
+    const x = () => init.prepared.gameX + tableSize.start.x + (q.column - 1) * (state.gui.prepared.card.minWidth + formGame.margin);
+    const y = () => tableSize.start.y + (q.row - 1) * (state.gui.prepared.card.minHeight + formGame.margin);
     const bgColor = () => {
       if (clickedCard == q.card) {
         if (clickedCard == quest) return settings.colors.success;

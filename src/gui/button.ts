@@ -23,9 +23,15 @@ interface ButtonAbstractCache {
   contentHeight: number,
 }
 
-const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cache: TCache) => void, optional?: () => ButtonOptional) => {
+interface ButtonAbstractCalced {
+  startX: number, startY: number,
+  endX: number, endY: number,
+  width: number, height: number,
+}
+
+const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cached: Readonly<TCache>, calced: Readonly<ButtonAbstractCalced>) => void, optional?: () => ButtonOptional) => {
   const isInArea = (x: number, y: number) => x >= state.startX && x <= state.endX && y >= state.startY && y <= state.endY;
-  const getState = (isPressed: boolean, isHover: boolean, stopClick?: () => void, stopHover?: () => void) => {
+  const getState = (isStopped: boolean, isPressed: boolean, isHover: boolean, stopClick?: () => void, stopHover?: () => void) => {
     const contentX = x();
     const contentY = y();
     const contentCache = cache(contentX, contentY);
@@ -42,7 +48,7 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
     const disabled = optionalLocal?.disabled;
     // state
     const state = {
-      contentX, contentY, contentCache, width, height, startX, startY, endX, endY, bgColor, likeLabel, disabled, isPressed, isHover, stopHover, stopClick
+      isStopped, contentX, contentY, contentCache, width, height, startX, startY, endX, endY, bgColor, likeLabel, disabled, isPressed, isHover, stopHover, stopClick
     }
     // new callbacks
     state.stopClick?.();
@@ -50,7 +56,7 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
     state.stopHover?.();
     state.stopHover = undefined;
     // update callbacks
-    if (state.likeLabel || state.disabled) {
+    if (state.likeLabel || state.disabled || state.isStopped) {
       state.isHover = false;
       state.isPressed = false;
     } else {
@@ -68,7 +74,7 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
 
     return state;
   };
-  let state = getState(false, false);
+  let state = getState(false, false, false);
 
   const redrawLabel = () => {
     if (state.bgColor) {
@@ -79,7 +85,7 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
       init.ctx.fillStyle = settings.colors.button.bg;
     }
     init.ctx.fillRect(state.startX, state.startY, state.width, state.height);
-    drawer(state.contentX, state.contentY, state.contentCache);
+    drawer(state.contentX, state.contentY, state.contentCache, state);
   };
   const redrawContent = () => {
     if (state.bgColor) {
@@ -99,12 +105,13 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
       init.ctx.canvas.style.cursor = "default";
     }
     drawRoundedRect(init.ctx, state.startX, state.startY, state.width, state.height, settings.gui.button.rounding);
-    drawer(state.contentX, state.contentY, state.contentCache);
+    drawer(state.contentX, state.contentY, state.contentCache, state);
   };
   const redraw = () => state.likeLabel ? redrawLabel() : redrawContent();
   redraw();
 
   const stop = (shouldRedrawToDefault?: boolean) => {
+    state.isStopped = true;
     if (shouldRedrawToDefault && (state.isHover || state.isPressed)) {
       state.isHover = false;
       state.isPressed = false;
@@ -115,7 +122,7 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
   };
 
   const update = () => {
-    state = getState(state.isPressed, state.isHover, state.stopClick, state.stopHover);
+    state = getState(state.isStopped ,state.isPressed, state.isHover, state.stopClick, state.stopHover);
   }
 
   return { redraw, stop, update };
@@ -135,6 +142,32 @@ export const drawButton = (init: Init, x: () => number, y: () => number, text: s
     init.ctx.font = settings.fonts.ctxFont;
     init.ctx.fillStyle = settings.colors.textColor;
     init.ctx.fillText(text, cache.textX, cache.textY);
+  }, optional);
+}
+
+export const drawButtonWithDescription = (init: Init, x: () => number, y: () => number, text: string, description: string, optional?: () => ButtonOptional) => {
+  return drawAbstractButton(init, x, y, (x, y) => {
+    init.ctx.font = settings.fonts.ctxFont;
+    const firstWidth = calcTextWidth(init.ctx, text);
+    const secondWidth = calcTextWidth(init.ctx, description);
+    const oneHeight = settings.fonts.fontSize + settings.gui.button.padding;
+    return {
+      contentWidth: Math.max(firstWidth, secondWidth),
+      contentHeight: oneHeight * 2 + 1,
+      textX: x - firstWidth / 2,
+      descX: x - secondWidth / 2,
+      textY: y - 1 - oneHeight + settings.fonts.fontSize / 3,
+      descY: y + oneHeight + settings.fonts.fontSize / 3,
+    };
+  }, (x, y, cache, calced) => {
+    init.ctx.font = settings.fonts.ctxFont;
+    init.ctx.fillStyle = settings.colors.textColor;
+    init.ctx.fillText(text, cache.textX, cache.textY);
+    init.ctx.beginPath();
+    init.ctx.moveTo(calced.startX, y);
+    init.ctx.lineTo(calced.endX, y);
+    init.ctx.stroke();
+    init.ctx.fillText(description, cache.descX, cache.descY);
   }, optional);
 }
 
