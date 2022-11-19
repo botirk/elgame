@@ -1,6 +1,6 @@
 
 export const dropGame = {
-  acceleration: 2.1,
+  acceleration: 1.85,
   mouseSpeed: 5.5,
   fps: 100,
   heroY: 150,
@@ -33,7 +33,7 @@ export const dropGame = {
     },
     movie: {
       targets: {
-        speed: 14,
+        speed: 15,
         cd: 111,
       },
       successCountPerWord: Infinity,

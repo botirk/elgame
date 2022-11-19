@@ -1,4 +1,4 @@
-const { readFileSync, readdirSync, writeFileSync } = require("fs");
+import { readFileSync, readdirSync, writeFileSync } from "fs";
 
 const imgToB64 = (imgPath) => readFileSync(`${__dirname}/../data/img/${imgPath}`).toString('base64');
 
@@ -16,7 +16,7 @@ const convertAssets = () => writeFileSync(`${__dirname}/generated/assets.json`, 
 
 const convertWords = () => writeFileSync(`${__dirname}/generated/words.json`, JSON.stringify(generateWords('words')));
 
-module.exports = () => {
+export default () => {
   convertAssets();
   convertWords();
 };

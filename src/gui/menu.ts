@@ -1,7 +1,7 @@
 import { Init } from "../init";
 import settings from "../settings";
 import drawBackground from "./background";
-import { drawButton, ButtonManager, drawFullscreenButton } from "./button";
+import { drawButton, ButtonManager, drawFullscreenButton, drawButtonWithDescription, calcButtonWithDescription } from "./button";
 import { reprepareInit } from "../init";
 import { loadPlans } from "../asset";
 import { calcTextWidth } from "./text";
@@ -19,20 +19,21 @@ const drawMenu = (init: Init) => {
   drawBackground(init.ctx);
   // menu width
   init.ctx.font = settings.fonts.ctxFont;
-  const minWidthGame = plans.reduce((prev, cur) => Math.max(calcTextWidth(init.ctx, cur.label), prev), 0) + settings.gui.button.padding * 2;
+  const [minWidth, minHeight] = plans.reduce((prev, cur) => {
+    const calced = calcButtonWithDescription(init, cur.name, cur.label);
+    return [Math.max(calced.contentWidth + settings.gui.button.padding * 2, prev[0]), Math.max(calced.contentHeight + settings.gui.button.padding * 2, prev[1])]; 
+  }, [0, 0]);
   const desc = "Слова";
   const minWidthDesc = calcTextWidth(init.ctx, desc) + settings.gui.button.padding * 2;
   // menu x/y
   const xGame = () => init.ctx.canvas.width / 2;
-  const xDesc = () => xGame() + minWidthGame / 2 + settings.gui.button.distance / 2 + minWidthDesc / 2;
-  const y = (count: number) => () => 200 + (count - 1) * settings.gui.button.distance;
+  const xDesc = () => xGame() + minWidth / 2 + settings.gui.button.distance / 2 + minWidthDesc / 2;
+  const y = (count: number) => () => 200 + ((count - 1) * settings.gui.button.distance) * 1.4;
   // drawing
   const buttons: ButtonManager[] = [];
   plans.forEach((plan) => {
-    const isOpen = (plan.place == 1);
-    buttons.push(drawButton(init, xGame, y(plan.place), plan.label, () => ({ 
-      minWidth: minWidthGame,
-      disabled: !progress[plan.place],
+    buttons.push(drawButtonWithDescription(init, xGame, y(plan.place), plan.name , plan.label, () => ({ 
+      minWidth, minHeight, disabled: !progress[plan.place],
       onClick: async () => { 
         stop();
         const stat = await plan.game();
@@ -40,7 +41,7 @@ const drawMenu = (init: Init) => {
       },
     })));
     if (plan.viewer) buttons.push(drawButton(init, xDesc, y(plan.place), desc, () => ({ 
-      minWidth: minWidthDesc,
+      minWidth: minWidthDesc, minHeight,
       disabled: !progress[plan.place],
       onClick: async () => { 
         stop();

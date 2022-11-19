@@ -145,24 +145,34 @@ export const drawButton = (init: Init, x: () => number, y: () => number, text: s
   }, optional);
 }
 
+export const calcButtonWithDescription = (init: Init, text: string, description: string) => {
+  init.ctx.font = settings.fonts.ctxFont;
+  const firstWidth = calcTextWidth(init.ctx, text);
+  const secondWidth = calcTextWidth(init.ctx, description);
+  const oneHeight = settings.fonts.fontSize + settings.gui.button.padding;
+  return {
+    firstWidth, secondWidth, oneHeight,
+    contentWidth: Math.max(firstWidth, secondWidth),
+    contentHeight: oneHeight * 2 + 1,
+  };
+}
+
 export const drawButtonWithDescription = (init: Init, x: () => number, y: () => number, text: string, description: string, optional?: () => ButtonOptional) => {
   return drawAbstractButton(init, x, y, (x, y) => {
-    init.ctx.font = settings.fonts.ctxFont;
-    const firstWidth = calcTextWidth(init.ctx, text);
-    const secondWidth = calcTextWidth(init.ctx, description);
-    const oneHeight = settings.fonts.fontSize + settings.gui.button.padding;
+    const { contentHeight, contentWidth, firstWidth, secondWidth } = calcButtonWithDescription(init, text, description);
     return {
-      contentWidth: Math.max(firstWidth, secondWidth),
-      contentHeight: oneHeight * 2 + 1,
+      contentWidth,
+      contentHeight,
       textX: x - firstWidth / 2,
+      textY: y - 1 - settings.fonts.fontSize / 3,
       descX: x - secondWidth / 2,
-      textY: y - 1 - oneHeight + settings.fonts.fontSize / 3,
-      descY: y + oneHeight + settings.fonts.fontSize / 3,
+      descY: y + settings.fonts.fontSize,
     };
   }, (x, y, cache, calced) => {
     init.ctx.font = settings.fonts.ctxFont;
     init.ctx.fillStyle = settings.colors.textColor;
     init.ctx.fillText(text, cache.textX, cache.textY);
+    init.ctx.strokeStyle = settings.colors.textColor;
     init.ctx.beginPath();
     init.ctx.moveTo(calced.startX, y);
     init.ctx.lineTo(calced.endX, y);

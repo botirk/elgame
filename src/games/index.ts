@@ -1,3 +1,4 @@
+import { DropGameDifficulty, FormGameDifficulty } from "../settings";
 
 export interface EndGameStats {
   isSuccess: boolean
@@ -23,4 +24,33 @@ export interface WordWithImage extends Word {
 
 export interface WordWithTranslation extends Word {
   translation: string,
+}
+
+export interface Plan {
+  viewer: {
+    place: number,
+    openPlace: number[],
+    label: string,
+    words: string[],
+  }[],
+  form: {
+    place: number,
+    openPlace: number[],
+    label: string,
+    words: string[],
+    difficulty: FormGameDifficulty,
+  }[],
+  memory: {
+    place: number,
+    openPlace: number[],
+    label: string,
+    words: string[],
+  }[],
+  drop: {
+    place: number,
+    openPlace: number[],
+    label: string,
+    words: string[],
+    difficulty: DropGameDifficulty,
+  }[]
 }

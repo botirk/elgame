@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "English Learning Game",
   "scripts": {
-    "generateData": "node -e \"require('./src/compileTime/generateImages.js')();\"",
-    "develop": "npm run generateData && npx parcel src/examples/onePage.html --log-level verbose",
-    "buildOnePage": "npm run generateData && npx parcel build src/examples/onePage.html --dist-dir build",
+    "generate": "npx ts-node -e \"require('./src/compileTime/generateImages').default();require('./src/compileTime/generatePlan').default();\"",
+    "develop": "npm run generate && npx parcel src/examples/onePage.html --log-level verbose",
+    "buildOnePage": "npm run generate && npx parcel build src/examples/onePage.html --dist-dir build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@rbf/parcel-optimizer-javascript-obfuscator": "^0.2.2",
-    "parcel": "^2.7.0"
+    "parcel": "^2.7.0",
+    "ts-node": "^10.9.1"
   }
 }

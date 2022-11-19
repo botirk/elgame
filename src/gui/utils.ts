@@ -34,3 +34,7 @@ export const promiseMagic = <T>(onResolve: (value: T) => void): [Promise<T>, (va
 export const randomInArray = <T>(a: Array<T>) => {
   return a[Math.floor(Math.random() * a.length)];
 }
+
+export const removeRandomInArray = <T>(a: Array<T>) => {
+  return a.splice(Math.floor(Math.random() * a.length), 1)[0];
+}

@@ -47,6 +47,7 @@ const calcGameplay = (init: Init, state: DropState) => {
         state.gameplay.score.lastScoreIncreasedTime = state.lastTick;
       }
       if (state.gameplay.score.total == state.gameplay.score.required) {
+        state.gameplay.targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
         state.gameplay.score.wonTime = state.lastTick;
       } else {
         state.gameplay.quest = generateQuest(init, state.gameplay.words, state);
@@ -56,15 +57,16 @@ const calcGameplay = (init: Init, state: DropState) => {
       state.gameplay.score.health = state.gameplay.score.health - 1;
       state.gameplay.score.lastHealthLostTime = state.lastTick;
       if (state.gameplay.score.health == 0) {
+        state.gameplay.targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
         state.gameplay.score.loseTime = state.lastTick;
       }
     }
     if (isHit || isMiss) state.gameplay.targets.a.splice(i, 1);
   });
   // generate new
-  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= state.gameplay.targets.cd) {
+  if (state.gameplay.targets.nextGeneration <= 0) {
     state.gameplay.targets.a.push(generateTarget(init, state));
-    state.gameplay.targets.lastTimeGenerated = state.lastTick;
+    state.gameplay.targets.nextGeneration = state.gameplay.targets.cd;
   }
 }
 
@@ -78,8 +80,13 @@ const calcNextFrame = (init: Init, state: DropState) => {
     state.gameplay.hero.x = Math.max(init.prepared.gameX, Math.min(state.gameplay.prepared.clickableGameXMax, state.gameplay.hero.x));
   }
   let speed = state.gameplay.targets.speed;
-  if (state.gui.accelerationKB || state.gui.accelerationMouse) speed *= dropGame.acceleration;
+  let betaTime = 1000 / dropGame.fps;
+  if (state.gui.accelerationKB || state.gui.accelerationMouse) {
+    speed *= dropGame.acceleration;
+    betaTime *= dropGame.acceleration;
+  } 
   state.gameplay.targets.a.forEach((target) => target.y -= speed);
+  state.gameplay.targets.nextGeneration -= betaTime;
 }
 
 const calcNextLoseFrame = (init: Init, state: DropState) => {
@@ -93,12 +100,14 @@ const calcNextLoseFrame = (init: Init, state: DropState) => {
     else target.y -= speed;
   });
   // generate new
-  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= dropGame.difficulties.movie.targets.cd) {
+  if (state.gameplay.targets.nextGeneration <= 0) {
     let target = generateTarget(init, state);
     for (let i = 0; i < 10 && Math.abs(target.x - state.gameplay.hero.x) < settings.hero.width * 2; i++)
       target.x = init.prepared.gameX + Math.random() * state.gameplay.prepared.clickableGameWidth;
     state.gameplay.targets.a.push(target);
-    state.gameplay.targets.lastTimeGenerated = state.lastTick;
+    state.gameplay.targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
+  } else {
+    state.gameplay.targets.nextGeneration -= 1000 / dropGame.fps;
   }
 }
 
@@ -127,9 +136,11 @@ const calcNextWonFrame = (init: Init, state: DropState) => {
     }
   });
   // generate new
-  if (state.gameplay.targets.a.length == 0 || state.lastTick - state.gameplay.targets.lastTimeGenerated >= dropGame.difficulties.movie.targets.cd) {
+  if (state.gameplay.targets.nextGeneration <= 0) {
     state.gameplay.targets.a.push(generateTarget(init, state));
-    state.gameplay.targets.lastTimeGenerated = state.lastTick;
+    state.gameplay.targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
+  } else {
+    state.gameplay.targets.nextGeneration -= 1000 / dropGame.fps;
   }
 }
 
@@ -155,7 +166,7 @@ export interface DropState {
       a: { word: WordWithImage, x: number, y: number, timeGenerated: number }[],
       candidates: WordWithImage[],
       speed: number,
-      lastTimeGenerated: number,
+      nextGeneration: number,
       cd: number,
     }
     hero: { x: number, y: number, speed: number },
@@ -240,7 +251,7 @@ const drop = (init: Init, words: WordWithImage[], dif: DropGameDifficulty, optio
       targets: {
         a: [],
         candidates: [...words],
-        lastTimeGenerated: Date.now(),
+        nextGeneration: 0,
         speed: dif.targets.speed,
         cd: dif.targets.cd,
       },

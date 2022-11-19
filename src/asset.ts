@@ -1,6 +1,6 @@
 import assetsJSON from "./compileTime/generated/assets.json";
 import wordsJSON from "./compileTime/generated/words.json";
-import { dropPlan, formPlan, memoryPlan, viewerPlan } from "./compileTime/plan";
+import planJSON from "./compileTime/generated/plan.json";
 
 import { Game } from "./games";
 import drop from "./games/drop/game";
@@ -74,13 +74,14 @@ const getWords = (init: Init, words: string[]) => {
   return found;
 }
 
-export interface Plan { place: number, label: string, game: Game, viewer?: Game, openPlace?: number }
-export type Plans = Plan[]
+export interface LoadedPlan { place: number, name: string, label: string, game: Game, viewer?: Game, openPlace?: number[] };
+export type LoadedPlans = LoadedPlan[];
 
 export const loadPlans = (init: Init) => {
-  const plans: Plans = [];
-  const add = ({ place, label , openPlace }: { place: number, label: string, openPlace?: number }, game: Game, viewer?: Game) => {
+  const plans: LoadedPlans = [];
+  const add = (name: string, { place, label , openPlace }: { place: number, label: string, openPlace?: number[] }, game: Game, viewer?: Game) => {
     plans.push({
+      name,
       place,
       openPlace,
       label,
@@ -89,28 +90,28 @@ export const loadPlans = (init: Init) => {
     });
   }
 
-  for (const plan of viewerPlan) {
+  for (const plan of planJSON.viewer) {
     const words = getWords(init, plan.words);
     if (typeof(words) == "string") return words;
-    add(plan, viewer(init, words));
+    add("Viewer", plan, viewer(init, words));
   }
 
-  for (const plan of formPlan) {
+  for (const plan of planJSON.form) {
     const words = getWordsWithImage(init, plan.words);
     if (typeof(words) == "string") return words;
-    add(plan, form(init, words, plan.dif), viewer(init, words));
+    add("Form", plan, form(init, words, plan.difficulty), viewer(init, words));
   }
 
-  for (const plan of dropPlan) {
+  for (const plan of planJSON.drop) {
     const words = getWordsWithImage(init, plan.words);
     if (typeof(words) == "string") return words;
-    add(plan, drop(init, words, plan.dif), viewer(init, words));
+    add("Drop", plan, drop(init, words, plan.difficulty), viewer(init, words));
   }
 
-  for (const plan of memoryPlan) {
+  for (const plan of planJSON.memory) {
     const words = getWordsWithImage(init, plan.words);
     if (typeof(words) == "string") return words;
-    add(plan, memory(init, words), viewer(init, words));
+    add("Memory", plan, memory(init, words), viewer(init, words));
   }
 
   return plans;
