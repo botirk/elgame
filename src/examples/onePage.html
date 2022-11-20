@@ -14,9 +14,9 @@
   <!-- your content here... -->
   <canvas id="elgame" style="height:100%; width:100%; float: left;"></canvas>
   <script type="module">
-    import init from '../index';
-    init('elgame').then(([isInited, message]) => {
-      if (!isInited) alert(message);
+    import index from '../index';
+    index('elgame').then((error) => {
+      if (error) alert(error);
     });
   </script>
 </body>
