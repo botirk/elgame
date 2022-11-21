@@ -47,7 +47,7 @@ export const reprepareInit = (init: Init) => ({
   ...reprepareLocal(init.ctx)
 })
 
-const init = async (elementId: string) => {
+const init = async (elementId: string, isDev?: boolean) => {
   const el = document.getElementById(elementId);
   if (!el) return `Element with id ${elementId} not found`;
   if (el.tagName != "CANVAS") return `Element is not <canvas>`;
@@ -56,6 +56,7 @@ const init = async (elementId: string) => {
   if (ctx.canvas.clientHeight < settings.dimensions.desiredClientMinHeight) return `canvas.clientHeight is too small, ${settings.dimensions.desiredClientMinHeight} required`;
   if (ctx.canvas.clientWidth < settings.dimensions.desiredClientMinWidth) return `canvas.clientWidth is too small, ${settings.dimensions.desiredClientMinWidth} required`;
   return {
+    isDev,
     ctx,
     addResizeRequest: resize(ctx),
     addMoveRequest: move(ctx),

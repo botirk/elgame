@@ -2,8 +2,9 @@
 Game for learning foreign languages
 Игра для изучения иностранных языков
 
-## Ссылка
+## Ссылки
 https://botirk.github.io/elgame/build/onePage.html
+https://botirk.github.io/elgame/build/onePageDev.html
 
 ## Внимание
 Игра в процессе разработки
@@ -15,5 +16,5 @@ npm
 ## Установка
 + `npm i`
 + добавить маленькие `.png` картинки в `src/data/img/words` папку
-+ `npm run buildOnePage`
++ `npm run build`
 + запустить `build/onePage.html` в браузере

@@ -5,12 +5,12 @@ import { drawButton, ButtonManager, drawFullscreenButton, drawButtonWithDescript
 import { reprepareInit } from "../init";
 import { loadPlans } from "../asset";
 import { calcTextWidth } from "./text";
-import { loadProgress } from "../progress";
+import { loadProgress, saveProgress } from "../progress";
 
 const drawMenu = (init: Init) => {
   // load plan
   const plans = loadPlans(init);
-  const progress = loadProgress();
+  const progress = loadProgress(init);
   if (typeof(plans) == "string") {
     alert(plans);
     return;
@@ -54,6 +54,10 @@ const drawMenu = (init: Init) => {
       onClick: async () => { 
         stop();
         const stat = await plan.game();
+        if (stat.isSuccess && plan.openPlace) {
+          plan.openPlace.forEach((openPlace) => progress[openPlace] = true);
+          saveProgress(init, progress);
+        }
         drawMenu(init);
       },
     })));

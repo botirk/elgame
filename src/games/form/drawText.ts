@@ -135,7 +135,7 @@ const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: F
   // shuffle
   const questions = shuffleCards(init, cards, tableSize);
   // form end
-  let finishTimeout: number | undefined;
+  let finishTimeout: NodeJS.Timeout | undefined;
   let clickedCard: FormCard | undefined;
   // draw buttons
   const buttons = questions.map((q) => {
