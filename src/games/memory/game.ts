@@ -2,7 +2,7 @@ import { EndGameStats } from "..";
 import { Init } from "../../init";
 import { drawFullscreenButton } from "../../gui/button";
 import { reprepareInit } from "../../init";
-import { promiseMagic } from "../../gui/utils";
+import { promiseMagic } from "../../utils";
 import { memoryGame } from "../../settings";
 import { prepare as prepareDraw, Prepared as PreparedDraw } from "../memory/draw";
 import { WordWithImage } from "..";
@@ -134,7 +134,7 @@ const memory = (init: Init, words: WordWithImage[]) => async () => {
   // fs button
   const buttonFS = drawFullscreenButton(init, () => redraw());
   // render
-  let timeout: number | undefined;
+  let timeout: NodeJS.Timeout | undefined;
   const [stopDraw, redraw, move, redrawCard] = drawState(init, state, (card) => {
     if (state.gameplay.remainingCards <= 0) return;
     clearTimeout(timeout);

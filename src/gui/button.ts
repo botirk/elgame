@@ -10,6 +10,7 @@ interface ButtonOptional {
   likeLabel?: boolean,
   onClick?: () => void,
   disabled?: boolean,
+  lateGlue?: boolean,
 }
 
 export interface ButtonManager {
@@ -29,9 +30,9 @@ interface ButtonAbstractCalced {
   width: number, height: number,
 }
 
-const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cached: Readonly<TCache>, calced: Readonly<ButtonAbstractCalced>) => void, optional?: () => ButtonOptional) => {
-  const isInArea = (x: number, y: number) => x >= state.startX && x <= state.endX && y >= state.startY && y <= state.endY;
-  const getState = (isStopped: boolean, isPressed: boolean, isHover: boolean, stopClick?: () => void, stopHover?: () => void) => {
+const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cached: Readonly<TCache>, calced: Readonly<ButtonAbstractCalced>) => void, optional?: () => ButtonOptional, isLateGlue?: boolean) => {
+  // state gen
+  const getState = (isStopped: boolean, isPressed: boolean, isHover: boolean, stopClick?: () => void, stopHover?: () => void, redraw?: () => void) => {
     const contentX = x();
     const contentY = y();
     const contentCache = cache(contentX, contentY);
@@ -46,9 +47,11 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
     const likeLabel = optionalLocal?.likeLabel;
     const onClick = optionalLocal?.onClick;
     const disabled = optionalLocal?.disabled;
+    const isInArea = (x: number, y: number) => x >= state.startX && x <= state.endX && y >= state.startY && y <= state.endY;
     // state
     const state = {
-      isStopped, contentX, contentY, contentCache, width, height, startX, startY, endX, endY, bgColor, likeLabel, disabled, isPressed, isHover, stopHover, stopClick
+      isStopped, contentX, contentY, contentCache, width, height, startX, startY, endX, endY, 
+      bgColor, likeLabel, disabled, isPressed, isHover, stopHover, stopClick, isInArea
     }
     // new callbacks
     state.stopClick?.();
@@ -61,74 +64,93 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
       state.isPressed = false;
     } else {
       state.stopClick = init.addClickRequest({
-        isInArea,
-        onReleased: (isInArea) => { state.isPressed = false; redraw(); if (isInArea) onClick?.(); },
-        onPressed: () => { state.isPressed = true; redraw(); },
+        isInArea: state.isInArea,
+        onReleased: (isInArea) => { state.isPressed = false; redraw?.(); if (isInArea) onClick?.(); },
+        onPressed: () => { state.isPressed = true; redraw?.(); },
       });
       state.stopHover = init.addHoverRequest({
-        isInArea,
-        onHover: () => { state.isHover = true; redraw(); },
-        onLeave: () => { state.isHover = false; redraw(); },
+        isInArea: state.isInArea,
+        onHover: () => { state.isHover = true; redraw?.(); },
+        onLeave: () => { state.isHover = false; redraw?.(); },
       });
     }
 
     return state;
   };
-  let state = getState(false, false, false);
-
-  const redrawLabel = () => {
-    if (state.bgColor) {
-      init.ctx.fillStyle = state.bgColor;
-    } else if (state.disabled) {
-      init.ctx.fillStyle = settings.colors.button.disabled;
-    } else {
-      init.ctx.fillStyle = settings.colors.button.bg;
+  // glue
+  const glue = () => {
+    let state = getState(false, false, false);
+    // drawing
+    const redrawLabel = () => {
+      if (state.bgColor) {
+        init.ctx.fillStyle = state.bgColor;
+      } else if (state.disabled) {
+        init.ctx.fillStyle = settings.colors.button.disabled;
+      } else {
+        init.ctx.fillStyle = settings.colors.button.bg;
+      }
+      init.ctx.fillRect(state.startX, state.startY, state.width, state.height);
+      drawer(state.contentX, state.contentY, state.contentCache, state);
+    };
+    const redrawContent = () => {
+      if (state.bgColor) {
+        init.ctx.fillStyle = state.bgColor;
+      } else if (state.disabled) {
+        init.ctx.fillStyle = settings.colors.button.disabled;
+      } else if (state.isPressed) {
+        init.ctx.fillStyle = settings.colors.button.pressed;
+      } else if (state.isHover) {
+        init.ctx.fillStyle = settings.colors.button.hover;
+      } else {
+        init.ctx.fillStyle = settings.colors.button.bg;
+      }
+      if (state.isHover && !state.disabled) {
+        init.ctx.canvas.style.cursor = "pointer";
+      } else {
+        init.ctx.canvas.style.cursor = "default";
+      }
+      drawRoundedRect(init.ctx, state.startX, state.startY, state.width, state.height, settings.gui.button.rounding);
+      drawer(state.contentX, state.contentY, state.contentCache, state);
+    };
+    const redraw = () => state.likeLabel ? redrawLabel() : redrawContent();
+    redraw();
+    // user functions
+    const stop = (shouldRedrawToDefault?: boolean) => {
+      state.isStopped = true;
+      if (shouldRedrawToDefault && (state.isHover || state.isPressed)) {
+        state.isHover = false;
+        state.isPressed = false;
+        redraw();
+      }
+      state.stopClick?.();
+      state.stopHover?.();
+    };
+    const update = () => {
+      state = getState(state.isStopped, state.isPressed, state.isHover, state.stopClick, state.stopHover);
     }
-    init.ctx.fillRect(state.startX, state.startY, state.width, state.height);
-    drawer(state.contentX, state.contentY, state.contentCache, state);
-  };
-  const redrawContent = () => {
-    if (state.bgColor) {
-      init.ctx.fillStyle = state.bgColor;
-    } else if (state.disabled) {
-      init.ctx.fillStyle = settings.colors.button.disabled;
-    } else if (state.isPressed) {
-      init.ctx.fillStyle = settings.colors.button.pressed;
-    } else if (state.isHover) {
-      init.ctx.fillStyle = settings.colors.button.hover;
-    } else {
-      init.ctx.fillStyle = settings.colors.button.bg;
-    }
-    if (state.isHover && !state.disabled) {
-      init.ctx.canvas.style.cursor = "pointer";
-    } else {
-      init.ctx.canvas.style.cursor = "default";
-    }
-    drawRoundedRect(init.ctx, state.startX, state.startY, state.width, state.height, settings.gui.button.rounding);
-    drawer(state.contentX, state.contentY, state.contentCache, state);
-  };
-  const redraw = () => state.likeLabel ? redrawLabel() : redrawContent();
-  redraw();
-
-  const stop = (shouldRedrawToDefault?: boolean) => {
-    state.isStopped = true;
-    if (shouldRedrawToDefault && (state.isHover || state.isPressed)) {
-      state.isHover = false;
-      state.isPressed = false;
-      redraw();
-    }
-    state.stopClick?.();
-    state.stopHover?.();
-  };
-
-  const update = () => {
-    state = getState(state.isStopped ,state.isPressed, state.isHover, state.stopClick, state.stopHover);
+    return { redraw, stop, update }
   }
-
-  return { redraw, stop, update };
+  if (!isLateGlue) return glue();
+  
+  let lateGlue: ButtonManager = {
+    stop: (shouldRedraw: boolean) => { },
+    redraw: () => {
+      const newGlue = glue();
+      lateGlue.stop = newGlue.stop;
+      lateGlue.redraw = newGlue.redraw;
+      lateGlue.update = newGlue.update;
+    },
+    update: () => {
+      const newGlue = glue();
+      lateGlue.stop = newGlue.stop;
+      lateGlue.redraw = newGlue.redraw;
+      lateGlue.update = newGlue.update;
+    }
+  };
+  return lateGlue;
 }
 
-export const drawButton = (init: Init, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional) => {
+export const drawButton = (init: Init, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional, isLateGlue?: boolean) => {
   return drawAbstractButton(init, x, y, (x, y) => {
     init.ctx.font = settings.fonts.ctxFont;
     const contentWidth = calcTextWidth(init.ctx, text);
@@ -142,7 +164,7 @@ export const drawButton = (init: Init, x: () => number, y: () => number, text: s
     init.ctx.font = settings.fonts.ctxFont;
     init.ctx.fillStyle = settings.colors.textColor;
     init.ctx.fillText(text, cache.textX, cache.textY);
-  }, optional);
+  }, optional, isLateGlue);
 }
 
 export const calcButtonWithDescription = (init: Init, text: string, description: string) => {
@@ -157,7 +179,7 @@ export const calcButtonWithDescription = (init: Init, text: string, description:
   };
 }
 
-export const drawButtonWithDescription = (init: Init, x: () => number, y: () => number, text: string, description: string, optional?: () => ButtonOptional) => {
+export const drawButtonWithDescription = (init: Init, x: () => number, y: () => number, text: string, description: string, optional?: () => ButtonOptional, isLateGlue?: boolean) => {
   return drawAbstractButton(init, x, y, (x, y) => {
     const { contentHeight, contentWidth, firstWidth, secondWidth } = calcButtonWithDescription(init, text, description);
     return {
@@ -178,14 +200,14 @@ export const drawButtonWithDescription = (init: Init, x: () => number, y: () => 
     init.ctx.lineTo(calced.endX, y);
     init.ctx.stroke();
     init.ctx.fillText(description, cache.descX, cache.descY);
-  }, optional);
+  }, optional, isLateGlue);
 }
 
 export const drawIcon = (init: Init, x: number, y: number, img: HTMLImageElement) => {
   init.ctx.drawImage(img, x, y, img.width, img.height);
 }
 
-export const drawIconButton = (init: Init, x: () => number, y: () => number, img: HTMLImageElement, optional?: () => ButtonOptional): ButtonManager => {
+export const drawIconButton = (init: Init, x: () => number, y: () => number, img: HTMLImageElement, optional?: () => ButtonOptional, isLateGlue?: boolean): ButtonManager => {
   return drawAbstractButton(init, x, y, (x, y) => {
     return {
       contentHeight: img.height,
@@ -195,7 +217,7 @@ export const drawIconButton = (init: Init, x: () => number, y: () => number, img
     }
   }, (x, y, cache) => {
     drawIcon(init, cache.iconX, cache.iconY, img);
-  }, optional);
+  }, optional, isLateGlue);
 }
 
 export const drawFullscreenButton = (init: Init, onRedraw: () => void): ButtonManager => {

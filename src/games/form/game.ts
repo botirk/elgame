@@ -1,7 +1,7 @@
 import { Init,reprepareInit } from "../../init";
 import { formGame, FormGameDifficulty } from "../../settings";
 import drawForm, { prepare, Prepared as PreparedDraw } from "./drawText";
-import { promiseMagic } from "../../gui/utils";
+import { promiseMagic } from "../../utils";
 import { drawFullscreenButton } from "../../gui/button";
 import { WordWithImage } from "..";
 import { EndGameStats } from "..";

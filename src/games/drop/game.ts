@@ -1,7 +1,7 @@
 import settings, { dropGame, DropGameDifficulty } from "../../settings";
 import { drawFrame, Prepared as PreparedDraw, prepare as prepareDraw, prepareQuestX } from "./draw";
 import { Init } from "../../init";
-import { mergeDeep, promiseMagic, randomInArray, RecursivePartial } from "../../gui/utils";
+import { mergeDeep, promiseMagic, randomInArray, RecursivePartial } from "../../utils";
 import { reprepareInit } from "../../init";
 import { drawFullscreenButton } from "../../gui/button";
 import { WordWithImage } from "..";

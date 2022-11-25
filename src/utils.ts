@@ -35,6 +35,16 @@ export const randomInArray = <T>(a: Array<T>) => {
   return a[Math.floor(Math.random() * a.length)];
 }
 
+export const randomNInArray = <T>(a: Array<T>, n: number) => {
+  const avail = a.map((_,i) => i);
+
+  const result: Array<T> = [];
+  for (let i = 0; i < n && avail.length > 0; i += 1) {
+    result.push(a[removeRandomInArray(avail)]);
+  }
+  return result;
+}
+
 export const removeRandomInArray = <T>(a: Array<T>) => {
   return a.splice(Math.floor(Math.random() * a.length), 1)[0];
 }

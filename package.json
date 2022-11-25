@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "English Learning Game",
   "scripts": {
-    "generate": "cd ./src/compileTime && npx ts-node -e \"require('./generateImages').default();require('./generatePlan').default();\"",
-    "develop": "npm run generate && npx parcel src/examples/onePageDev.html --log-level verbose",
+    "generate": "cd ./src/compileTime && npx ts-node -e \"require('./generateImages').default();require('./generatePlan').default(false);\"",
+    "generateDev": "cd ./src/compileTime && npx ts-node -e \"require('./generateImages').default();require('./generatePlan').default(true);\"",
+    "develop": "npm run generateDev && npx parcel src/examples/onePageDev.html --log-level verbose",
     "developProd": "npm run generate && npx parcel src/examples/onePage.html --log-level verbose",
-    "build": "npm run generate && npx parcel build src/examples/onePage.html --dist-dir build && npx parcel build src/examples/onePageDev.html --dist-dir build",
+    "build": "npm run generate && npx parcel build src/examples/onePage.html --dist-dir build && npm run generateDev && npx parcel build src/examples/onePageDev.html --dist-dir build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

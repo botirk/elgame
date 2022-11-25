@@ -41,12 +41,20 @@ export const dropGame = {
     }
   },
   winTime: 4000, loseTime: 3000,
+  recomendation: {
+    minWords: 3,
+    maxWords: 12,
+  }
 }
 export type DropGameDifficulty = typeof dropGame.difficulties.easy;
 
 export const memoryGame = {
   winTime: 2500,
   margin: 15,
+  recomendation: {
+    minWords: 2,
+    maxWords: 10,
+  }
 }
 
 export const formGame = {
@@ -61,6 +69,10 @@ export const formGame = {
       stepCount: 1,
       maxHealth: 3,
     }
+  },
+  recomendation: {
+    minWords: 2,
+    maxWords: 12,
   }
 }
 export type FormGameDifficulty = typeof formGame.difficulties.learning;

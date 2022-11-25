@@ -3,7 +3,7 @@ import { Init } from "../../init";
 import drawBackground from "../../gui/background";
 import { ButtonManager, drawIconButton, drawButton } from "../../gui/button";
 import { calcTextWidth } from "../../gui/text";
-import { promiseMagic } from "../../gui/utils";
+import { promiseMagic } from "../../utils";
 import settings, { viewerGame } from "../../settings";
 import { Word, WordWithImage } from "..";
 

@@ -6,6 +6,7 @@ import { reprepareInit } from "../init";
 import { loadPlans } from "../asset";
 import { calcTextWidth } from "./text";
 import { loadProgress, saveProgress } from "../progress";
+import scroll from "./events/scroll";
 
 const drawMenu = (init: Init) => {
   // load plan
@@ -31,8 +32,8 @@ const drawMenu = (init: Init) => {
   const xDescDesktop = () => xGame() - minWidthGame / 2 - settings.gui.button.distance - minWidthDesc / 2;
   const xDescMobile = xGame;
   const xDesc = () => isNarrow() ? xDescMobile() : xDescDesktop();
-  const yGameDesktop = (count: number) => settings.gui.button.distance + minHeight / 2 + ((count - 1) * (minHeight + settings.gui.button.distance));
-  const yGameMobile = (i: number) => settings.gui.button.distance + minHeight / 2 + (i * (minHeight + settings.gui.button.distance));
+  const yGameDesktop = (count: number) => -scrollManager.pos() + settings.gui.button.distance + minHeight / 2 + ((count - 1) * (minHeight + settings.gui.button.distance));
+  const yGameMobile = (i: number) => -scrollManager.pos() + settings.gui.button.distance + minHeight / 2 + (i * (minHeight + settings.gui.button.distance));
   const yGame = (count: number, i: number) => () => isNarrow() ? yGameMobile(i) : yGameDesktop(count);
   const yDescDesktop = yGameDesktop;
   const yDescMobile = yGameMobile;
@@ -48,7 +49,7 @@ const drawMenu = (init: Init) => {
         await plan.viewer?.();
         drawMenu(init);
       },
-    })));
+    }), true));
     buttons.push(drawButtonWithDescription(init, xGame, yGame(plan.place, buttons.length), plan.name , plan.label, () => ({ 
       minWidth: minWidthGame, minHeight: minHeight, disabled: !progress[plan.place],
       onClick: async () => { 
@@ -60,20 +61,32 @@ const drawMenu = (init: Init) => {
         }
         drawMenu(init);
       },
-    })));
+    }), true));
   });
   // observer
   const stopResize = init.addResizeRequest(() => {
     init.prepared = reprepareInit(init);
-    move();
+    update();
     redraw();
   });
   // actions
   const stop = () => { buttons.forEach(({ stop }) => stop(true)); buttonFS.stop(true); stopResize(); };
   const redraw = () => { drawBackground(init.ctx); buttons.forEach(({ redraw }) => redraw()); buttonFS.redraw(); };
-  const move = () => { buttons.forEach(({ update: move }) => move()); buttonFS.update(); }
+  const update = () => { buttons.forEach(({ update }) => update()); buttonFS.update(); }
   // fullscreen button
   const buttonFS = drawFullscreenButton(init, redraw);
+  // scroll
+  const scrollManager = scroll(init, () => ({
+    maxPos: 1500,
+    oneStep: minHeight + settings.gui.button.distance,
+    onScroll: (pos) => {
+      console.log(`SCROLL ${pos} ${scrollManager.pos()}`)
+      update()
+      redraw()
+    },
+  }));
+  // late glue
+  redraw();
 }
 
 export default drawMenu;
