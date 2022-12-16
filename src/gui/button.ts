@@ -32,7 +32,7 @@ interface ButtonAbstractCalced {
 
 const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cached: Readonly<TCache>, calced: Readonly<ButtonAbstractCalced>) => void, optional?: () => ButtonOptional, isLateGlue?: boolean) => {
   // state gen
-  const getState = (isStopped: boolean, isPressed: boolean, isHover: boolean, stopClick?: () => void, stopHover?: () => void, redraw?: () => void) => {
+  const getState = (redraw: () => void, isStopped: boolean, isPressed: boolean, isHover: boolean, stopClick?: () => void, stopHover?: () => void) => {
     const contentX = x();
     const contentY = y();
     const contentCache = cache(contentX, contentY);
@@ -65,13 +65,13 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
     } else {
       state.stopClick = init.addClickRequest({
         isInArea: state.isInArea,
-        onReleased: (isInArea) => { state.isPressed = false; redraw?.(); if (isInArea) onClick?.(); },
-        onPressed: () => { state.isPressed = true; redraw?.(); },
+        onReleased: (isInArea) => { state.isPressed = false; redraw(); if (isInArea) onClick?.(); },
+        onPressed: () => { state.isPressed = true; redraw(); },
       });
       state.stopHover = init.addHoverRequest({
         isInArea: state.isInArea,
-        onHover: () => { state.isHover = true; redraw?.(); },
-        onLeave: () => { state.isHover = false; redraw?.(); },
+        onHover: () => { state.isHover = true; redraw(); },
+        onLeave: () => { state.isHover = false; redraw(); },
       });
     }
 
@@ -79,7 +79,8 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
   };
   // glue
   const glue = () => {
-    let state = getState(false, false, false);
+    // state 
+    let state = getState(() => redraw(), false, false, false);
     // drawing
     const redrawLabel = () => {
       if (state.bgColor) {
@@ -114,6 +115,7 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
     };
     const redraw = () => state.likeLabel ? redrawLabel() : redrawContent();
     redraw();
+    
     // user functions
     const stop = (shouldRedrawToDefault?: boolean) => {
       state.isStopped = true;
@@ -126,28 +128,31 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
       state.stopHover?.();
     };
     const update = () => {
-      state = getState(state.isStopped, state.isPressed, state.isHover, state.stopClick, state.stopHover);
+      state = getState(redraw, state.isStopped, state.isPressed, state.isHover, state.stopClick, state.stopHover);
     }
-    return { redraw, stop, update }
+
+    return { redraw, stop, update };
   }
-  if (!isLateGlue) return glue();
-  
-  let lateGlue: ButtonManager = {
-    stop: (shouldRedraw: boolean) => { },
-    redraw: () => {
-      const newGlue = glue();
-      lateGlue.stop = newGlue.stop;
-      lateGlue.redraw = newGlue.redraw;
-      lateGlue.update = newGlue.update;
-    },
-    update: () => {
-      const newGlue = glue();
-      lateGlue.stop = newGlue.stop;
-      lateGlue.redraw = newGlue.redraw;
-      lateGlue.update = newGlue.update;
+  // late glue
+  if (isLateGlue) {
+    let manager: ButtonManager | undefined;
+    return {
+      stop: (shouldRedraw: boolean) => { 
+        if (!manager) manager = glue();
+        manager.stop(shouldRedraw);
+      },
+      redraw: () => {
+        if (!manager) manager = glue();
+        manager.redraw();
+      },
+      update: () => {
+        if (!manager) manager = glue();
+        manager.update();
+      }
     }
-  };
-  return lateGlue;
+  } else {
+    return glue();
+  }
 }
 
 export const drawButton = (init: Init, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional, isLateGlue?: boolean) => {
