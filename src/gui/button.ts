@@ -1,5 +1,7 @@
 import { Init } from "../init";
 import settings from "../settings";
+import { mergeDeep } from "../utils";
+import { HoverManager } from "./events/hover";
 import { drawRoundedRect } from "./roundedRect";
 import { calcTextWidth } from "./text";
 
@@ -30,107 +32,93 @@ interface ButtonAbstractCalced {
   width: number, height: number,
 }
 
-const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cached: Readonly<TCache>, calced: Readonly<ButtonAbstractCalced>) => void, optional?: () => ButtonOptional, isLateGlue?: boolean) => {
-  // state gen
-  const getState = (redraw: () => void, isStopped: boolean, isPressed: boolean, isHover: boolean, stopClick?: () => void, stopHover?: () => void) => {
-    const contentX = x();
-    const contentY = y();
-    const contentCache = cache(contentX, contentY);
-    const optionalLocal = optional?.();
-    const width = Math.max(contentCache.contentWidth + settings.gui.button.padding * 2, optionalLocal?.minWidth || 0);
-    const height = Math.max(contentCache.contentHeight + settings.gui.button.padding * 2, optionalLocal?.minHeight || 0);
-    const startX = contentX - width / 2;
-    const startY = contentY - height / 2;
-    const endX = startX + width;
-    const endY = startY + height;
-    const bgColor = optionalLocal?.bgColor;
-    const likeLabel = optionalLocal?.likeLabel;
-    const onClick = optionalLocal?.onClick;
-    const disabled = optionalLocal?.disabled;
-    const isInArea = (x: number, y: number) => x >= state.startX && x <= state.endX && y >= state.startY && y <= state.endY;
-    // state
-    const state = {
-      isStopped, contentX, contentY, contentCache, width, height, startX, startY, endX, endY, 
-      bgColor, likeLabel, disabled, isPressed, isHover, stopHover, stopClick, isInArea
-    }
-    // new callbacks
-    state.stopClick?.();
-    state.stopClick = undefined;
-    state.stopHover?.();
-    state.stopHover = undefined;
-    // update callbacks
-    if (state.likeLabel || state.disabled || state.isStopped) {
-      state.isHover = false;
-      state.isPressed = false;
-    } else {
-      state.stopClick = init.addClickRequest({
-        isInArea: state.isInArea,
-        onReleased: (isInArea) => { state.isPressed = false; redraw(); if (isInArea) onClick?.(); },
-        onPressed: () => { state.isPressed = true; redraw(); },
-      });
-      state.stopHover = init.addHoverRequest({
-        isInArea: state.isInArea,
-        onHover: () => { state.isHover = true; redraw(); },
-        onLeave: () => { state.isHover = false; redraw(); },
-      });
-    }
+const abstractButtonState = <TCache extends ButtonAbstractCache>(init: Init, redraw: () => void, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, optional?: () => ButtonOptional) => {
+  const pos = {
+    contentX: 0, contentY: 0,
+    width: 0, height: 0,
+    startX: 0, startY: 0,
+    endX: 0, endY: 0,
+  }
+  const contentCache = {
+    contentWidth: 0, contentHeight: 0,
+  } as TCache;
+  const optionalSaved: ReturnType<Extract<typeof optional, () => ButtonOptional>> = {};
+  const isInArea = (x: number, y: number) => x >= pos.startX && x <= pos.endX && y >= pos.startY && y <= pos.endY;
+  const hoverManager = init.addHoverRequest({
+    isInArea,
+    onHover: redraw,
+    onLeave: redraw,
+  });
+  const clickManager = init.addClickRequest({
+    isInArea,
+    onReleased: (isInArea) => { if (isInArea) optionalSaved?.onClick?.(); redraw(); },
+    onPressed: redraw,
+  });
+  const update = () => {
+    pos.contentX = x(), pos.contentY = y();
+    mergeDeep(contentCache, cache(pos.contentX, pos.contentY));
+    mergeDeep(optionalSaved, optional?.());
+    pos.width = Math.max(contentCache.contentWidth + settings.gui.button.padding * 2, optionalSaved?.minWidth || 0);
+    pos.height = Math.max(contentCache.contentHeight + settings.gui.button.padding * 2, optionalSaved?.minHeight || 0);
+    pos.startX = pos.contentX - pos.width / 2;
+    pos.startY = pos.contentY - pos.height / 2;
+    pos.endX = pos.startX + pos.width;
+    pos.endY = pos.startY + pos.height;
+    hoverManager.update();
+  }
+  update();
+  // state
+  return {
+    hoverManager, clickManager, pos: pos as Readonly<typeof pos>, optionalSaved: optionalSaved as Readonly<typeof optionalSaved>, contentCache: contentCache as TCache, update,
+  }
+}
 
-    return state;
-  };
+const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cached: Readonly<TCache>, calced: Readonly<ButtonAbstractCalced>) => void, optional?: () => ButtonOptional, isLateGlue?: boolean) => {
   // glue
   const glue = () => {
     // state 
-    let state = getState(() => redraw(), false, false, false);
+    const state = abstractButtonState(init, () => redraw(), x, y, cache, optional) as ReturnType<typeof abstractButtonState<TCache>>;
     // drawing
     const redrawLabel = () => {
-      if (state.bgColor) {
-        init.ctx.fillStyle = state.bgColor;
-      } else if (state.disabled) {
+      if (state.optionalSaved.bgColor) {
+        init.ctx.fillStyle = state.optionalSaved.bgColor;
+      } else if (state.optionalSaved.disabled) {
         init.ctx.fillStyle = settings.colors.button.disabled;
       } else {
         init.ctx.fillStyle = settings.colors.button.bg;
       }
-      init.ctx.fillRect(state.startX, state.startY, state.width, state.height);
-      drawer(state.contentX, state.contentY, state.contentCache, state);
+      init.ctx.fillRect(state.pos.startX, state.pos.startY, state.pos.width, state.pos.height);
+      drawer(state.pos.contentX, state.pos.contentY, state.contentCache, state.pos);
     };
     const redrawContent = () => {
-      if (state.bgColor) {
-        init.ctx.fillStyle = state.bgColor;
-      } else if (state.disabled) {
+      if (state.optionalSaved.bgColor) {
+        init.ctx.fillStyle = state.optionalSaved.bgColor;
+      } else if (state.optionalSaved.disabled) {
         init.ctx.fillStyle = settings.colors.button.disabled;
-      } else if (state.isPressed) {
+      } else if (state.clickManager.isPressed()) {
         init.ctx.fillStyle = settings.colors.button.pressed;
-      } else if (state.isHover) {
+      } else if (state.hoverManager.isInArea()) {
         init.ctx.fillStyle = settings.colors.button.hover;
       } else {
         init.ctx.fillStyle = settings.colors.button.bg;
       }
-      if (state.isHover && !state.disabled) {
+      if (state.hoverManager.isInArea() && !state.optionalSaved.disabled) {
         init.ctx.canvas.style.cursor = "pointer";
       } else {
         init.ctx.canvas.style.cursor = "default";
       }
-      drawRoundedRect(init.ctx, state.startX, state.startY, state.width, state.height, settings.gui.button.rounding);
-      drawer(state.contentX, state.contentY, state.contentCache, state);
+      drawRoundedRect(init.ctx, state.pos.startX, state.pos.startY, state.pos.width, state.pos.height, settings.gui.button.rounding);
+      drawer(state.pos.contentX, state.pos.contentY, state.contentCache, state.pos);
     };
-    const redraw = () => state.likeLabel ? redrawLabel() : redrawContent();
+    const redraw = () => state.optionalSaved.likeLabel ? redrawLabel() : redrawContent();
     redraw();
-    
     // user functions
     const stop = (shouldRedrawToDefault?: boolean) => {
-      state.isStopped = true;
-      if (shouldRedrawToDefault && (state.isHover || state.isPressed)) {
-        state.isHover = false;
-        state.isPressed = false;
-        redraw();
-      }
-      state.stopClick?.();
-      state.stopHover?.();
+      state.clickManager.stop();
+      state.hoverManager.stop();
+      if (shouldRedrawToDefault) redraw();
     };
-    const update = () => {
-      state = getState(redraw, state.isStopped, state.isPressed, state.isHover, state.stopClick, state.stopHover);
-    }
-
+    const update = state.update;
     return { redraw, stop, update };
   }
   // late glue
@@ -247,7 +235,7 @@ export const drawFullscreenButton = (init: Init, onRedraw: () => void): ButtonMa
     onRedraw();
   };
 
-  const stopHover = init.addHoverRequest({ 
+  const hoverManager = init.addHoverRequest({ 
     isInArea: (xIn, yIn) => xIn >= x() - 70 && yIn >= y() - 70,
     onHover: () => { if (!document.fullscreenElement) display(); },
     onLeave: stopDisplay,
@@ -255,7 +243,7 @@ export const drawFullscreenButton = (init: Init, onRedraw: () => void): ButtonMa
 
   const newStop = (shouldRedraw: boolean) => {
     if (button?.stop) button.stop(shouldRedraw);
-    stopHover();
+    hoverManager.stop();
   };
   const newRedraw = () => { if (button?.redraw) button.redraw(); };
   const newUpdate = () => { if (button?.update) button.update(); };

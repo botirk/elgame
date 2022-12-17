@@ -113,6 +113,10 @@ const gui = {
     rounding: 4,
     padding: 6,
     distance: fonts.fontSize,
+  },
+  scroll: {
+    width: 15,
+    padding: 8,
   }
 }
 

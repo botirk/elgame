@@ -32,14 +32,16 @@ const scroll = (init: Init, options: () => Options): ScrollManager => {
   }
   update();
   
+  const maxPos = () => Math.max(0, state.maxHeight - init.ctx.canvas.height);
   const wheelListener = (e: WheelEvent) => {
     const oldPos = state.pos;
     // to top
     if (e.deltaY < 0) state.pos = Math.max(0, state.pos - state.oneStep);
     // to bot
-    else if (e.deltaY > 0) state.pos = Math.min(Math.max(0, state.maxHeight - init.ctx.canvas.height), state.pos + state.oneStep);
+    else if (e.deltaY > 0) state.pos = Math.min(maxPos(), state.pos + state.oneStep);
     
     if (state.pos != oldPos) state.onScroll(state.pos);
+    drawScroll();
   };
   init.ctx.canvas.addEventListener("wheel", wheelListener);
 
@@ -68,7 +70,7 @@ const scroll = (init: Init, options: () => Options): ScrollManager => {
     }
     // to bot
     if (topTouch < state.topTouch) {
-      state.pos = Math.min(Math.max(0, state.maxHeight - init.ctx.canvas.height), state.pos + (state.topTouch - topTouch));
+      state.pos = Math.min(maxPos(), state.pos + (state.topTouch - topTouch));
       state.topTouch = topTouch;
     }
     if (state.pos != oldPos) state.onScroll(state.pos);
@@ -80,15 +82,27 @@ const scroll = (init: Init, options: () => Options): ScrollManager => {
   init.ctx.canvas.addEventListener("touchmove", touchMoveListener);
   init.ctx.canvas.addEventListener("touchend", touchEndListener);
 
+  const stop = () => {
+    init.ctx.canvas.removeEventListener("wheel", wheelListener);
+    init.ctx.canvas.removeEventListener("touchstart", touchStartListener);
+    init.ctx.canvas.removeEventListener("touchmove", touchMoveListener);
+    init.ctx.canvas.removeEventListener("touchend", touchEndListener);
+  }
+
+  const drawScroll = () => {
+    const pagePercent = init.ctx.canvas.height / state.maxHeight;
+    if (pagePercent >= 1) return;
+    const heightPercent = state.pos / maxPos();
+    const scrollHeight = init.ctx.canvas.height * pagePercent;
+    const scrollPos = init.ctx.canvas.height * (1 - pagePercent) * heightPercent;
+    console.log(pagePercent);
+    init.ctx.fillStyle = settings.colors.button.bg;
+    init.ctx.fillRect(init.ctx.canvas.width - settings.gui.scroll.width - settings.gui.scroll.padding, scrollPos, settings.gui.scroll.width, scrollHeight);
+  }
 
   return {
     pos: () => state.pos,
-    stop: () => {
-      init.ctx.canvas.removeEventListener("wheel", wheelListener);
-      init.ctx.canvas.removeEventListener("touchstart", touchStartListener);
-      init.ctx.canvas.removeEventListener("touchmove", touchMoveListener);
-      init.ctx.canvas.removeEventListener("touchend", touchEndListener);
-    },
+    stop,
     update,
   };
 }

@@ -7,30 +7,43 @@ interface HoverRequest {
   isCurrentlyInside?: boolean,
 }
 
+export interface HoverManager {
+  stop: () => void,
+  update: () => void,
+  isInArea: () => boolean,
+}
+
 const hover = (ctx: CanvasRenderingContext2D) => {
   const requesters: HoverRequest[] = [];
+  const lastPos = { x: Infinity, y: Infinity };
 
   ctx.canvas.addEventListener("mousemove", (e) => {
-    const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
-    requesters.forEach((requester) => {
-      if (!requester.isCurrentlyInside && requester.isInArea(x, y)) {
-        requester.onHover();
-        requester.isCurrentlyInside = true;
-      } else if (requester.isCurrentlyInside && !requester.isInArea(x, y)) {
-        requester.onLeave();
-        requester.isCurrentlyInside = false;
+    [lastPos.x, lastPos.y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
+    requesters.forEach((req) => {
+      if (!req.isCurrentlyInside && req.isInArea(lastPos.x, lastPos.y)) {
+        req.isCurrentlyInside = true;
+        req.onHover();
+        
+      } else if (req.isCurrentlyInside && !req.isInArea(lastPos.x, lastPos.y)) {
+        req.isCurrentlyInside = false;
+        req.onLeave();
       }
     });
   });
 
-  const addRequest = (req: HoverRequest): () => void => {
-    requesters.push(req);
-
-    const removeRequest = () => {
+  const addRequest = (req: HoverRequest): HoverManager => {
+    const update = () => {
+      req.isCurrentlyInside = req.isInArea(lastPos.x, lastPos.y);
+    }
+    if (req.isCurrentlyInside === undefined) update();
+    const stop = () => {
       const i = requesters.indexOf(req);
       if (i != -1) requesters.splice(i, 1);
+      req.isCurrentlyInside = false;
     }
-    return removeRequest;
+    const isInArea = () => !!req.isCurrentlyInside;
+    requesters.push(req);
+    return { stop, isInArea, update };
   }
 
   return addRequest;

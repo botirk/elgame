@@ -7,6 +7,11 @@ interface ClickRequest {
   onPressed?: () => void,
 }
 
+export interface ClickManager {
+  stop: () => void,
+  isPressed: () => boolean,
+}
+
 const click = (ctx: CanvasRenderingContext2D) => {
   const requesters: ClickRequest[] = [];
   
@@ -14,8 +19,8 @@ const click = (ctx: CanvasRenderingContext2D) => {
     const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
     requesters.forEach((requester) => {
       if (requester.isInArea(x, y)) {
-        requester.onPressed?.();
         requester.isPressed = true;
+        requester.onPressed?.(); 
       }
     });
   }});
@@ -24,19 +29,21 @@ const click = (ctx: CanvasRenderingContext2D) => {
     const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
     requesters.forEach((requester) => {
       if (requester.isPressed) {
+        requester.isPressed = false;
         requester.onReleased(requester.isInArea(x, y));
       }
-      requester.isPressed = false;
     });
   }});
 
-  const addRequest = (req: ClickRequest) => {
+  const addRequest = (req: ClickRequest): ClickManager => {
     requesters.push(req);
-    const removeRequest = () => {
+    const stop = () => {
       const i = requesters.indexOf(req);
       if (i != -1) requesters.splice(i, 1);
+      req.isPressed = false;
     }
-    return removeRequest;
+    const isPressed = () => !!req.isPressed;
+    return { stop, isPressed };
   }
 
   return addRequest;
