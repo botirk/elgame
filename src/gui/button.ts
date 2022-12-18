@@ -5,12 +5,13 @@ import { HoverManager } from "./events/hover";
 import { drawRoundedRect } from "./roundedRect";
 import { calcTextWidth } from "./text";
 
+type ShouldRedrawAfterClick = boolean | void | Promise<void>;
 interface ButtonOptional {
   minWidth?: number,
   minHeight?: number,
   bgColor?: string,
   likeLabel?: boolean,
-  onClick?: () => void,
+  onClick?: () => ShouldRedrawAfterClick,
   disabled?: boolean,
   lateGlue?: boolean,
 }
@@ -18,7 +19,7 @@ interface ButtonOptional {
 export interface ButtonManager {
   stop: (shouldRedraw: boolean) => void,
   redraw: () => void,
-  update: () => void,
+  update: (dontUpdateHover?: boolean) => void,
 }
 
 interface ButtonAbstractCache {
@@ -51,10 +52,17 @@ const abstractButtonState = <TCache extends ButtonAbstractCache>(init: Init, red
   });
   const clickManager = init.addClickRequest({
     isInArea,
-    onReleased: (isInArea) => { if (isInArea) optionalSaved?.onClick?.(); redraw(); },
+    onReleased: (isInArea) => { 
+      if (isInArea) {
+        const shouldRedrawAfterClick = optionalSaved?.onClick?.();
+        if (!(shouldRedrawAfterClick instanceof Promise) && shouldRedrawAfterClick !== false) redraw();
+      } else {
+        redraw();
+      }
+    },
     onPressed: redraw,
   });
-  const update = () => {
+  const update = (dontUpdateHover?: boolean) => {
     pos.contentX = x(), pos.contentY = y();
     mergeDeep(contentCache, cache(pos.contentX, pos.contentY));
     mergeDeep(optionalSaved, optional?.());
@@ -64,7 +72,7 @@ const abstractButtonState = <TCache extends ButtonAbstractCache>(init: Init, red
     pos.startY = pos.contentY - pos.height / 2;
     pos.endX = pos.startX + pos.width;
     pos.endY = pos.startY + pos.height;
-    hoverManager.update();
+    if (!dontUpdateHover) hoverManager.update();
   }
   update();
   // state
@@ -73,7 +81,7 @@ const abstractButtonState = <TCache extends ButtonAbstractCache>(init: Init, red
   }
 }
 
-const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cached: Readonly<TCache>, calced: Readonly<ButtonAbstractCalced>) => void, optional?: () => ButtonOptional, isLateGlue?: boolean) => {
+const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cached: Readonly<TCache>, calced: Readonly<ButtonAbstractCalced>) => void, optional?: () => ButtonOptional, isLateGlue?: boolean): ButtonManager => {
   // glue
   const glue = () => {
     // state 
@@ -143,7 +151,7 @@ const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: (
   }
 }
 
-export const drawButton = (init: Init, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional, isLateGlue?: boolean) => {
+export const drawButton = (init: Init, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional, isLateGlue?: boolean): ButtonManager => {
   return drawAbstractButton(init, x, y, (x, y) => {
     init.ctx.font = settings.fonts.ctxFont;
     const contentWidth = calcTextWidth(init.ctx, text);
@@ -172,7 +180,7 @@ export const calcButtonWithDescription = (init: Init, text: string, description:
   };
 }
 
-export const drawButtonWithDescription = (init: Init, x: () => number, y: () => number, text: string, description: string, optional?: () => ButtonOptional, isLateGlue?: boolean) => {
+export const drawButtonWithDescription = (init: Init, x: () => number, y: () => number, text: string, description: string, optional?: () => ButtonOptional, isLateGlue?: boolean): ButtonManager => {
   return drawAbstractButton(init, x, y, (x, y) => {
     const { contentHeight, contentWidth, firstWidth, secondWidth } = calcButtonWithDescription(init, text, description);
     return {
@@ -226,7 +234,7 @@ export const drawFullscreenButton = (init: Init, onRedraw: () => void): ButtonMa
       () => ({ onClick: () => {
         init.ctx.canvas.requestFullscreen();
         stopDisplay();
-      }})
+      }}),
     );
   };
   const stopDisplay = () => {

@@ -58,7 +58,8 @@ export const memoryGame = {
 }
 
 export const formGame = {
-  endAnimationTime: 3000,
+  endAnimationTime: 15000,
+  //endAnimationTime: 3000,
   margin: 15,
   progressBarY: 100,
   pause: 900,
@@ -78,7 +79,7 @@ export const formGame = {
 export type FormGameDifficulty = typeof formGame.difficulties.learning;
 
 export const viewerGame = {
-  margin: 12,
+  //margin: 12,
 }
 
 const colors = {
@@ -117,6 +118,7 @@ const gui = {
   scroll: {
     width: 15,
     padding: 8,
+    timeout: 1500,
   }
 }
 

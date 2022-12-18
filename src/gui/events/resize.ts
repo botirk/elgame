@@ -3,9 +3,11 @@ type ResizeRequest = () => void;
 
 const resize = (ctx: CanvasRenderingContext2D) => {
   const requesters: ResizeRequest[] = [];
+  let init = false;
 
   const resizeObserver = new ResizeObserver(() => {
-    requesters.forEach((req) => req()); 
+    if (!init) init = true;
+    else requesters.forEach((req) => req());
   });
   resizeObserver.observe(ctx.canvas);
 

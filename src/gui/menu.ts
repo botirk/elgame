@@ -16,8 +16,7 @@ const calcMenu = (init: Init, plans: LoadedPlans, desc: string) => {
     return [Math.max(calced.contentWidth + settings.gui.button.padding * 2, prev[0]), Math.max(calced.contentHeight + settings.gui.button.padding * 2, prev[1])]; 
   }, [0, 0]);
   const minWidthDesc = calcTextWidth(init.ctx, desc) + settings.gui.button.padding * 2;
-  
-  // console.log("ITEMS: ", plans.length)
+
   // menu x/y
   const isNarrow = () => init.ctx.canvas.width < minWidthGame + settings.gui.button.distance * 4 + minWidthDesc * 2;
   const xGame = () => init.ctx.canvas.width / 2;
@@ -56,11 +55,8 @@ const drawMenu = (init: Init) => {
   const scrollManager = scroll(init, () => ({
     maxHeight: calced.totalHeight,
     oneStep: calced.minHeight + settings.gui.button.distance,
-    onScroll: (pos) => {
-      // console.log(`SCROLL ${pos} ${scrollManager.pos()} ${calced.totalHeight()}`)
-      update()
-      redraw()
-    },
+    update: () => update(),
+    redraw: () => redraw(),
   }));
   // draw
   drawBackground(init.ctx);
@@ -70,7 +66,7 @@ const drawMenu = (init: Init) => {
     if (plan.viewer) buttons.push(drawButton(init, calced.xDesc, calced.yDesc(plan.place, buttons.length, scrollManager.pos), desc, () => ({ 
       minWidth: calced.minWidth(), minHeight: calced.minHeight,
       disabled: !progress[plan.place],
-      onClick: async () => { 
+      onClick: async () => {
         stop();
         await plan.viewer?.();
         drawMenu(init);
@@ -104,6 +100,7 @@ const drawMenu = (init: Init) => {
   const buttonFS = drawFullscreenButton(init, redraw);
   // late glue
   redraw();
+  scrollManager.drawScroll();
 }
 
 export default drawMenu;

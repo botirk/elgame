@@ -5,13 +5,15 @@ interface Options {
   initialPos?: number,
   maxHeight: () => number,
   oneStep: number,
-  onScroll: (pos: number) => void,
+  redraw: () => void,
+  update: () => void,
 }
 
 interface ScrollManager {
   pos: () => number,
   stop: () => void,
   update: () => void,
+  drawScroll: () => void,
 }
 
 const scroll = (init: Init, options: () => Options): ScrollManager => {
@@ -21,14 +23,16 @@ const scroll = (init: Init, options: () => Options): ScrollManager => {
     oneStep: 0,
     topTouch: undefined as number | undefined,
     botTouch: undefined as number | undefined,
-    onScroll: (pos: number) => {},
+    redraw: () => {},
+    update: () => {},
   }
   const update = () => {
     const optionsLocal = options();
     state.maxHeight = optionsLocal.maxHeight();
     state.pos = Math.min(Math.max(0, state.maxHeight - init.ctx.canvas.height), state.pos);
     state.oneStep = optionsLocal.oneStep;
-    state.onScroll = optionsLocal.onScroll;
+    state.redraw = optionsLocal.redraw;
+    state.update = optionsLocal.update;
   }
   update();
   
@@ -40,8 +44,11 @@ const scroll = (init: Init, options: () => Options): ScrollManager => {
     // to bot
     else if (e.deltaY > 0) state.pos = Math.min(maxPos(), state.pos + state.oneStep);
     
-    if (state.pos != oldPos) state.onScroll(state.pos);
-    drawScroll();
+    if (state.pos != oldPos) {
+      state.update();
+      state.redraw();
+      drawScroll();
+    }
   };
   init.ctx.canvas.addEventListener("wheel", wheelListener);
 
@@ -73,7 +80,11 @@ const scroll = (init: Init, options: () => Options): ScrollManager => {
       state.pos = Math.min(maxPos(), state.pos + (state.topTouch - topTouch));
       state.topTouch = topTouch;
     }
-    if (state.pos != oldPos) state.onScroll(state.pos);
+    if (state.pos != oldPos) {
+      state.update();
+      state.redraw();
+      drawScroll();
+    }
   }
   const touchEndListener = (e: TouchEvent) => {
     state.topTouch = undefined, state.botTouch = undefined;
@@ -87,23 +98,27 @@ const scroll = (init: Init, options: () => Options): ScrollManager => {
     init.ctx.canvas.removeEventListener("touchstart", touchStartListener);
     init.ctx.canvas.removeEventListener("touchmove", touchMoveListener);
     init.ctx.canvas.removeEventListener("touchend", touchEndListener);
+    clearTimeout(hideTimeout);
   }
 
+  let hideTimeout: NodeJS.Timeout | undefined = undefined;
   const drawScroll = () => {
     const pagePercent = init.ctx.canvas.height / state.maxHeight;
     if (pagePercent >= 1) return;
     const heightPercent = state.pos / maxPos();
     const scrollHeight = init.ctx.canvas.height * pagePercent;
-    const scrollPos = init.ctx.canvas.height * (1 - pagePercent) * heightPercent;
-    console.log(pagePercent);
+    const scrollPos = (init.ctx.canvas.height - scrollHeight) * heightPercent;
     init.ctx.fillStyle = settings.colors.button.bg;
     init.ctx.fillRect(init.ctx.canvas.width - settings.gui.scroll.width - settings.gui.scroll.padding, scrollPos, settings.gui.scroll.width, scrollHeight);
+    if (hideTimeout !== undefined) clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(() => { state.redraw(); hideTimeout = undefined; }, settings.gui.scroll.timeout);
   }
 
   return {
     pos: () => state.pos,
     stop,
     update,
+    drawScroll,
   };
 }
 

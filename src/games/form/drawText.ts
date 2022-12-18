@@ -165,6 +165,7 @@ const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: F
             }, formGame.pause);
             button.update();
             button.redraw();
+            return false;
           }
         },
       })
@@ -184,9 +185,9 @@ const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: F
     }
     buttons.forEach((btn) => btn.redraw());
   }
-  const move = () => buttons.forEach((btn) => btn.update());
+  const update = (dontUpdateHover?: boolean) => buttons.forEach((btn) => btn.update(dontUpdateHover));
 
-  return { stop, redraw, update: move };
+  return { stop, redraw, update };
 }
 
 export default drawForm;
