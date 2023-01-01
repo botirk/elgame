@@ -63,7 +63,8 @@ const viewer = (init: Init, words: Word[]) => async () => {
   let table = calculateTable(init, words);
   // scroll 
   const scrollManager = scroll(init, () => ({ 
-    maxHeight: () => table.columnHeight, oneStep: table.rowHeight + settings.gui.button.distance, 
+    maxHeight: table.columnHeight,
+    oneStep: table.rowHeight + settings.gui.button.distance, 
     update: () => update(),
     redraw: () => redraw(),
   }));

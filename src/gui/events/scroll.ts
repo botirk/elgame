@@ -1,9 +1,9 @@
 import { Init } from "../../init";
 import settings from "../../settings";
 
-interface Options {
+interface ScrollOptions {
   initialPos?: number,
-  maxHeight: () => number,
+  maxHeight: number,
   oneStep: number,
   redraw: () => void,
   update: () => void,
@@ -16,25 +16,24 @@ interface ScrollManager {
   drawScroll: () => void,
 }
 
-const scroll = (init: Init, options: () => Options): ScrollManager => {
-  const state = {
-    maxHeight: 0,
-    pos: 0,
-    oneStep: 0,
-    topTouch: undefined as number | undefined,
-    botTouch: undefined as number | undefined,
-    redraw: () => {},
-    update: () => {},
-  }
-  const update = () => {
-    const optionsLocal = options();
-    state.maxHeight = optionsLocal.maxHeight();
-    state.pos = Math.min(Math.max(0, state.maxHeight - init.ctx.canvas.height), state.pos);
-    state.oneStep = optionsLocal.oneStep;
-    state.redraw = optionsLocal.redraw;
-    state.update = optionsLocal.update;
-  }
-  update();
+const initScrollState = {
+  maxHeight: 0, pos: 0, oneStep: 0, topTouch: undefined as number | undefined, botTouch: undefined as number | undefined, redraw: () => {}, update: () => {}
+}
+
+const scrollState = (init: Init, options: () => ScrollOptions, state = { ...initScrollState }) => {
+  const localOptions = options();
+  state.maxHeight = localOptions.maxHeight;
+  state.pos = Math.min(Math.max(0, localOptions.maxHeight - init.ctx.canvas.height), state.pos),
+  state.oneStep = localOptions.oneStep;
+  state.redraw = localOptions.redraw;
+  state.update = localOptions.update;
+  return state;
+};
+
+const scroll = (init: Init, options: () => ScrollOptions): ScrollManager => {
+  init.ctx.canvas.style.touchAction = "none";
+  let state = scrollState(init, options);
+  const update = () => { state = scrollState(init, options, state); };
   
   const maxPos = () => Math.max(0, state.maxHeight - init.ctx.canvas.height);
   const wheelListener = (e: WheelEvent) => {

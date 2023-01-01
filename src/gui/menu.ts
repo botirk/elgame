@@ -43,17 +43,17 @@ const calcMenu = (init: Init, plans: LoadedPlans, desc: string) => {
 const drawMenu = (init: Init) => {
   // load plan
   const plans = loadPlans(init);
-  const progress = loadProgress(init);
   if (typeof(plans) == "string") {
     alert(plans);
     return;
   }
+  const progress = loadProgress(init);
   // calc
   const desc = "Слова";
   const calced = calcMenu(init, plans, desc);
   // scroll
   const scrollManager = scroll(init, () => ({
-    maxHeight: calced.totalHeight,
+    maxHeight: calced.totalHeight(),
     oneStep: calced.minHeight + settings.gui.button.distance,
     update: () => update(),
     redraw: () => redraw(),

@@ -33,6 +33,16 @@ interface ButtonAbstractCalced {
   width: number, height: number,
 }
 
+const initAbstractButtonState = {
+  pos: {
+    contentX: 0, contentY: 0, width: 0, height: 0, startX: 0, startY: 0, endX: 0, endY: 0,
+    isInArea: function(x: number, y: number) { return x >= this.startX && x <= this.endX && y >= this.startY && y <= this.endY },
+    hoverManager: undefined as undefined | ReturnType<Init["addHoverRequest"]>,
+    clickManager: undefined as undefined | ReturnType<Init["addClickRequest"]>,
+  },
+  
+};
+
 const abstractButtonState = <TCache extends ButtonAbstractCache>(init: Init, redraw: () => void, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, optional?: () => ButtonOptional) => {
   const pos = {
     contentX: 0, contentY: 0,
