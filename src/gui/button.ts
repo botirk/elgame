@@ -1,4 +1,4 @@
-import { Init } from "../init";
+import init, { Init } from "../init";
 import settings from "../settings";
 import { mergeDeep } from "../utils";
 import { HoverManager } from "./events/hover";
@@ -19,151 +19,150 @@ interface ButtonOptional {
 export interface ButtonManager {
   stop: (shouldRedraw: boolean) => void,
   redraw: () => void,
-  update: (dontUpdateHover?: boolean) => void,
+  update: (everything?: boolean, dontUpdateHover?: boolean) => void,
 }
 
-interface ButtonAbstractCache {
+interface AbstractButtonCache {
   contentWidth: number, 
   contentHeight: number,
 }
 
-interface ButtonAbstractCalced {
+interface AbstractButtonCalced {
   startX: number, startY: number,
   endX: number, endY: number,
   width: number, height: number,
 }
 
-const initAbstractButtonState = {
-  pos: {
-    contentX: 0, contentY: 0, width: 0, height: 0, startX: 0, startY: 0, endX: 0, endY: 0,
-    isInArea: function(x: number, y: number) { return x >= this.startX && x <= this.endX && y >= this.startY && y <= this.endY },
-    hoverManager: undefined as undefined | ReturnType<Init["addHoverRequest"]>,
-    clickManager: undefined as undefined | ReturnType<Init["addClickRequest"]>,
-  },
+class AbstractButton<TCache extends AbstractButtonCache> {
+  private readonly init: Init;
+  private readonly x: () => number;
+  private readonly y: () => number;
+  private readonly cache: (x: number, y: number) => TCache;
+  private readonly drawer: (x: number, y: number, cached: Readonly<TCache>, calced: Readonly<AbstractButtonCalced>) => void;
+  private readonly optional?: (() => ButtonOptional);
+  private readonly isLateGlue?: boolean;
   
-};
-
-const abstractButtonState = <TCache extends ButtonAbstractCache>(init: Init, redraw: () => void, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, optional?: () => ButtonOptional) => {
-  const pos = {
-    contentX: 0, contentY: 0,
-    width: 0, height: 0,
-    startX: 0, startY: 0,
-    endX: 0, endY: 0,
-  }
-  const contentCache = {
-    contentWidth: 0, contentHeight: 0,
-  } as TCache;
-  const optionalSaved: ReturnType<Extract<typeof optional, () => ButtonOptional>> = {};
-  const isInArea = (x: number, y: number) => x >= pos.startX && x <= pos.endX && y >= pos.startY && y <= pos.endY;
-  const hoverManager = init.addHoverRequest({
-    isInArea,
-    onHover: redraw,
-    onLeave: redraw,
-  });
-  const clickManager = init.addClickRequest({
-    isInArea,
-    onReleased: (isInArea) => { 
-      if (isInArea) {
-        const shouldRedrawAfterClick = optionalSaved?.onClick?.();
-        if (!(shouldRedrawAfterClick instanceof Promise) && shouldRedrawAfterClick !== false) redraw();
-      } else {
-        redraw();
-      }
-    },
-    onPressed: redraw,
-  });
-  const update = (dontUpdateHover?: boolean) => {
-    pos.contentX = x(), pos.contentY = y();
-    mergeDeep(contentCache, cache(pos.contentX, pos.contentY));
-    mergeDeep(optionalSaved, optional?.());
-    pos.width = Math.max(contentCache.contentWidth + settings.gui.button.padding * 2, optionalSaved?.minWidth || 0);
-    pos.height = Math.max(contentCache.contentHeight + settings.gui.button.padding * 2, optionalSaved?.minHeight || 0);
-    pos.startX = pos.contentX - pos.width / 2;
-    pos.startY = pos.contentY - pos.height / 2;
-    pos.endX = pos.startX + pos.width;
-    pos.endY = pos.startY + pos.height;
-    if (!dontUpdateHover) hoverManager.update();
-  }
-  update();
-  // state
-  return {
-    hoverManager, clickManager, pos: pos as Readonly<typeof pos>, optionalSaved: optionalSaved as Readonly<typeof optionalSaved>, contentCache: contentCache as TCache, update,
-  }
-}
-
-const drawAbstractButton = <TCache extends ButtonAbstractCache>(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: (x: number, y: number, cached: Readonly<TCache>, calced: Readonly<ButtonAbstractCalced>) => void, optional?: () => ButtonOptional, isLateGlue?: boolean): ButtonManager => {
-  // glue
-  const glue = () => {
-    // state 
-    const state = abstractButtonState(init, () => redraw(), x, y, cache, optional) as ReturnType<typeof abstractButtonState<TCache>>;
-    // drawing
-    const redrawLabel = () => {
-      if (state.optionalSaved.bgColor) {
-        init.ctx.fillStyle = state.optionalSaved.bgColor;
-      } else if (state.optionalSaved.disabled) {
-        init.ctx.fillStyle = settings.colors.button.disabled;
-      } else {
-        init.ctx.fillStyle = settings.colors.button.bg;
-      }
-      init.ctx.fillRect(state.pos.startX, state.pos.startY, state.pos.width, state.pos.height);
-      drawer(state.pos.contentX, state.pos.contentY, state.contentCache, state.pos);
-    };
-    const redrawContent = () => {
-      if (state.optionalSaved.bgColor) {
-        init.ctx.fillStyle = state.optionalSaved.bgColor;
-      } else if (state.optionalSaved.disabled) {
-        init.ctx.fillStyle = settings.colors.button.disabled;
-      } else if (state.clickManager.isPressed()) {
-        init.ctx.fillStyle = settings.colors.button.pressed;
-      } else if (state.hoverManager.isInArea()) {
-        init.ctx.fillStyle = settings.colors.button.hover;
-      } else {
-        init.ctx.fillStyle = settings.colors.button.bg;
-      }
-      if (state.hoverManager.isInArea() && !state.optionalSaved.disabled) {
-        init.ctx.canvas.style.cursor = "pointer";
-      } else {
-        init.ctx.canvas.style.cursor = "default";
-      }
-      drawRoundedRect(init.ctx, state.pos.startX, state.pos.startY, state.pos.width, state.pos.height, settings.gui.button.rounding);
-      drawer(state.pos.contentX, state.pos.contentY, state.contentCache, state.pos);
-    };
-    const redraw = () => state.optionalSaved.likeLabel ? redrawLabel() : redrawContent();
-    redraw();
-    // user functions
-    const stop = (shouldRedrawToDefault?: boolean) => {
-      state.clickManager.stop();
-      state.hoverManager.stop();
-      if (shouldRedrawToDefault) redraw();
-    };
-    const update = state.update;
-    return { redraw, stop, update };
-  }
-  // late glue
-  if (isLateGlue) {
-    let manager: ButtonManager | undefined;
-    return {
-      stop: (shouldRedraw: boolean) => { 
-        if (!manager) manager = glue();
-        manager.stop(shouldRedraw);
-      },
-      redraw: () => {
-        if (!manager) manager = glue();
-        manager.redraw();
-      },
-      update: () => {
-        if (!manager) manager = glue();
-        manager.update();
-      }
+  private isGlued = false;
+  private contentX: number;
+  private contentY: number;
+  private width: number;
+  private height: number;
+  private startX: number;
+  private startY: number;
+  private endX: number; 
+  private endY: number;
+  private optionalSaved: ButtonOptional | undefined;
+  private contentCache: TCache;
+  
+  private redrawLabel() {
+    if (this.optionalSaved?.bgColor) {
+      this.init.ctx.fillStyle = this.optionalSaved.bgColor;
+    } else if (this.optionalSaved?.disabled) {
+      this.init.ctx.fillStyle = settings.colors.button.disabled;
+    } else {
+      this.init.ctx.fillStyle = settings.colors.button.bg;
     }
-  } else {
-    return glue();
+    this.init.ctx.fillRect(this.startX, this.startY, this.width, this.height);
+    this.drawer(this.contentX, this.contentY, this.contentCache, this as Readonly<AbstractButtonCalced>);
+  }
+  private redrawContent() {
+    if (this.optionalSaved?.bgColor) {
+      this.init.ctx.fillStyle = this.optionalSaved.bgColor;
+    } else if (this.optionalSaved?.disabled) {
+      this.init.ctx.fillStyle = settings.colors.button.disabled;
+    } else if (this.clickManager.isPressed()) {
+      this.init.ctx.fillStyle = settings.colors.button.pressed;
+    } else if (this.hoverManager.isInArea()) {
+      this.init.ctx.fillStyle = settings.colors.button.hover;
+    } else {
+      this.init.ctx.fillStyle = settings.colors.button.bg;
+    }
+    if (this.hoverManager.isInArea() && !this.optionalSaved?.disabled) {
+      this.init.ctx.canvas.style.cursor = "pointer";
+    } else {
+      this.init.ctx.canvas.style.cursor = "default";
+    }
+    drawRoundedRect(this.init.ctx, this.startX, this.startY, this.width, this.height, settings.gui.button.rounding);
+    this.drawer(this.contentX, this.contentY, this.contentCache, this as Readonly<AbstractButtonCalced>);
+  }
+  private glue() {
+    if (this.isGlued) return false;
+    this.isGlued = true;
+    this.hoverManager = this.init.addHoverRequest({
+      isInArea: this.isInArea,
+      onHover: this.redraw,
+      onLeave: this.redraw,
+    });
+    this.clickManager = this.init.addClickRequest({
+      isInArea: this.isInArea,
+      onReleased: (isInArea) => { 
+        if (isInArea) {
+          const shouldRedrawAfterClick = this.optionalSaved?.onClick?.();
+          if (!(shouldRedrawAfterClick instanceof Promise) && shouldRedrawAfterClick !== false) this.redraw();
+        } else {
+          this.redraw();
+        }
+      },
+      onPressed: this.redraw,
+    });
+    this.update(true);
+    return true;
+  }
+
+  hoverManager: ReturnType<Init["addHoverRequest"]>;
+  clickManager: ReturnType<Init["addClickRequest"]>;
+  constructor(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: AbstractButton<TCache>["drawer"], optional?: () => ButtonOptional, isLateGlue?: boolean) {
+    this.isInArea = this.isInArea.bind(this);
+    this.redraw = this.redraw.bind(this);
+    this.stop = this.stop.bind(this);
+    this.update = this.update.bind(this);
+    
+    this.init = init;
+    this.x = x;
+    this.y = y;
+    this.cache = cache;
+    this.drawer = drawer;
+    this.optional = optional;
+    this.isLateGlue = isLateGlue;
+    if (!isLateGlue) {
+      this.glue();
+      this.redraw();
+    }
+  }
+  private isInArea(x: number, y: number) {
+    return x >= this.startX && x <= this.endX && y >= this.startY && y <= this.endY;
+  }
+  redraw() {
+    this.glue();
+    this.optionalSaved?.likeLabel ? this.redrawLabel() : this.redrawContent();
+  }
+  update(everything?: boolean, dontUpdateHover?: boolean) {
+    if (this.glue()) return;
+    this.contentX = this.x(), this.contentY = this.y();
+    this.contentCache = this.cache(this.contentX, this.contentY);
+    if (everything) {
+      this.optionalSaved = this.optional?.();
+      this.width = Math.max(this.contentCache.contentWidth + settings.gui.button.padding * 2, this.optionalSaved?.minWidth || 0);
+      this.height = Math.max(this.contentCache.contentHeight + settings.gui.button.padding * 2, this.optionalSaved?.minHeight || 0);
+    }
+    this.startX = this.contentX - this.width / 2;
+    this.startY = this.contentY - this.height / 2;
+    this.endX = this.startX + this.width;
+    this.endY = this.startY + this.height;
+    if (!dontUpdateHover) this.hoverManager.update();
+  }
+  stop(shouldRedrawToDefault?: boolean) {
+    this.glue();
+    this.clickManager.stop();
+    this.hoverManager.stop();
+    if (shouldRedrawToDefault) this.redraw();
   }
 }
 
 export const drawButton = (init: Init, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional, isLateGlue?: boolean): ButtonManager => {
-  return drawAbstractButton(init, x, y, (x, y) => {
+  return new AbstractButton(init, x, y, (x, y) => {
     init.ctx.font = settings.fonts.ctxFont;
+    // TODO: stop calcing it every time
     const contentWidth = calcTextWidth(init.ctx, text);
     return {
       contentWidth, 
@@ -191,7 +190,7 @@ export const calcButtonWithDescription = (init: Init, text: string, description:
 }
 
 export const drawButtonWithDescription = (init: Init, x: () => number, y: () => number, text: string, description: string, optional?: () => ButtonOptional, isLateGlue?: boolean): ButtonManager => {
-  return drawAbstractButton(init, x, y, (x, y) => {
+  return new AbstractButton(init, x, y, (x, y) => {
     const { contentHeight, contentWidth, firstWidth, secondWidth } = calcButtonWithDescription(init, text, description);
     return {
       contentWidth,
@@ -219,7 +218,7 @@ export const drawIcon = (init: Init, x: number, y: number, img: HTMLImageElement
 }
 
 export const drawIconButton = (init: Init, x: () => number, y: () => number, img: HTMLImageElement, optional?: () => ButtonOptional, isLateGlue?: boolean): ButtonManager => {
-  return drawAbstractButton(init, x, y, (x, y) => {
+  return new AbstractButton(init, x, y, (x, y) => {
     return {
       contentHeight: img.height,
       contentWidth: img.width,
