@@ -21,6 +21,8 @@ const reprepareLocal = (ctx: CanvasRenderingContext2D) => {
   // add shadow
   ctx.shadowColor = "black";
   ctx.shadowBlur = 1;
+  // set font
+  ctx.font = settings.fonts.ctxFont;
   // calc
   const isMobile = settings.calculate.isMobile(currentWidthToHeightRatio);
   const gameWidth = settings.calculate.gameWidth(isMobile);

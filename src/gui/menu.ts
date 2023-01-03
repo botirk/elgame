@@ -10,7 +10,6 @@ import scroll from "./events/scroll";
 
 const calcMenu = (init: Init, plans: LoadedPlans, desc: string) => {
   // menu width
-  init.ctx.font = settings.fonts.ctxFont;
   const [minWidthGame, minHeight] = plans.reduce((prev, cur) => {
     const calced = calcButtonWithDescription(init, cur.name, cur.label);
     return [Math.max(calced.contentWidth + settings.gui.button.padding * 2, prev[0]), Math.max(calced.contentHeight + settings.gui.button.padding * 2, prev[1])]; 
@@ -89,13 +88,13 @@ const drawMenu = (init: Init) => {
   const stopResize = init.addResizeRequest(() => {
     init.prepared = reprepareInit(init);
     scrollManager.update();
-    update();
+    update(true);
     redraw();
   });
   // actions
   const stop = () => { buttons.forEach(({ stop }) => stop(true)); buttonFS.stop(true); stopResize(); scrollManager.stop(); };
   const redraw = () => { drawBackground(init.ctx); buttons.forEach(({ redraw }) => redraw()); buttonFS.redraw(); };
-  const update = () => { buttons.forEach(({ update }) => update()); buttonFS.update(); }
+  const update = (everything?: boolean) => { buttons.forEach(({ update }) => update(everything)); buttonFS.update(); }
   // fullscreen button
   const buttonFS = drawFullscreenButton(init, redraw);
   // late glue

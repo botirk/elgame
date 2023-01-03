@@ -103,7 +103,6 @@ const drawProgressBar = (init: Init, state: FormState) => {
 
 const drawQuest = (init: Init, state: FormState, quest: WordWithImage) => {
   init.ctx.fillStyle = "black";
-  init.ctx.font = settings.fonts.ctxFont;
   init.ctx.fillText(quest.toLearnText, init.prepared.gameX + (init.prepared.gameWidth - calcTextWidth(init.ctx, quest.toLearnText)) / 2, state.gui.prepared.progressBarTextsY);
 }
 

@@ -21,7 +21,6 @@ const generateTarget = (init: Init, state: DropState) => {
 }
 
 const generateQuest = (init: Init, words: WordWithImage[], state?: DropState) => {
-  init.ctx.font = settings.fonts.ctxFont;
   let wordsAvailable = words;
   if (state) {
     const remaining = state.gameplay.words.filter((word) => state.gameplay.score.perWord[word.toLearnText] < state.gameplay.score.requiredPerWord);

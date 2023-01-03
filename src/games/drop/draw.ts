@@ -48,7 +48,6 @@ const drawHealths = (init: Init, state: DropState) => {
 
 const drawQuest = (init: Init, state: DropState) => {
   init.ctx.fillStyle = "black";
-  init.ctx.font = settings.fonts.ctxFont;
   init.ctx.fillText(state.gameplay.quest.word.toLearnText, state.gui.prepared.questX, state.gui.prepared.progressBarTextsY);
 }
 

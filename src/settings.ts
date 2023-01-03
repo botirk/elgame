@@ -58,8 +58,7 @@ export const memoryGame = {
 }
 
 export const formGame = {
-  endAnimationTime: 15000,
-  //endAnimationTime: 3000,
+  endAnimationTime: 3000,
   margin: 15,
   progressBarY: 100,
   pause: 900,

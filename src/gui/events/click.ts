@@ -5,6 +5,7 @@ interface ClickRequest {
   isPressed?: boolean,
   onReleased: (isInside: boolean) => void,
   onPressed?: () => void,
+  zIndex?: number,
 }
 
 export interface ClickManager {
@@ -17,11 +18,22 @@ const click = (ctx: CanvasRenderingContext2D) => {
   
   ctx.canvas.addEventListener("mousedown", (e) => { if (e.button == 0) {
     const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
+    const result: ClickRequest[] = [];
+    let resultZIndex = -Infinity;
     requesters.forEach((requester) => {
       if (requester.isInArea(x, y)) {
-        requester.isPressed = true;
-        requester.onPressed?.(); 
+        if ((requester.zIndex || 0) >= resultZIndex) {
+          if ((requester.zIndex || 0) > resultZIndex) {
+            resultZIndex = (requester.zIndex || 0);
+            result.length = 0;
+          }
+          result.push(requester);
+        }
       }
+    });
+    result.forEach((requester) => {
+      requester.isPressed = true;
+      requester.onPressed?.();
     });
   }});
 

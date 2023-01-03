@@ -13,7 +13,6 @@ type OnClick = (card: MemoryCard) => void;
 const calculateCardSize = (init: Init, words: WordWithImage[]) => {
   let height = settings.fonts.fontSize + settings.gui.button.padding * 2;
   let width = settings.gui.button.padding * 2;
-  init.ctx.font = settings.fonts.ctxFont;
   words.forEach((img) => {
     height = Math.max(height, img.toLearnImg.height + settings.gui.button.padding * 2);
     width = Math.max(width, calcTextWidth(init.ctx, img.toLearnText) + settings.gui.button.padding * 2, img.toLearnImg.width + settings.gui.button.padding * 2);

@@ -22,22 +22,19 @@ export interface ButtonManager {
   update: (everything?: boolean, dontUpdateHover?: boolean) => void,
 }
 
-interface AbstractButtonCache {
-  contentWidth: number, 
-  contentHeight: number,
-}
-
 interface AbstractButtonCalced {
   startX: number, startY: number,
   endX: number, endY: number,
   width: number, height: number,
 }
 
-class AbstractButton<TCache extends AbstractButtonCache> {
+class AbstractButton<TCache extends Object> {
   private readonly init: Init;
   private readonly x: () => number;
   private readonly y: () => number;
-  private readonly cache: (x: number, y: number) => TCache;
+  private readonly contentWidth: () => number;
+  private readonly contentHeight: () => number;
+  private readonly cache: (contentX: number, contentY: number, contentWidth: number, contentHeight: number) => TCache;
   private readonly drawer: (x: number, y: number, cached: Readonly<TCache>, calced: Readonly<AbstractButtonCalced>) => void;
   private readonly optional?: (() => ButtonOptional);
   private readonly isLateGlue?: boolean;
@@ -52,6 +49,8 @@ class AbstractButton<TCache extends AbstractButtonCache> {
   private endX: number; 
   private endY: number;
   private optionalSaved: ButtonOptional | undefined;
+  private contentWidthSaved: number;
+  private contentHeightSaved: number;
   private contentCache: TCache;
   
   private redrawLabel() {
@@ -111,7 +110,7 @@ class AbstractButton<TCache extends AbstractButtonCache> {
 
   hoverManager: ReturnType<Init["addHoverRequest"]>;
   clickManager: ReturnType<Init["addClickRequest"]>;
-  constructor(init: Init, x: () => number, y: () => number, cache: (x: number, y: number) => TCache, drawer: AbstractButton<TCache>["drawer"], optional?: () => ButtonOptional, isLateGlue?: boolean) {
+  constructor(init: Init, x: () => number, y: () => number, contentWidth: () => number, contentHeigth: () => number, cache: AbstractButton<TCache>["cache"], drawer: AbstractButton<TCache>["drawer"], optional?: () => ButtonOptional, isLateGlue?: boolean) {
     this.isInArea = this.isInArea.bind(this);
     this.redraw = this.redraw.bind(this);
     this.stop = this.stop.bind(this);
@@ -120,6 +119,8 @@ class AbstractButton<TCache extends AbstractButtonCache> {
     this.init = init;
     this.x = x;
     this.y = y;
+    this.contentWidth = contentWidth;
+    this.contentHeight = contentHeigth;
     this.cache = cache;
     this.drawer = drawer;
     this.optional = optional;
@@ -138,13 +139,15 @@ class AbstractButton<TCache extends AbstractButtonCache> {
   }
   update(everything?: boolean, dontUpdateHover?: boolean) {
     if (this.glue()) return;
-    this.contentX = this.x(), this.contentY = this.y();
-    this.contentCache = this.cache(this.contentX, this.contentY);
     if (everything) {
+      this.contentWidthSaved = this.contentWidth();
+      this.contentHeightSaved = this.contentHeight();
       this.optionalSaved = this.optional?.();
-      this.width = Math.max(this.contentCache.contentWidth + settings.gui.button.padding * 2, this.optionalSaved?.minWidth || 0);
-      this.height = Math.max(this.contentCache.contentHeight + settings.gui.button.padding * 2, this.optionalSaved?.minHeight || 0);
+      this.width = Math.max(this.contentWidthSaved + settings.gui.button.padding * 2, this.optionalSaved?.minWidth || 0);
+      this.height = Math.max(this.contentHeightSaved + settings.gui.button.padding * 2, this.optionalSaved?.minHeight || 0);
     }
+    this.contentX = this.x(), this.contentY = this.y();
+    this.contentCache = this.cache(this.contentX, this.contentY, this.contentWidthSaved, this.contentHeightSaved);
     this.startX = this.contentX - this.width / 2;
     this.startY = this.contentY - this.height / 2;
     this.endX = this.startX + this.width;
@@ -160,25 +163,18 @@ class AbstractButton<TCache extends AbstractButtonCache> {
 }
 
 export const drawButton = (init: Init, x: () => number, y: () => number, text: string, optional?: () => ButtonOptional, isLateGlue?: boolean): ButtonManager => {
-  return new AbstractButton(init, x, y, (x, y) => {
-    init.ctx.font = settings.fonts.ctxFont;
-    // TODO: stop calcing it every time
-    const contentWidth = calcTextWidth(init.ctx, text);
+  return new AbstractButton(init, x, y, () => calcTextWidth(init.ctx, text), () => settings.fonts.fontSize, (contentX, contentY, contentWidth) => {
     return {
-      contentWidth, 
-      contentHeight: settings.fonts.fontSize,
-      textX: x - contentWidth / 2,
-      textY: y + settings.fonts.fontSize / 3,
+      textX: contentX - contentWidth / 2,
+      textY: contentY + settings.fonts.fontSize / 3,
     };
   }, (x, y, cache) => {
-    init.ctx.font = settings.fonts.ctxFont;
     init.ctx.fillStyle = settings.colors.textColor;
     init.ctx.fillText(text, cache.textX, cache.textY);
   }, optional, isLateGlue);
 }
 
 export const calcButtonWithDescription = (init: Init, text: string, description: string) => {
-  init.ctx.font = settings.fonts.ctxFont;
   const firstWidth = calcTextWidth(init.ctx, text);
   const secondWidth = calcTextWidth(init.ctx, description);
   const oneHeight = settings.fonts.fontSize + settings.gui.button.padding;
@@ -190,18 +186,15 @@ export const calcButtonWithDescription = (init: Init, text: string, description:
 }
 
 export const drawButtonWithDescription = (init: Init, x: () => number, y: () => number, text: string, description: string, optional?: () => ButtonOptional, isLateGlue?: boolean): ButtonManager => {
-  return new AbstractButton(init, x, y, (x, y) => {
-    const { contentHeight, contentWidth, firstWidth, secondWidth } = calcButtonWithDescription(init, text, description);
+  const { contentHeight, contentWidth, firstWidth, secondWidth } = calcButtonWithDescription(init, text, description);
+  return new AbstractButton(init, x, y, () => contentWidth, () => contentHeight, (x, y) => {
     return {
-      contentWidth,
-      contentHeight,
       textX: x - firstWidth / 2,
       textY: y - 1 - settings.fonts.fontSize / 3,
       descX: x - secondWidth / 2,
       descY: y + settings.fonts.fontSize,
     };
   }, (x, y, cache, calced) => {
-    init.ctx.font = settings.fonts.ctxFont;
     init.ctx.fillStyle = settings.colors.textColor;
     init.ctx.fillText(text, cache.textX, cache.textY);
     init.ctx.strokeStyle = settings.colors.textColor;
@@ -218,12 +211,10 @@ export const drawIcon = (init: Init, x: number, y: number, img: HTMLImageElement
 }
 
 export const drawIconButton = (init: Init, x: () => number, y: () => number, img: HTMLImageElement, optional?: () => ButtonOptional, isLateGlue?: boolean): ButtonManager => {
-  return new AbstractButton(init, x, y, (x, y) => {
+  return new AbstractButton(init, x, y, () => img.width, () => img.height, (x, y, contentWidth, contentHeight) => {
     return {
-      contentHeight: img.height,
-      contentWidth: img.width,
-      iconX: x - img.width / 2,
-      iconY: y - img.height / 2,
+      iconX: x - contentWidth / 2,
+      iconY: y - contentHeight / 2,
     }
   }, (x, y, cache) => {
     drawIcon(init, cache.iconX, cache.iconY, img);
@@ -239,7 +230,7 @@ export const drawFullscreenButton = (init: Init, onRedraw: () => void): ButtonMa
     if (document.fullscreenElement) return;
     if (button?.stop) button.stop(false);
     button = drawIconButton(
-      init,x, y, init.prepared.imgs.fullscreen,
+      init, x, y, init.prepared.imgs.fullscreen,
       () => ({ onClick: () => {
         init.ctx.canvas.requestFullscreen();
         stopDisplay();
@@ -258,9 +249,20 @@ export const drawFullscreenButton = (init: Init, onRedraw: () => void): ButtonMa
     onLeave: stopDisplay,
   });
 
+  const clickManager = init.addClickRequest({
+    isInArea: () => true,
+    zIndex: -Infinity,
+    onReleased: (isInside) => { 
+      if (isInside && !document.fullscreenElement && init.prepared.isMobile) {
+        if (!button) display(); else stopDisplay();
+      }
+    },
+  });
+
   const newStop = (shouldRedraw: boolean) => {
     if (button?.stop) button.stop(shouldRedraw);
     hoverManager.stop();
+    clickManager.stop();
   };
   const newRedraw = () => { if (button?.redraw) button.redraw(); };
   const newUpdate = () => { if (button?.update) button.update(); };

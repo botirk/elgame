@@ -14,7 +14,6 @@ const calculateTable = (init: Init, words: Word[]) => {
   let wordColumnWidth = 0;
   let imgColumnWidth = 0;
   let translationColumnWidth = 0;
-  init.ctx.font = settings.fonts.ctxFont;
   words.forEach((word) => {
     wordColumnWidth = Math.max(wordColumnWidth, calcTextWidth(init.ctx, word.toLearnText) + settings.gui.button.padding * 2);
     if (word.toLearnImg) {
@@ -84,6 +83,7 @@ const viewer = (init: Init, words: Word[]) => async () => {
   const click = init.addClickRequest({
     isInArea: () => true, 
     onReleased: (isInside) => { if (isInside) gameEnder({ isSuccess: true }); },
+    zIndex: 1,
   });
   
   // resize

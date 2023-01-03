@@ -1,7 +1,6 @@
 import settings from "../settings";
 
 export const drawTextAtCenter = (ctx: CanvasRenderingContext2D, x: number, y: number, text: string) => {
-  ctx.font = settings.fonts.ctxFont;
   const metrics = ctx.measureText(text);
 
   const textWidth = metrics.width;

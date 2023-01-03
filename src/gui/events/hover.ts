@@ -7,6 +7,10 @@ interface HoverRequest {
   isCurrentlyInside?: boolean,
 }
 
+interface HoverRequestPlus extends HoverRequest {
+  lastPos: [number, number],
+}
+
 export interface HoverManager {
   stop: () => void,
   update: () => void,
@@ -14,17 +18,16 @@ export interface HoverManager {
 }
 
 const hover = (ctx: CanvasRenderingContext2D) => {
-  const requesters: HoverRequest[] = [];
-  const lastPos = { x: Infinity, y: Infinity };
+  const requesters: HoverRequestPlus[] = [];
 
   ctx.canvas.addEventListener("mousemove", (e) => {
-    [lastPos.x, lastPos.y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
+    const pos = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
     requesters.forEach((req) => {
-      if (!req.isCurrentlyInside && req.isInArea(lastPos.x, lastPos.y)) {
+      req.lastPos = pos;
+      if (!req.isCurrentlyInside && req.isInArea(...req.lastPos)) {
         req.isCurrentlyInside = true;
         req.onHover();
-        
-      } else if (req.isCurrentlyInside && !req.isInArea(lastPos.x, lastPos.y)) {
+      } else if (req.isCurrentlyInside && !req.isInArea(...req.lastPos)) {
         req.isCurrentlyInside = false;
         req.onLeave();
       }
@@ -32,17 +35,17 @@ const hover = (ctx: CanvasRenderingContext2D) => {
   });
 
   const addRequest = (req: HoverRequest): HoverManager => {
-    const update = () => {
-      req.isCurrentlyInside = req.isInArea(lastPos.x, lastPos.y);
-    }
-    if (req.isCurrentlyInside === undefined) update();
+    const newReq: HoverRequestPlus = { ...req, lastPos: [-Infinity, -Infinity] };
+    requesters.push(newReq);
+    
     const stop = () => {
-      const i = requesters.indexOf(req);
+      const i = requesters.indexOf(newReq);
       if (i != -1) requesters.splice(i, 1);
-      req.isCurrentlyInside = false;
+      newReq.isCurrentlyInside = false;
     }
-    const isInArea = () => !!req.isCurrentlyInside;
-    requesters.push(req);
+    const isInArea = () => !!newReq.isCurrentlyInside;
+    const update = () => { newReq.isCurrentlyInside = newReq.isInArea(...newReq.lastPos); };
+
     return { stop, isInArea, update };
   }
 

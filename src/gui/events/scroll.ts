@@ -55,7 +55,7 @@ const scroll = (init: Init, options: () => ScrollOptions): ScrollManager => {
     if (!e.targetTouches.length) return;
     state.topTouch = Infinity, state.botTouch = -Infinity;
     for (let i = 0; i < e.targetTouches.length; i++) {
-      const [_, y] = settings.calculate.toCanvasCoords(init.ctx, e.targetTouches[0].pageX, e.targetTouches[0].pageY);
+      const [_, y] = settings.calculate.toCanvasCoords(init.ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
       if (y < state.topTouch) state.topTouch = y;
       if (y > state.botTouch) state.botTouch = y;
     }
@@ -65,20 +65,20 @@ const scroll = (init: Init, options: () => ScrollOptions): ScrollManager => {
     const oldPos = state.pos;
     let topTouch = Infinity, botTouch = -Infinity;
     for (let i = 0; i < e.targetTouches.length; i++) {
-      const [_, y] = settings.calculate.toCanvasCoords(init.ctx, e.targetTouches[0].pageX, e.targetTouches[0].pageY);
+      const [_, y] = settings.calculate.toCanvasCoords(init.ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
       if (y < topTouch) topTouch = y;
       if (y > botTouch) botTouch = y;
     }
     // to top
     if (botTouch > state.botTouch) {
       state.pos = Math.max(0, state.pos - (botTouch - state.botTouch));
-      state.botTouch = botTouch;
     }
     // to bot
     if (topTouch < state.topTouch) {
       state.pos = Math.min(maxPos(), state.pos + (state.topTouch - topTouch));
-      state.topTouch = topTouch;
     }
+    state.botTouch = botTouch;
+    state.topTouch = topTouch;
     if (state.pos != oldPos) {
       state.update();
       state.redraw();
