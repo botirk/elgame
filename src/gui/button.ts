@@ -1,7 +1,5 @@
-import init, { Init } from "../init";
+import { Init } from "../init";
 import settings from "../settings";
-import { mergeDeep } from "../utils";
-import { HoverManager } from "./events/hover";
 import { drawRoundedRect } from "./roundedRect";
 import { calcTextWidth } from "./text";
 
@@ -17,7 +15,7 @@ interface ButtonOptional {
 }
 
 export interface ButtonManager {
-  stop: (shouldRedraw: boolean) => void,
+  stop: (shouldRedraw?: boolean) => void,
   redraw: () => void,
   update: (everything?: boolean, dontUpdateHover?: boolean) => void,
 }
@@ -52,6 +50,8 @@ class AbstractButton<TCache extends Object> {
   private contentWidthSaved: number;
   private contentHeightSaved: number;
   private contentCache: TCache;
+  hoverManager?: ReturnType<Init["addHoverRequest"]>;
+  clickManager?: ReturnType<Init["addClickRequest"]>;
   
   private redrawLabel() {
     if (this.optionalSaved?.bgColor) {
@@ -69,14 +69,14 @@ class AbstractButton<TCache extends Object> {
       this.init.ctx.fillStyle = this.optionalSaved.bgColor;
     } else if (this.optionalSaved?.disabled) {
       this.init.ctx.fillStyle = settings.colors.button.disabled;
-    } else if (this.clickManager.isPressed()) {
+    } else if (this.clickManager?.isPressed()) {
       this.init.ctx.fillStyle = settings.colors.button.pressed;
-    } else if (this.hoverManager.isInArea()) {
+    } else if (this.hoverManager?.isInArea()) {
       this.init.ctx.fillStyle = settings.colors.button.hover;
     } else {
       this.init.ctx.fillStyle = settings.colors.button.bg;
     }
-    if (this.hoverManager.isInArea() && !this.optionalSaved?.disabled) {
+    if (this.hoverManager?.isInArea() && !this.optionalSaved?.disabled) {
       this.init.ctx.canvas.style.cursor = "pointer";
     } else {
       this.init.ctx.canvas.style.cursor = "default";
@@ -84,32 +84,40 @@ class AbstractButton<TCache extends Object> {
     drawRoundedRect(this.init.ctx, this.startX, this.startY, this.width, this.height, settings.gui.button.rounding);
     this.drawer(this.contentX, this.contentY, this.contentCache, this as Readonly<AbstractButtonCalced>);
   }
+  
+  private updateManagers() {
+    if (this.optionalSaved?.disabled || this.optionalSaved?.likeLabel || !this.optionalSaved?.onClick) {
+      this.hoverManager?.stop();
+      this.hoverManager = undefined;
+      this.clickManager?.stop();
+      this.clickManager = undefined;
+    } else {
+      this.hoverManager ||= this.init.addHoverRequest({
+        isInArea: this.isInArea,
+        onHover: this.redraw,
+        onLeave: this.redraw,
+      });
+      this.clickManager ||= this.init.addClickRequest({
+        isInArea: this.isInArea,
+        onReleased: (isInArea) => { 
+          if (isInArea) {
+            const shouldRedrawAfterClick = this.optionalSaved?.onClick?.();
+            if (!(shouldRedrawAfterClick instanceof Promise) && shouldRedrawAfterClick !== false) this.redraw();
+          } else {
+            this.redraw();
+          }
+        },
+        onPressed: this.redraw,
+      });
+    }
+  }
   private glue() {
     if (this.isGlued) return false;
     this.isGlued = true;
-    this.hoverManager = this.init.addHoverRequest({
-      isInArea: this.isInArea,
-      onHover: this.redraw,
-      onLeave: this.redraw,
-    });
-    this.clickManager = this.init.addClickRequest({
-      isInArea: this.isInArea,
-      onReleased: (isInArea) => { 
-        if (isInArea) {
-          const shouldRedrawAfterClick = this.optionalSaved?.onClick?.();
-          if (!(shouldRedrawAfterClick instanceof Promise) && shouldRedrawAfterClick !== false) this.redraw();
-        } else {
-          this.redraw();
-        }
-      },
-      onPressed: this.redraw,
-    });
     this.update(true);
     return true;
   }
 
-  hoverManager: ReturnType<Init["addHoverRequest"]>;
-  clickManager: ReturnType<Init["addClickRequest"]>;
   constructor(init: Init, x: () => number, y: () => number, contentWidth: () => number, contentHeigth: () => number, cache: AbstractButton<TCache>["cache"], drawer: AbstractButton<TCache>["drawer"], optional?: () => ButtonOptional, isLateGlue?: boolean) {
     this.isInArea = this.isInArea.bind(this);
     this.redraw = this.redraw.bind(this);
@@ -143,6 +151,7 @@ class AbstractButton<TCache extends Object> {
       this.contentWidthSaved = this.contentWidth();
       this.contentHeightSaved = this.contentHeight();
       this.optionalSaved = this.optional?.();
+      this.updateManagers();
       this.width = Math.max(this.contentWidthSaved + settings.gui.button.padding * 2, this.optionalSaved?.minWidth || 0);
       this.height = Math.max(this.contentHeightSaved + settings.gui.button.padding * 2, this.optionalSaved?.minHeight || 0);
     }
@@ -152,13 +161,17 @@ class AbstractButton<TCache extends Object> {
     this.startY = this.contentY - this.height / 2;
     this.endX = this.startX + this.width;
     this.endY = this.startY + this.height;
-    if (!dontUpdateHover) this.hoverManager.update();
+    if (!dontUpdateHover) this.hoverManager?.update();
   }
   stop(shouldRedrawToDefault?: boolean) {
-    this.glue();
-    this.clickManager.stop();
-    this.hoverManager.stop();
-    if (shouldRedrawToDefault) this.redraw();
+    this.clickManager?.stop();
+    this.clickManager = undefined;
+    this.hoverManager?.stop();
+    this.hoverManager = undefined;
+    if (shouldRedrawToDefault) {
+      this.glue();
+      this.redraw();
+    }
   }
 }
 
@@ -259,7 +272,7 @@ export const drawFullscreenButton = (init: Init, onRedraw: () => void): ButtonMa
     },
   });
 
-  const newStop = (shouldRedraw: boolean) => {
+  const newStop = (shouldRedraw?: boolean) => {
     if (button?.stop) button.stop(shouldRedraw);
     hoverManager.stop();
     clickManager.stop();

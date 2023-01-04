@@ -114,6 +114,6 @@ export const loadPlans = (init: Init) => {
     add("Memory", plan, memory(init, words), viewer(init, words));
   }
 
-  return plans;
+  return plans.sort((a, b) => a.place - b.place);
 }
 

@@ -162,7 +162,7 @@ const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: F
               stop(true);
               onFinish(q.card);
             }, formGame.pause);
-            button.update();
+            button.update(true);
             button.redraw();
             return false;
           }
@@ -172,7 +172,7 @@ const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: F
     return button;
   });
 
-  const stop = (shouldRedraw: boolean) => buttons.forEach((btn) => btn.stop(shouldRedraw));
+  const stop = (shouldRedraw?: boolean) => buttons.forEach((btn) => btn.stop(shouldRedraw));
   const redraw = () => {
     drawBackground(init.ctx);
     if (clickedCard && clickedCard == quest) {
@@ -184,7 +184,7 @@ const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: F
     }
     buttons.forEach((btn) => btn.redraw());
   }
-  const update = (dontUpdateHover?: boolean) => buttons.forEach((btn) => btn.update(dontUpdateHover));
+  const update = (everything?: boolean, dontUpdateHover?: boolean) => buttons.forEach((btn) => btn.update(everything, dontUpdateHover));
 
   return { stop, redraw, update };
 }

@@ -23,15 +23,19 @@ const calcMenu = (init: Init, plans: LoadedPlans, desc: string) => {
   const xDescMobile = xGame;
   const xDesc = () => isNarrow() ? xDescMobile() : xDescDesktop();
   const yGameDesktop = (count: number, scrollPos: number) => -scrollPos + settings.gui.button.distance + minHeight / 2 + ((count - 1) * (minHeight + settings.gui.button.distance));
-  const yGameMobile = (i: number, scrollPos: number) => -scrollPos + settings.gui.button.distance + minHeight / 2 + (i * (minHeight + settings.gui.button.distance));
-  const yGame = (count: number, i: number, scrollPos: () => number) => () => isNarrow() ? yGameMobile(i, scrollPos()) : yGameDesktop(count, scrollPos());
+  const yGameMobile = (count: number, i: number, scrollPos: number) => {
+    // starting marging + block margin + button margin
+    return -scrollPos + settings.gui.button.distance + minHeight / 2  + (count - 1) * settings.gui.button.distance + (i * (minHeight + settings.gui.button.distance));
+  }
+  const yGame = (count: number, i: number, scrollPos: () => number) => () => isNarrow() ? yGameMobile(count, i, scrollPos()) : yGameDesktop(count, scrollPos());
   const yDescDesktop = yGameDesktop;
   const yDescMobile = yGameMobile;
-  const yDesc = (count: number, i: number, scrollPos: () => number) => () => isNarrow() ? yDescMobile(i, scrollPos()) : yDescDesktop(count, scrollPos());
+  const yDesc = (count: number, i: number, scrollPos: () => number) => () => isNarrow() ? yDescMobile(count, i, scrollPos()) : yDescDesktop(count, scrollPos());
   const minWidth = () => isNarrow() ? minWidthGame : minWidthDesc;
   const totalHeight = () => {
     if (isNarrow()) {
-      return (settings.gui.button.distance + minHeight) * 2 * plans.length + settings.gui.button.distance - (settings.gui.button.distance + minHeight);
+      // two buttons per plan + blocks margin + margin at botton - one "all words" button at top
+      return (settings.gui.button.distance + minHeight) * 2 * plans.length + settings.gui.button.distance * (plans.length - 1) + settings.gui.button.distance - (settings.gui.button.distance + minHeight);
     } else {
       return (settings.gui.button.distance + minHeight) * plans.length + settings.gui.button.distance;
     }
@@ -71,7 +75,7 @@ const drawMenu = (init: Init) => {
         drawMenu(init);
       },
     }), true));
-    buttons.push(drawButtonWithDescription(init, calced.xGame, calced.yGame(plan.place, buttons.length, scrollManager.pos), plan.name , plan.label, () => ({ 
+    buttons.push(drawButtonWithDescription(init, calced.xGame, calced.yGame(plan.place, buttons.length, scrollManager.pos), plan.name, plan.label, () => ({ 
       minWidth: calced.minWidthGame, minHeight: calced.minHeight, disabled: !progress[plan.place],
       onClick: async () => { 
         stop();

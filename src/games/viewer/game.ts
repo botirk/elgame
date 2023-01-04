@@ -1,7 +1,7 @@
 import { EndGameStats } from "..";
 import { Init, reprepareInit } from "../../init";
 import drawBackground from "../../gui/background";
-import { ButtonManager, drawIconButton, drawButton } from "../../gui/button";
+import { ButtonManager, drawIconButton, drawButton, drawFullscreenButton } from "../../gui/button";
 import { calcTextWidth } from "../../gui/text";
 import { promiseMagic } from "../../utils";
 import settings, { viewerGame } from "../../settings";
@@ -83,7 +83,6 @@ const viewer = (init: Init, words: Word[]) => async () => {
   const click = init.addClickRequest({
     isInArea: () => true, 
     onReleased: (isInside) => { if (isInside) gameEnder({ isSuccess: true }); },
-    zIndex: 1,
   });
   
   // resize
@@ -95,6 +94,8 @@ const viewer = (init: Init, words: Word[]) => async () => {
     redraw();
   });
 
+  const buttonFS = drawFullscreenButton(init, () => redraw());
+
   // update
   const update = () => {
     buttons.forEach((btn) => { btn.update(); });
@@ -104,6 +105,7 @@ const viewer = (init: Init, words: Word[]) => async () => {
   const redraw = () => {
     drawBackground(init.ctx);
     buttons.forEach((btn) => { btn.redraw(); });
+    buttonFS.redraw();
   }
   // late glue activation
   redraw();
@@ -114,6 +116,7 @@ const viewer = (init: Init, words: Word[]) => async () => {
     buttons.forEach((btn) => btn.stop(false));
     scrollManager.stop();
     stopResize();
+    buttonFS.stop();
   });
   return await promise;
 }

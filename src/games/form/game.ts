@@ -107,10 +107,10 @@ const form = (init: Init, words: WordWithImage[], dif: FormGameDifficulty) => as
           clickCard.successCount += 1;
           state.gameplay.score.total += 1;
           // update here if screen was resized
-          state.gui.winHistory.push(() => { form.update(true); form.redraw(); });
+          state.gui.winHistory.push(() => { form.update(false, true); form.redraw(); });
         } else {
           // update here if screen was resized
-          state.gui.loseHistory.push(() => { form.update(true); form.redraw(); });
+          state.gui.loseHistory.push(() => { form.update(false, true); form.redraw(); });
           state.gameplay.score.health -= 1;
         }
       }, (card) => resolve(card));
