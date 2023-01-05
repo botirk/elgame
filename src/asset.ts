@@ -40,7 +40,7 @@ const loadWord = async (toLoad: UnloadedWord, pxValue: number, side: "width" | "
     return new Promise<Word>((resolve) => {
       loadAsset(toLoad.toLearnImgB64 as string, pxValue, side).then((toLearnImg) => {
         resolve({ toLearnImg, toLearnText: toLoad.toLearnText, translation: toLoad.translation });
-      })
+      });
     });
   }
 };

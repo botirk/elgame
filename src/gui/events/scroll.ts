@@ -2,123 +2,159 @@ import { Init } from "../../init";
 import settings from "../../settings";
 
 interface ScrollOptions {
-  initialPos?: number,
   maxHeight: number,
   oneStep: number,
   redraw: () => void,
   update: () => void,
+  saveId?: string,
 }
 
-interface ScrollManager {
-  pos: () => number,
-  stop: () => void,
-  update: () => void,
-  drawScroll: () => void,
-}
-
-const initScrollState = {
-  maxHeight: 0, pos: 0, oneStep: 0, topTouch: undefined as number | undefined, botTouch: undefined as number | undefined, redraw: () => {}, update: () => {}
-}
-
-const scrollState = (init: Init, options: () => ScrollOptions, state = { ...initScrollState }) => {
-  const localOptions = options();
-  state.maxHeight = localOptions.maxHeight;
-  state.pos = Math.min(Math.max(0, localOptions.maxHeight - init.ctx.canvas.height), state.pos),
-  state.oneStep = localOptions.oneStep;
-  state.redraw = localOptions.redraw;
-  state.update = localOptions.update;
-  return state;
-};
-
-const scroll = (init: Init, options: () => ScrollOptions): ScrollManager => {
-  init.ctx.canvas.style.touchAction = "none";
-  let state = scrollState(init, options);
-  const update = () => { state = scrollState(init, options, state); };
+class Scroll {
+  private init: Init;
+  private options: () => ScrollOptions;
+  private optionsSaved: ScrollOptions;
   
-  const maxPos = () => Math.max(0, state.maxHeight - init.ctx.canvas.height);
-  const wheelListener = (e: WheelEvent) => {
-    const oldPos = state.pos;
-    // to top
-    if (e.deltaY < 0) state.pos = Math.max(0, state.pos - state.oneStep);
-    // to bot
-    else if (e.deltaY > 0) state.pos = Math.min(maxPos(), state.pos + state.oneStep);
-    
-    if (state.pos != oldPos) {
-      state.update();
-      state.redraw();
-      drawScroll();
+  private curPos: number;
+  private botTouch?: number;
+  private topTouch?: number;
+  private hideTimeout?: NodeJS.Timeout;
+  private loadPoses(): { [saveId: string]: number } {
+    const saveJSON = localStorage.getItem(settings.localStorage.scroll);
+    if (saveJSON) {
+      const parsed = JSON.parse(saveJSON);
+      if (typeof(parsed) == "object") {
+        if (!Object.values(parsed).some((key) => typeof(key) !== "number")) {
+          return parsed;
+        }
+      }
     }
-  };
-  init.ctx.canvas.addEventListener("wheel", wheelListener);
-
-  const touchStartListener = (e: TouchEvent) => {
-    if (!e.targetTouches.length) return;
-    state.topTouch = Infinity, state.botTouch = -Infinity;
-    for (let i = 0; i < e.targetTouches.length; i++) {
-      const [_, y] = settings.calculate.toCanvasCoords(init.ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
-      if (y < state.topTouch) state.topTouch = y;
-      if (y > state.botTouch) state.botTouch = y;
+    return {};
+  }
+  private loadPos() {
+    if (!this.optionsSaved.saveId) this.curPos = 0;
+    else this.curPos = this.loadPoses()[this.optionsSaved.saveId] || 0;
+  }
+  private savePos(): boolean {
+    if (!this.optionsSaved.saveId) return true;
+    const loaded = this.loadPoses();
+    loaded[this.optionsSaved.saveId] = this.curPos;
+    try {
+      localStorage.setItem(settings.localStorage.scroll, JSON.stringify(loaded));
+      return true;
+    } catch {
+      try {
+        localStorage.removeItem(settings.localStorage.scroll);
+        localStorage.setItem(settings.localStorage.scroll, JSON.stringify(loaded));
+        return true;
+      } catch {
+        return false;
+      }
+      
+    }
+    
+  }
+  private maxPos() {
+    return Math.max(0, this.optionsSaved.maxHeight - this.init.ctx.canvas.height);
+  }
+  private wheelListener(e: WheelEvent) {
+    const oldPos = this.curPos;
+    // to top
+    if (e.deltaY < 0) this.curPos = Math.max(0, this.curPos - this.optionsSaved.oneStep);
+    // to bot
+    else if (e.deltaY > 0) this.curPos = Math.min(this.maxPos(), this.curPos + this.optionsSaved.oneStep);
+    
+    if (this.curPos != oldPos) {
+      this.optionsSaved.update();
+      this.optionsSaved.redraw();
+      this.drawScroll();
     }
   }
-  const touchMoveListener = (e: TouchEvent) => {
-    if (!state.topTouch || !state.botTouch || !e.targetTouches.length) return;
-    const oldPos = state.pos;
+  private touchStartListener(e: TouchEvent) {
+    if (!e.targetTouches.length) return;
+    this.topTouch = Infinity, this.botTouch = -Infinity;
+    for (let i = 0; i < e.targetTouches.length; i++) {
+      const [_, y] = settings.calculate.toCanvasCoords(this.init.ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
+      if (y < this.topTouch) this.topTouch = y;
+      if (y > this.botTouch) this.botTouch = y;
+    }
+  }
+  private touchMoveListener(e: TouchEvent) {
+    if (!this.topTouch || !this.botTouch || !e.targetTouches.length) return;
+    const oldPos = this.curPos;
     let topTouch = Infinity, botTouch = -Infinity;
     for (let i = 0; i < e.targetTouches.length; i++) {
-      const [_, y] = settings.calculate.toCanvasCoords(init.ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
+      const [_, y] = settings.calculate.toCanvasCoords(this.init.ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
       if (y < topTouch) topTouch = y;
       if (y > botTouch) botTouch = y;
     }
     // to top
-    if (botTouch > state.botTouch) {
-      state.pos = Math.max(0, state.pos - (botTouch - state.botTouch));
+    if (botTouch > this.botTouch) {
+      this.curPos = Math.max(0, this.curPos - (botTouch - this.botTouch));
     }
     // to bot
-    if (topTouch < state.topTouch) {
-      state.pos = Math.min(maxPos(), state.pos + (state.topTouch - topTouch));
+    if (topTouch < this.topTouch) {
+      this.curPos = Math.min(this.maxPos(), this.curPos + (this.topTouch - topTouch));
     }
-    state.botTouch = botTouch;
-    state.topTouch = topTouch;
-    if (state.pos != oldPos) {
-      state.update();
-      state.redraw();
-      drawScroll();
+    this.botTouch = botTouch;
+    this.topTouch = topTouch;
+    if (this.curPos != oldPos) {
+      this.optionsSaved.update();
+      this.optionsSaved.redraw();
+      this.drawScroll();
     }
   }
-  const touchEndListener = (e: TouchEvent) => {
-    state.topTouch = undefined, state.botTouch = undefined;
+  private touchEndListener(e: TouchEvent) {
+    this.topTouch = undefined, this.botTouch = undefined;
   }
-  init.ctx.canvas.addEventListener("touchstart", touchStartListener);
-  init.ctx.canvas.addEventListener("touchmove", touchMoveListener);
-  init.ctx.canvas.addEventListener("touchend", touchEndListener);
-
-  const stop = () => {
-    init.ctx.canvas.removeEventListener("wheel", wheelListener);
-    init.ctx.canvas.removeEventListener("touchstart", touchStartListener);
-    init.ctx.canvas.removeEventListener("touchmove", touchMoveListener);
-    init.ctx.canvas.removeEventListener("touchend", touchEndListener);
-    clearTimeout(hideTimeout);
+  private beforeUnloadListener(e: BeforeUnloadEvent) {
+    this.savePos();
   }
 
-  let hideTimeout: NodeJS.Timeout | undefined = undefined;
-  const drawScroll = () => {
-    const pagePercent = init.ctx.canvas.height / state.maxHeight;
+  constructor(init: Init, options: () => ScrollOptions) {
+    init.ctx.canvas.style.touchAction = "none";
+    this.pos = this.pos.bind(this);
+    this.beforeUnloadListener = this.beforeUnloadListener.bind(this);
+    this.wheelListener = this.wheelListener.bind(this);
+    this.touchStartListener = this.touchStartListener.bind(this);
+    this.touchMoveListener = this.touchMoveListener.bind(this);
+    this.touchEndListener = this.touchEndListener.bind(this);
+    window.addEventListener("beforeunload", this.beforeUnloadListener);
+    init.ctx.canvas.addEventListener("wheel", this.wheelListener);
+    init.ctx.canvas.addEventListener("touchstart", this.touchStartListener);
+    init.ctx.canvas.addEventListener("touchmove", this.touchMoveListener);
+    init.ctx.canvas.addEventListener("touchend", this.touchEndListener);
+    this.init = init;
+    this.options = options;
+    this.update();
+  }
+  pos() {
+    return this.curPos;
+  }
+  update() {
+    this.optionsSaved = this.options();
+    if (!this.curPos) this.loadPos();
+    this.curPos = Math.min(this.maxPos(), this.curPos);
+  }
+  drawScroll() {
+    const pagePercent = this.init.ctx.canvas.height / this.optionsSaved.maxHeight;
     if (pagePercent >= 1) return;
-    const heightPercent = state.pos / maxPos();
-    const scrollHeight = init.ctx.canvas.height * pagePercent;
-    const scrollPos = (init.ctx.canvas.height - scrollHeight) * heightPercent;
-    init.ctx.fillStyle = settings.colors.button.bg;
-    init.ctx.fillRect(init.ctx.canvas.width - settings.gui.scroll.width - settings.gui.scroll.padding, scrollPos, settings.gui.scroll.width, scrollHeight);
-    if (hideTimeout !== undefined) clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(() => { state.redraw(); hideTimeout = undefined; }, settings.gui.scroll.timeout);
+    const heightPercent = this.curPos / this.maxPos();
+    const scrollHeight = this.init.ctx.canvas.height * pagePercent;
+    const scrollPos = (this.init.ctx.canvas.height - scrollHeight) * heightPercent;
+    this.init.ctx.fillStyle = settings.colors.button.bg;
+    this.init.ctx.fillRect(this.init.ctx.canvas.width - settings.gui.scroll.width - settings.gui.scroll.padding, scrollPos, settings.gui.scroll.width, scrollHeight);
+    clearTimeout(this.hideTimeout);
+    this.hideTimeout = setTimeout(() => { this.optionsSaved.redraw(); this.hideTimeout = undefined; }, settings.gui.scroll.timeout);
   }
-
-  return {
-    pos: () => state.pos,
-    stop,
-    update,
-    drawScroll,
-  };
+  stop() {
+    window.removeEventListener("beforeunload", this.beforeUnloadListener);
+    this.init.ctx.canvas.removeEventListener("wheel", this.wheelListener);
+    this.init.ctx.canvas.removeEventListener("touchstart", this.touchStartListener);
+    this.init.ctx.canvas.removeEventListener("touchmove", this.touchMoveListener);
+    this.init.ctx.canvas.removeEventListener("touchend", this.touchEndListener);
+    clearTimeout(this.hideTimeout);
+    this.savePos();
+  }
 }
 
-export default scroll;
+export default Scroll;

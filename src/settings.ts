@@ -118,6 +118,10 @@ const gui = {
     width: 15,
     padding: 8,
     timeout: 1500,
+  },
+  icon: {
+    width: 45,
+    height: 45,
   }
 }
 
@@ -136,9 +140,9 @@ const calculate = {
   toCanvasCoords: (ctx: CanvasRenderingContext2D, x: number, y: number): [ number, number ] => [x * (ctx.canvas.width / ctx.canvas.clientWidth), y * (ctx.canvas.height / ctx.canvas.clientHeight)],
 }
 
-const hero = {
-  width: 40,
-  height: 40,
+const localStorage = {
+  progress: "elgame",
+  scroll: "elgame-scroll",
 }
 
 const settings = {
@@ -146,8 +150,8 @@ const settings = {
   colors, 
   fonts,
   dimensions,
-  hero,
   gui,
+  localStorage,
 }
 
 export type Settings = typeof settings;

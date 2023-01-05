@@ -6,7 +6,7 @@ import { calcTextWidth } from "../../gui/text";
 import { promiseMagic } from "../../utils";
 import settings, { viewerGame } from "../../settings";
 import { Word, WordWithImage } from "..";
-import scroll from "../../gui/events/scroll";
+import Scroll from "../../gui/events/scroll";
 
 const calculateTable = (init: Init, words: Word[]) => {
   // width + height of rows
@@ -61,7 +61,7 @@ const calculateTable = (init: Init, words: Word[]) => {
 const viewer = (init: Init, words: Word[]) => async () => {
   let table = calculateTable(init, words);
   // scroll 
-  const scrollManager = scroll(init, () => ({ 
+  const scroll = new Scroll(init, () => ({ 
     maxHeight: table.columnHeight,
     oneStep: table.rowHeight + settings.gui.button.distance, 
     update: () => update(),
@@ -70,12 +70,12 @@ const viewer = (init: Init, words: Word[]) => async () => {
   // words
   const buttons: ButtonManager[] = [];
   buttons.push(...words.map((word, i) => drawButton(
-    init, () => table.wordX, () => -scrollManager.pos() + table.columnY + ((table.rowHeight + settings.gui.button.distance) * i), word.toLearnText, 
+    init, () => table.wordX, () => -scroll.pos() + table.columnY + ((table.rowHeight + settings.gui.button.distance) * i), word.toLearnText, 
     () => ({ likeLabel: true, minHeight: table.rowHeight, minWidth: table.wordColumnWidth, lateGlue: true })
   )));
   // imgs
   buttons.push(...(words.filter((word) => word.toLearnImg) as WordWithImage[]).map((word, i) => drawIconButton(
-    init, () => table.imgX, () => -scrollManager.pos() + table.columnY + ((table.rowHeight + settings.gui.button.distance) * i), word.toLearnImg, 
+    init, () => table.imgX, () => -scroll.pos() + table.columnY + ((table.rowHeight + settings.gui.button.distance) * i), word.toLearnImg, 
     () => ({ likeLabel: true, minHeight: table.rowHeight, minWidth: table.imgColumnWidth, lateGlue: true })
   )));
   
@@ -89,7 +89,7 @@ const viewer = (init: Init, words: Word[]) => async () => {
   const stopResize = init.addResizeRequest(() => {
     init.prepared = reprepareInit(init);
     table = calculateTable(init, words);
-    scrollManager.update();
+    scroll.update();
     update();
     redraw();
   });
@@ -109,12 +109,12 @@ const viewer = (init: Init, words: Word[]) => async () => {
   }
   // late glue activation
   redraw();
-  scrollManager.drawScroll();
+  scroll.drawScroll();
   
   const [promise, gameEnder] = promiseMagic<EndGameStats>(() => {
     click.stop();
     buttons.forEach((btn) => btn.stop(false));
-    scrollManager.stop();
+    scroll.stop();
     stopResize();
     buttonFS.stop();
   });
