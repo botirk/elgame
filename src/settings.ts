@@ -59,8 +59,6 @@ export const memoryGame = {
 
 export const formGame = {
   endAnimationTime: 3000,
-  margin: 15,
-  progressBarY: 100,
   pause: 900,
   difficulties: {
     learning: {
@@ -109,6 +107,7 @@ const fonts = {
 }
 
 const gui = {
+  margin: 15,
   button: {
     rounding: 4,
     padding: 6,
@@ -122,6 +121,9 @@ const gui = {
   icon: {
     width: 45,
     height: 45,
+  },
+  status: {
+    height: 100,
   }
 }
 

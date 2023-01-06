@@ -104,7 +104,7 @@ const memory = (init: Init, words: WordWithImage[]) => async () => {
     init.prepared = reprepareInit(init);
     state.gui.prepared = prepareDraw(init, words);
     reshuffleCards(state.gameplay.cards, state.gui.prepared);
-    move();
+    update();
     buttonFS.update();
     redraw();
     buttonFS.redraw();
@@ -135,7 +135,7 @@ const memory = (init: Init, words: WordWithImage[]) => async () => {
   const buttonFS = drawFullscreenButton(init, () => redraw());
   // render
   let timeout: NodeJS.Timeout | undefined;
-  const [stopDraw, redraw, move, redrawCard] = drawState(init, state, (card) => {
+  const { stop, redraw, update, redrawCard } = drawState(init, state, (card) => {
     if (state.gameplay.remainingCards <= 0) return;
     clearTimeout(timeout);
     for (const failed of state.gameplay.cards.filter((card) => card.gameState == "failed")) {
@@ -186,7 +186,7 @@ const memory = (init: Init, words: WordWithImage[]) => async () => {
 
   const [promise, gameEnder] = promiseMagic<EndGameStats>(() => {
     clearTimeout(timeout);
-    stopDraw();
+    stop();
     stopResize();
     buttonFS.stop(false);
   });

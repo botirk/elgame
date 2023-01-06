@@ -47,6 +47,11 @@ export const prepare = (init: Init, words: WordWithImage[]) => {
 }
 export type Prepared = ReturnType<typeof prepare>;
 
+const getCardBgColor = (card: MemoryCard) => {
+  if (card.gameState == "failed") return settings.colors.fail; 
+  else if (card.gameState == "solved&open") return settings.colors.success;
+}
+
 const drawCard = (init: Init, card: MemoryCard, state: MemoryState, onClick: OnClick): ButtonManager => {
   const x = () => init.prepared.gameX + state.gui.prepared.start.x + (card.column - 1) * (state.gui.prepared.card.width + memoryGame.margin);
   const y = () => state.gui.prepared.start.y + (card.row - 1) * (state.gui.prepared.card.height + memoryGame.margin);
@@ -56,17 +61,15 @@ const drawCard = (init: Init, card: MemoryCard, state: MemoryState, onClick: OnC
       init, x, y, "", () => ({ minWidth: state.gui.prepared.card.width, minHeight: state.gui.prepared.card.height, onClick: () => onClick(card) })
     );
   } else if (card.gameState == "open" || card.gameState == "failed" || card.gameState == "solved&open") {
-    let bgColor: string | undefined;
-    if (card.gameState == "failed") bgColor = settings.colors.fail; else if (card.gameState == "solved&open") bgColor = settings.colors.success;
     if (card.guessState == "word") {
       return drawButton(
         init, x, y, card.word.toLearnText,
-        () => ({ minWidth: state.gui.prepared.card.width, minHeight: state.gui.prepared.card.height, bgColor, onClick: () => onClick(card) })
+        () => ({ minWidth: state.gui.prepared.card.width, minHeight: state.gui.prepared.card.height, bgColor: getCardBgColor(card), onClick: () => onClick(card) })
       );
     } else {
       return drawIconButton(
         init, x, y, card.word.toLearnImg,
-        () => ({ minWidth: state.gui.prepared.card.width, minHeight: state.gui.prepared.card.height, bgColor, onClick: () => onClick(card) })
+        () => ({ minWidth: state.gui.prepared.card.width, minHeight: state.gui.prepared.card.height, bgColor: getCardBgColor(card), onClick: () => onClick(card) })
       );
     }
   } else {
@@ -81,7 +84,7 @@ const drawCard = (init: Init, card: MemoryCard, state: MemoryState, onClick: OnC
   }
 }
 
-const drawCards = (init: Init, state: MemoryState, onClick: OnClick): [() => void, () => void, () => void, (card: MemoryCard) => void] => {
+const drawCards = (init: Init, state: MemoryState, onClick: OnClick) => {
   const redrawBtn = (i: number) => {
     const btn = buttons[i];
     if (btn) {
@@ -94,20 +97,20 @@ const drawCards = (init: Init, state: MemoryState, onClick: OnClick): [() => voi
   }
   
   const buttons = state.gameplay.cards.map((card) => ({ ...drawCard(init, card, state, onClick), card }));
-  const stopDraw = () => buttons.forEach((btn) => btn.stop(false));
-  const redraw = () => buttons.forEach((btn) => btn.redraw());
-  const move = () => buttons.forEach((btn) => btn.update());
+  const stop = () => buttons.forEach(({ stop }) => stop());
+  const redraw = () => buttons.forEach(({ redraw }) => redraw());
+  const update = () => buttons.forEach(({ update }) => update());
   const redrawCard = (card: MemoryCard) => redrawBtn(buttons.findIndex((btn) => btn.card == card));
-  return [stopDraw, redraw, move, redrawCard];
+  return { stop, redraw, update, redrawCard };
 }
 
-export const drawState = (init: Init, state: MemoryState, onClick: OnClick): [() => void, () => void, () => void, (card: MemoryCard) => void] => {
+export const drawState = (init: Init, state: MemoryState, onClick: OnClick) => {
   drawBackground(init.ctx);
 
-  const stdReturn = drawCards(init, state, onClick);
+  const cards = drawCards(init, state, onClick);
   const redraw = () => {
     drawBackground(init.ctx);
-    stdReturn[1]();
+    cards.redraw();
   }
-  return [stdReturn[0], redraw, stdReturn[2], stdReturn[3]];
+  return { ...cards, redraw };
 }

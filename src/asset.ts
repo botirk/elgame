@@ -116,4 +116,3 @@ export const loadPlans = (init: Init) => {
 
   return plans.sort((a, b) => a.place - b.place);
 }
-
