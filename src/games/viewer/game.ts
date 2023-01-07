@@ -1,12 +1,13 @@
 import { EndGameStats } from "..";
 import { Init, reprepareInit } from "../../init";
 import drawBackground from "../../gui/background";
-import { ButtonManager, drawIconButton, drawButton, drawFullscreenButton } from "../../gui/button";
 import { calcTextWidth } from "../../gui/text";
 import { promiseMagic } from "../../utils";
 import settings, { viewerGame } from "../../settings";
 import { Word, WordWithImage } from "..";
 import Scroll from "../../gui/events/scroll";
+import { Button } from "../../gui/button";
+import FullscreenButton from "../../gui/fullscreenButton";
 
 const calculateTable = (init: Init, words: Word[]) => {
   // width + height of rows
@@ -64,24 +65,25 @@ const viewer = (init: Init, words: Word[]) => async () => {
   const scroll = new Scroll(init, () => ({ 
     maxHeight: table.columnHeight,
     oneStep: table.rowHeight + settings.gui.button.distance, 
-    update: () => update(),
+    update: () => dynamicPos(),
     redraw: () => redraw(),
   }));
   // words
-  const buttons: ButtonManager[] = [];
-  buttons.push(...words.map((word, i) => drawButton(
-    init, () => table.wordX, () => -scroll.pos() + table.columnY + ((table.rowHeight + settings.gui.button.distance) * i), word.toLearnText, 
-    () => ({ likeLabel: true, minHeight: table.rowHeight, minWidth: table.wordColumnWidth, lateGlue: true })
+  const buttons: Button[] = [];
+  buttons.push(...words.map((word, i) => new Button(
+    init, word.toLearnText, () => table.wordX, () => -scroll.pos() + table.columnY + ((table.rowHeight + settings.gui.button.distance) * i),
+    { likeLabel: true, minHeight: table.rowHeight, minWidth: table.wordColumnWidth, lateGlue: true }
   )));
   // imgs
-  buttons.push(...(words.filter((word) => word.toLearnImg) as WordWithImage[]).map((word, i) => drawIconButton(
-    init, () => table.imgX, () => -scroll.pos() + table.columnY + ((table.rowHeight + settings.gui.button.distance) * i), word.toLearnImg, 
-    () => ({ likeLabel: true, minHeight: table.rowHeight, minWidth: table.imgColumnWidth, lateGlue: true })
+  buttons.push(...(words.filter((word) => word.toLearnImg) as WordWithImage[]).map((word, i) => new Button(
+    init, word.toLearnImg, () => table.imgX, () => -scroll.pos() + table.columnY + ((table.rowHeight + settings.gui.button.distance) * i), 
+    { likeLabel: true, minHeight: table.rowHeight, minWidth: table.imgColumnWidth, lateGlue: true }
   )));
   
   // clicks
   const click = init.addClickRequest({
-    isInArea: () => true, 
+    isInArea: () => true,
+    zIndex: -1000,
     onReleased: (isInside) => { if (isInside) gameEnder({ isSuccess: true }); },
   });
   
@@ -90,16 +92,14 @@ const viewer = (init: Init, words: Word[]) => async () => {
     init.prepared = reprepareInit(init);
     table = calculateTable(init, words);
     scroll.update();
-    update();
+    dynamicPos();
     redraw();
   });
 
-  const buttonFS = drawFullscreenButton(init, () => redraw());
+  const buttonFS = new FullscreenButton(init, () => redraw());
 
   // update
-  const update = () => {
-    buttons.forEach((btn) => { btn.update(); });
-  }
+  const dynamicPos = () => { for (const button of buttons) button.dynamicPos(); }
 
   // redraw
   const redraw = () => {

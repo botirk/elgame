@@ -1,14 +1,13 @@
 import { Init } from "../../init";
 import drawBackground from "../../gui/background";
-import { drawButton, ButtonManager, drawIconButton } from "../../gui/button";
 import { drawRoundedBorder, drawRoundedRect } from "../../gui/roundedRect";
 import { calcTextWidth } from "../../gui/text";
 import settings, { memoryGame } from "../../settings";
 import { WordWithImage } from "..";
 import { MemoryCard, MemoryState } from "./game";
+import Card from "./card";
 
 
-type OnClick = (card: MemoryCard) => void;
 
 const calculateCardSize = (init: Init, words: WordWithImage[]) => {
   let height = settings.fonts.fontSize + settings.gui.button.padding * 2;
@@ -47,61 +46,23 @@ export const prepare = (init: Init, words: WordWithImage[]) => {
 }
 export type Prepared = ReturnType<typeof prepare>;
 
-const getCardBgColor = (card: MemoryCard) => {
-  if (card.gameState == "failed") return settings.colors.fail; 
-  else if (card.gameState == "solved&open") return settings.colors.success;
-}
-
-const drawCard = (init: Init, card: MemoryCard, state: MemoryState, onClick: OnClick): ButtonManager => {
-  const x = () => init.prepared.gameX + state.gui.prepared.start.x + (card.column - 1) * (state.gui.prepared.card.width + memoryGame.margin);
-  const y = () => state.gui.prepared.start.y + (card.row - 1) * (state.gui.prepared.card.height + memoryGame.margin);
-
-  if (card.gameState == "closed") {
-    return drawButton(
-      init, x, y, "", () => ({ minWidth: state.gui.prepared.card.width, minHeight: state.gui.prepared.card.height, onClick: () => onClick(card) })
-    );
-  } else if (card.gameState == "open" || card.gameState == "failed" || card.gameState == "solved&open") {
-    if (card.guessState == "word") {
-      return drawButton(
-        init, x, y, card.word.toLearnText,
-        () => ({ minWidth: state.gui.prepared.card.width, minHeight: state.gui.prepared.card.height, bgColor: getCardBgColor(card), onClick: () => onClick(card) })
-      );
-    } else {
-      return drawIconButton(
-        init, x, y, card.word.toLearnImg,
-        () => ({ minWidth: state.gui.prepared.card.width, minHeight: state.gui.prepared.card.height, bgColor: getCardBgColor(card), onClick: () => onClick(card) })
-      );
-    }
-  } else {
-    const redraw = () => {
-      init.ctx.fillStyle = settings.colors.bg;
-      drawRoundedRect(init.ctx, x() - state.gui.prepared.card.width / 2, y() - state.gui.prepared.card.height / 2, state.gui.prepared.card.width, state.gui.prepared.card.height, settings.gui.button.rounding);
-      init.ctx.fillStyle = settings.colors.button.bg;
-      drawRoundedBorder(init.ctx, x() - state.gui.prepared.card.width / 2, y() - state.gui.prepared.card.height / 2, state.gui.prepared.card.width, state.gui.prepared.card.height, settings.gui.button.rounding);
-    }
-    redraw();
-    return { stop: () => {}, redraw, update: () => {} } as ButtonManager;
-  }
-}
-
+type OnClick = (card: MemoryCard) => void;
 const drawCards = (init: Init, state: MemoryState, onClick: OnClick) => {
-  const redrawBtn = (i: number) => {
-    const btn = buttons[i];
-    if (btn) {
-      // stop drawing
-      btn.stop(false);
-      // new draw
-      const card = btn.card;
-      buttons[i] = { ...drawCard(init, card, state, onClick), card };
-    }
-  }
-  
-  const buttons = state.gameplay.cards.map((card) => ({ ...drawCard(init, card, state, onClick), card }));
+  const x = (card: MemoryCard) => init.prepared.gameX + state.gui.prepared.start.x + (card.column - 1) * (state.gui.prepared.card.width + memoryGame.margin);
+  const y = (card: MemoryCard) => state.gui.prepared.start.y + (card.row - 1) * (state.gui.prepared.card.height + memoryGame.margin);
+
+  const buttons = state.gameplay.cards.map((card) => 
+    new Card(init, card, x(card), y(card), state.gui.prepared.card.width, state.gui.prepared.card.height, () => onClick(card))
+  );
   const stop = () => buttons.forEach(({ stop }) => stop());
   const redraw = () => buttons.forEach(({ redraw }) => redraw());
   const update = () => buttons.forEach(({ update }) => update());
-  const redrawCard = (card: MemoryCard) => redrawBtn(buttons.findIndex((btn) => btn.card == card));
-  return { stop, redraw, update, redrawCard };
+  const updateRedrawCard = (card: MemoryCard) => {
+    const found = buttons.find((btn) => btn.card === card);
+    found?.update(true);
+    found?.redraw();
+  }
+  return { stop, redraw, update, updateRedrawCard };
 }
 
 export const drawState = (init: Init, state: MemoryState, onClick: OnClick) => {

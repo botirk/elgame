@@ -1,11 +1,11 @@
 import { Init } from "../../init";
 import drawBackground from "../../gui/background";
-import { ButtonManager, drawIconButton } from "../../gui/button";
 import { calcTextWidth } from "../../gui/text";
 import settings, { formGame } from "../../settings";
 import { Word, WordWithImage } from "..";
 import { FormCard, FormState } from "./game";
 import { drawHealths, drawProgressBar, drawProgressBarFail, drawProgressBarSuccess, drawQuestText, drawStatusText, drawStatusTextFail, drawStatusTextSuccess, prepareHealths, prepareQuestText, prepareStatusText } from "../../gui/status";
+import { Button } from "../../gui/button";
 
 interface FormImg {
   card: FormCard,
@@ -67,7 +67,7 @@ const shuffleCards = (init: Init, questions: FormCard[], tableSize: ReturnType<t
   });
 }
 
-const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: FormCard[], onClick: (card: FormCard) => void, onFinish: (card: FormCard) => void): ButtonManager => {
+const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: FormCard[], onClick: (card: FormCard) => void, onFinish: (card: FormCard) => void) => {
   drawBackground(init.ctx);
   drawStatusText(init, quest.word.toLearnText, state.gameplay.score.total, state.gameplay.score.required, state.gameplay.score.health, state.gui.prepared);
   // imgs
@@ -89,8 +89,8 @@ const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: F
         else return settings.colors.fail;
       }
     }
-    const button = drawIconButton(
-      init, x, y, q.card.word.toLearnImg, () => ({ 
+    const button = new Button(
+      init, q.card.word.toLearnImg, x, y, () => ({ 
         ...state.gui.prepared.card, 
         bgColor: bgColor(),
         onClick: () => {

@@ -3,7 +3,7 @@ import { drawFrame, Prepared as PreparedDraw, prepare as prepareDraw, prepareQue
 import { Init } from "../../init";
 import { mergeDeep, promiseMagic, randomInArray, RecursivePartial } from "../../utils";
 import { reprepareInit } from "../../init";
-import { drawFullscreenButton } from "../../gui/button";
+import FullscreenButton from "../../gui/fullscreenButton";
 import { WordWithImage } from "..";
 import { EndGameStats, Game } from "..";
 
@@ -235,7 +235,7 @@ const drop = (init: Init, words: WordWithImage[], dif: DropGameDifficulty, optio
     onPressed: () => { state.gui.mouse.x = -Infinity; },
     onReleased: () => { state.gui.mouse.x = undefined; },
   });
-  const buttonFS = drawFullscreenButton(init, () => render());
+  const buttonFS = FullscreenButton(init, () => render());
 
   // general state
   const quest = generateQuest(init, words);

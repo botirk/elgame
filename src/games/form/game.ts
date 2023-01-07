@@ -2,9 +2,9 @@ import { Init,reprepareInit } from "../../init";
 import { formGame, FormGameDifficulty } from "../../settings";
 import drawForm, { prepare, Prepared as PreparedDraw } from "./drawText";
 import { promiseMagic } from "../../utils";
-import { drawFullscreenButton } from "../../gui/button";
 import { WordWithImage } from "..";
 import { EndGameStats } from "..";
+import FullscreenButton from "../../gui/fullscreenButton";
 
 const calcCardStep = (card: FormCard, dif: FormGameDifficulty) => {
   return dif.startCount + Math.floor(card.successCount / dif.stepCount);
@@ -97,7 +97,7 @@ const form = (init: Init, words: WordWithImage[], dif: FormGameDifficulty) => as
     buttonFS.update();
     buttonFS.redraw();
   });
-  const buttonFS = drawFullscreenButton(init, () => resizeCurrent?.());
+  const buttonFS = new FullscreenButton(init, () => resizeCurrent?.());
 
   const nextForm = (previousCard?: FormCard) => {
     const [target, others] = calcNextForm(state, dif, previousCard);

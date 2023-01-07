@@ -1,12 +1,12 @@
 import { EndGameStats } from "..";
 import { Init } from "../../init";
-import { drawFullscreenButton } from "../../gui/button";
 import { reprepareInit } from "../../init";
 import { promiseMagic } from "../../utils";
 import { memoryGame } from "../../settings";
 import { prepare as prepareDraw, Prepared as PreparedDraw } from "../memory/draw";
 import { WordWithImage } from "..";
 import { drawState } from "./draw";
+import FullscreenButton from "../../gui/fullscreenButton";
 
 
 
@@ -126,25 +126,25 @@ const memory = (init: Init, words: WordWithImage[]) => async () => {
       const unopenSolved = state.gameplay.cards.filter((card) => card.gameState != "solved&open");
       if (unopenSolved.length > 0) {
         unopenSolved[0].gameState = "solved&open";
-        redrawCard(unopenSolved[0]);
+        updateRedrawCard(unopenSolved[0]);
         winAnimation(timeRemaining);
       } else gameEnder({ isSuccess: true });
     }, memoryGame.winTime / state.gameplay.cards.length);
   }
   // fs button
-  const buttonFS = drawFullscreenButton(init, () => redraw());
+  const buttonFS = new FullscreenButton(init, () => redraw());
   // render
   let timeout: NodeJS.Timeout | undefined;
-  const { stop, redraw, update, redrawCard } = drawState(init, state, (card) => {
+  const { stop, redraw, update, updateRedrawCard } = drawState(init, state, (card) => {
     if (state.gameplay.remainingCards <= 0) return;
     clearTimeout(timeout);
     for (const failed of state.gameplay.cards.filter((card) => card.gameState == "failed")) {
       failed.gameState = "closed";
-      redrawCard(failed);
+      updateRedrawCard(failed);
     }
     for (const solvedOpen of state.gameplay.cards.filter((card) => card.gameState == "solved&open")) {
       solvedOpen.gameState = "solved&closed";
-      redrawCard(solvedOpen);
+      updateRedrawCard(solvedOpen);
       if ((state.gameplay.remainingCards -= 1) <= 0) {
         winAnimation();
         break;
@@ -155,30 +155,30 @@ const memory = (init: Init, words: WordWithImage[]) => async () => {
     const open = state.gameplay.cards.filter((card) => card.gameState == "open");
     if (open.length == 0) {
       card.gameState = "open";
-      redrawCard(card);
+      updateRedrawCard(card);
     } else if (open.length == 1) {
       if (open[0].word == card.word) {
         card.gameState = "solved&open";
-        redrawCard(card);
+        updateRedrawCard(card);
         open[0].gameState = "solved&open";
-        redrawCard(open[0]);
+        updateRedrawCard(open[0]);
         timeout = setTimeout(() => {
           card.gameState = "solved&closed";
-          redrawCard(card);
+          updateRedrawCard(card);
           open[0].gameState = "solved&closed";
-          redrawCard(open[0]);
+          updateRedrawCard(open[0]);
           if ((state.gameplay.remainingCards -= 2) <= 0) winAnimation(); 
         }, 2000);
       } else {
         card.gameState = "failed";
-        redrawCard(card);
+        updateRedrawCard(card);
         open[0].gameState = "failed";
-        redrawCard(open[0]);
+        updateRedrawCard(open[0]);
         timeout = setInterval(() => {
           card.gameState = "closed";
-          redrawCard(card);
+          updateRedrawCard(card);
           open[0].gameState = "closed";
-          redrawCard(open[0]);
+          updateRedrawCard(open[0]);
         }, 2000);
       }
     }

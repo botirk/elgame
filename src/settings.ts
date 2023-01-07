@@ -110,7 +110,7 @@ const gui = {
   margin: 15,
   button: {
     rounding: 4,
-    padding: 6,
+    padding: 9,
     distance: fonts.fontSize,
   },
   scroll: {
@@ -119,8 +119,8 @@ const gui = {
     timeout: 1500,
   },
   icon: {
-    width: 45,
-    height: 45,
+    width: 50,
+    height: 50,
   },
   status: {
     height: 100,

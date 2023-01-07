@@ -1,18 +1,21 @@
 import { Init } from "../init";
 import settings from "../settings";
 import drawBackground from "./background";
-import { drawButton, ButtonManager, drawFullscreenButton, drawButtonWithDescription, calcButtonWithDescription } from "./button";
 import { reprepareInit } from "../init";
 import { LoadedPlans, loadPlans } from "../asset";
 import { calcTextWidth } from "./text";
 import { loadProgress, saveProgress } from "../progress";
 import Scroll from "./events/scroll";
+import { ButtonWithDescription, calcButtonWithDescription } from "./buttonWithDescription";
+import AbstractButton from "./abstractButton";
+import { Button } from "./button";
+import FullscreenButton from "./fullscreenButton";
 
 const calcMenu = (init: Init, plans: LoadedPlans, desc: string) => {
   // menu width
   const [minWidthGame, minHeight] = plans.reduce((prev, cur) => {
     const calced = calcButtonWithDescription(init, cur.name, cur.label);
-    return [Math.max(calced.contentWidth + settings.gui.button.padding * 2, prev[0]), Math.max(calced.contentHeight + settings.gui.button.padding * 2, prev[1])]; 
+    return [Math.max(calced.width + settings.gui.button.padding * 2, prev[0]), Math.max(calced.height + settings.gui.button.padding * 2, prev[1])]; 
   }, [0, 0]);
   const minWidthDesc = calcTextWidth(init.ctx, desc) + settings.gui.button.padding * 2;
 
@@ -59,15 +62,16 @@ const drawMenu = (init: Init) => {
     saveId: "menu",
     maxHeight: calced.totalHeight(),
     oneStep: calced.minHeight + settings.gui.button.distance,
-    update: () => update(),
+    update: () => dynamycPos(),
     redraw: () => redraw(),
   }));
   // draw
   drawBackground(init.ctx);
+
   // drawing
-  const buttons: ButtonManager[] = [];
+  const buttons: AbstractButton<any>[] = [];
   plans.forEach((plan) => {
-    if (plan.viewer) buttons.push(drawButton(init, calced.xDesc, calced.yDesc(plan.place, buttons.length, scroll.pos), desc, () => ({ 
+    if (plan.viewer) buttons.push(new Button(init, desc, calced.xDesc(), calced.yDesc(plan.place, buttons.length, scroll.pos), { 
       minWidth: calced.minWidth(), minHeight: calced.minHeight,
       disabled: !progress[plan.place],
       onClick: async () => {
@@ -75,8 +79,8 @@ const drawMenu = (init: Init) => {
         await plan.viewer?.();
         drawMenu(init);
       },
-    }), true));
-    buttons.push(drawButtonWithDescription(init, calced.xGame, calced.yGame(plan.place, buttons.length, scroll.pos), plan.name, plan.label, () => ({ 
+    }, true));
+    buttons.push(new ButtonWithDescription(init, { text: plan.name, description: plan.label }, calced.xGame(), calced.yGame(plan.place, buttons.length, scroll.pos), { 
       minWidth: calced.minWidthGame, minHeight: calced.minHeight, disabled: !progress[plan.place],
       onClick: async () => { 
         stop();
@@ -87,21 +91,22 @@ const drawMenu = (init: Init) => {
         }
         drawMenu(init);
       },
-    }), true));
+    }, true));
   });
+
+  console.log(calced.minHeight, buttons[0].height, buttons[1].height);
   // observer
   const stopResize = init.addResizeRequest(() => {
     init.prepared = reprepareInit(init);
     scroll.update();
-    update(true);
+    dynamycPos();
     redraw();
   });
-  // actions
-  const stop = () => { buttons.forEach(({ stop }) => stop(true)); buttonFS.stop(true); stopResize(); scroll.stop(); };
-  const redraw = () => { drawBackground(init.ctx); buttons.forEach(({ redraw }) => redraw()); buttonFS.redraw(); };
-  const update = (everything?: boolean) => { buttons.forEach(({ update }) => update(everything)); buttonFS.update(); }
+  const dynamycPos = () => { for (const button of buttons) button.dynamicPos(); };
+  const stop = () => { for (const button of buttons) button.stop(true); buttonFS.stop(true); stopResize(); scroll.stop(); };
+  const redraw = () => { drawBackground(init.ctx); for (const button of buttons) button.redraw(); buttonFS.redraw(); };
   // fullscreen button
-  const buttonFS = drawFullscreenButton(init, redraw);
+  const buttonFS = new FullscreenButton(init, redraw);
   // late glue
   redraw();
   scroll.drawScroll();
