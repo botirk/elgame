@@ -26,7 +26,8 @@ class FullscreenButton extends Button {
         this.invisible = true;
       },
       invisible: true,
-    }, true);
+    });
+    this.ownerRedraw = ownerRedraw;
     this.moreHover = init.addHoverRequest({ 
       isInArea: (xIn, yIn) => xIn >= x() - 70 && yIn >= y() - 70,
       onHover: () => { if (!document.fullscreenElement) this.setInvisible(false); },

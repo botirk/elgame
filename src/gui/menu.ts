@@ -93,8 +93,6 @@ const drawMenu = (init: Init) => {
       },
     }, true));
   });
-
-  console.log(calced.minHeight, buttons[0].height, buttons[1].height);
   // observer
   const stopResize = init.addResizeRequest(() => {
     init.prepared = reprepareInit(init);

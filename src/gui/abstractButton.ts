@@ -8,7 +8,7 @@ export interface ButtonOptional {
   minHeight?: number,
   bgColor?: string,
   likeLabel?: boolean,
-  onClick?: () => ShouldRedrawAfterClick,
+  onClick?: (this) => ShouldRedrawAfterClick,
   disabled?: boolean,
   lateGlue?: boolean,
   invisible?: boolean,
@@ -23,19 +23,15 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
     this.x = x;
     this.y = y;
     Object.entries(optional || {}).forEach(([k, v]) => this[k] = v);
-    this.redraw();
-    this.updateManagers();
-    if (!isLateGlue) {
-      
-    }
+    if (!isLateGlue) this.glue();
   }
 
   protected readonly init: Init;
 
   bgColor?: string;
 
-  private _onClick?: () => ShouldRedrawAfterClick;
-  set onClick(onClick: (() => ShouldRedrawAfterClick) | undefined) {
+  private _onClick?: (this) => ShouldRedrawAfterClick;
+  set onClick(onClick: ((this) => ShouldRedrawAfterClick) | undefined) {
     this._onClick = onClick;
     this.updateManagers();
   }
@@ -245,7 +241,7 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
         isInArea: (x, y) => this.isInArea(x, y),
         onReleased: (isInArea) => { 
           if (isInArea) {
-            const shouldRedrawAfterClick = this.onClick?.();
+            const shouldRedrawAfterClick = this.onClick?.apply(this);
             if (!(shouldRedrawAfterClick instanceof Promise) && shouldRedrawAfterClick !== false) this.redraw();
           } else {
             this.redraw();
@@ -271,6 +267,10 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
   dynamicPos() {
     if (this._dynamicX) this.x = this._dynamicX();
     if (this._dynamicY) this.y = this._dynamicY();
+  }
+  glue() {
+    this.redraw();
+    this.updateManagers();
   }
 }
 

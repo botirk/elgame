@@ -1,7 +1,7 @@
 import { Init } from "../../init";
 import settings from "../../settings";
 
-interface ScrollOptions {
+export interface ScrollOptions {
   maxHeight: number,
   oneStep: number,
   redraw: () => void,

@@ -1,15 +1,12 @@
-import { EndGameStats } from "..";
-import { Init, reprepareInit } from "../../init";
+import { AbstractGame, EndGameStats } from "..";
+import { Init } from "../../init";
 import drawBackground from "../../gui/background";
 import { calcTextWidth } from "../../gui/text";
-import { promiseMagic } from "../../utils";
-import settings, { viewerGame } from "../../settings";
+import settings from "../../settings";
 import { Word, WordWithImage } from "..";
-import Scroll from "../../gui/events/scroll";
 import { Button } from "../../gui/button";
-import FullscreenButton from "../../gui/fullscreenButton";
 
-const calculateTable = (init: Init, words: Word[]) => {
+const calcTable = (init: Init, words: Word[]) => {
   // width + height of rows
   let rowHeight = 0;
   let wordColumnWidth = 0;
@@ -28,97 +25,86 @@ const calculateTable = (init: Init, words: Word[]) => {
   if (rowHeight > 0) columnHeight = settings.gui.button.distance + (settings.gui.button.distance + rowHeight) * words.length;
   // x coords
   let totalWidth = 0;
+  if (wordColumnWidth > 0) totalWidth += wordColumnWidth;
+  if (translationColumnWidth > 0) totalWidth += settings.gui.button.distance + translationColumnWidth;
+  if (imgColumnWidth > 0) totalWidth += settings.gui.button.distance + imgColumnWidth;
+  return {
+    wordColumnWidth, translationColumnWidth, imgColumnWidth, rowHeight, columnHeight, totalWidth
+  };
+}
+
+const calcTablePos = (init: Init, prepared: ReturnType<typeof calcTable>) => {
+  // x coords
   let wordX = 0, translationX = 0, imgX = 0;
-  if (wordColumnWidth > 0) {
-    wordX = totalWidth + wordColumnWidth / 2;
-    totalWidth += wordColumnWidth;
-  }
-  if (translationColumnWidth > 0) {
-    translationX = totalWidth + settings.gui.button.distance + translationColumnWidth / 2;
-    totalWidth += settings.gui.button.distance + translationColumnWidth;
-  }
-  if (imgColumnWidth > 0) {
-    imgX = totalWidth + settings.gui.button.distance + imgColumnWidth / 2;
-    totalWidth += settings.gui.button.distance + imgColumnWidth;
-  }
-  const beta  = init.ctx.canvas.width / 2 - totalWidth / 2;
+  if (prepared.wordColumnWidth > 0) wordX = prepared.wordColumnWidth / 2;
+  if (prepared.translationColumnWidth > 0) translationX = prepared.totalWidth / 2;
+  if (prepared.imgColumnWidth > 0) imgX = prepared.totalWidth - prepared.imgColumnWidth / 2;
+  const beta  = init.ctx.canvas.width / 2 - prepared.totalWidth / 2;
   wordX += beta;
   translationX += beta;
   imgX += beta;
   // y coords
   let columnY = init.ctx.canvas.height / 2;
-  if (columnHeight > 0) {
-    columnY -= columnHeight / 2 - settings.gui.button.distance - rowHeight / 2;
-    let min = settings.gui.button.distance + rowHeight / 2;
+  if (prepared.columnHeight > 0) {
+    columnY -= prepared.columnHeight / 2 - settings.gui.button.distance - prepared.rowHeight / 2;
+    let min = settings.gui.button.distance + prepared.rowHeight / 2;
     if (columnY < min) columnY = min;
   }
 
   return {
-    wordX, wordColumnWidth, translationX, translationColumnWidth, imgX, imgColumnWidth, rowHeight, columnHeight, 
-    columnY, wordEnd: wordX + wordColumnWidth / 2, imgStart: imgX - imgColumnWidth / 2
+    wordX, translationX, imgX, columnY, wordEnd: wordX + prepared.wordColumnWidth / 2, imgStart: imgX - prepared.imgColumnWidth / 2
   };
 }
 
-const viewer = (init: Init, words: Word[]) => async () => {
-  let table = calculateTable(init, words);
-  // scroll 
-  const scroll = new Scroll(init, () => ({ 
-    maxHeight: table.columnHeight,
-    oneStep: table.rowHeight + settings.gui.button.distance, 
-    update: () => dynamicPos(),
-    redraw: () => redraw(),
-  }));
-  // words
-  const buttons: Button[] = [];
-  buttons.push(...words.map((word, i) => new Button(
-    init, word.toLearnText, () => table.wordX, () => -scroll.pos() + table.columnY + ((table.rowHeight + settings.gui.button.distance) * i),
-    { likeLabel: true, minHeight: table.rowHeight, minWidth: table.wordColumnWidth, lateGlue: true }
-  )));
-  // imgs
-  buttons.push(...(words.filter((word) => word.toLearnImg) as WordWithImage[]).map((word, i) => new Button(
-    init, word.toLearnImg, () => table.imgX, () => -scroll.pos() + table.columnY + ((table.rowHeight + settings.gui.button.distance) * i), 
-    { likeLabel: true, minHeight: table.rowHeight, minWidth: table.imgColumnWidth, lateGlue: true }
-  )));
-  
-  // clicks
-  const click = init.addClickRequest({
-    isInArea: () => true,
-    zIndex: -1000,
-    onReleased: (isInside) => { if (isInside) gameEnder({ isSuccess: true }); },
-  });
-  
-  // resize
-  const stopResize = init.addResizeRequest(() => {
-    init.prepared = reprepareInit(init);
-    table = calculateTable(init, words);
-    scroll.update();
-    dynamicPos();
-    redraw();
-  });
-
-  const buttonFS = new FullscreenButton(init, () => redraw());
-
-  // update
-  const dynamicPos = () => { for (const button of buttons) button.dynamicPos(); }
-
-  // redraw
-  const redraw = () => {
-    drawBackground(init.ctx);
-    buttons.forEach((btn) => { btn.redraw(); });
-    buttonFS.redraw();
+class Viewer extends AbstractGame<Word[], ReturnType<typeof calcTable>, ReturnType<typeof calcTablePos>, EndGameStats> {
+  constructor(init: Init, words: Word[]) {
+    super(init, words);
+    this._click = init.addClickRequest({
+      isInArea: () => true,
+      zIndex: -1000,
+      onReleased: (isInside) => { if (isInside) this.gameEnder({ isSuccess: true }); },
+    });
   }
-  // late glue activation
-  redraw();
-  scroll.drawScroll();
-  
-  const [promise, gameEnder] = promiseMagic<EndGameStats>(() => {
-    click.stop();
-    buttons.forEach((btn) => btn.stop(false));
-    scroll.stop();
-    stopResize();
-    buttonFS.stop();
-  });
-  return await promise;
+  private _buttons: Button[];
+  private _click: ReturnType<Init["addClickRequest"]>;
+  protected onGameStart() {
+    this._buttons = [];
+    // draw background
+    drawBackground(this.init.ctx);
+    // text
+    this._buttons.push(...this.content.map((word, i) => new Button(
+      this.init, word.toLearnText, () => this.preparedPos.wordX, () => -this.scroll.pos() + this.preparedPos.columnY + ((this.prepared.rowHeight + settings.gui.button.distance) * i),
+      { likeLabel: true, minHeight: this.prepared.rowHeight, minWidth: this.prepared.wordColumnWidth, lateGlue: true }
+    )));
+    // imgs
+    this._buttons.push(...(this.content.filter((word) => word.toLearnImg) as WordWithImage[]).map((word, i) => new Button(
+      this.init, word.toLearnImg, () => this.preparedPos.imgX, () => -this.scroll.pos() + this.preparedPos.columnY + ((this.prepared.rowHeight + settings.gui.button.distance) * i), 
+      { likeLabel: true, minHeight: this.prepared.rowHeight, minWidth: this.prepared.imgColumnWidth, lateGlue: true }
+    )));
+  }
+  protected onGameEnd() {
+    this._click.stop();
+    for (const button of this._buttons) button.stop();
+  }
+  protected redraw() {
+    drawBackground(this.init.ctx);
+    for (const button of this._buttons) button.redraw();
+  }
+  protected update() {
+    for (const button of this._buttons) button.dynamicPos();
+  }
+  protected scrollOptions(): { oneStep: number; maxHeight: number; } {
+    return {
+      maxHeight: this.prepared.columnHeight,
+      oneStep: this.prepared.rowHeight + settings.gui.button.distance,
+    }
+  }
+  protected prepare() {
+    return calcTable(this.init, this.content);
+  }
+  protected preparePos() {
+    return calcTablePos(this.init, this.prepared);
+  }
 }
 
-export default viewer;
+export default Viewer;

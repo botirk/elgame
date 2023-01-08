@@ -6,6 +6,8 @@ import { Word, WordWithImage } from "..";
 import { FormCard, FormState } from "./game";
 import { drawHealths, drawProgressBar, drawProgressBarFail, drawProgressBarSuccess, drawQuestText, drawStatusText, drawStatusTextFail, drawStatusTextSuccess, prepareHealths, prepareQuestText, prepareStatusText } from "../../gui/status";
 import { Button } from "../../gui/button";
+import Card from "./card";
+import Form from "./form";
 
 interface FormImg {
   card: FormCard,
@@ -67,8 +69,10 @@ const shuffleCards = (init: Init, questions: FormCard[], tableSize: ReturnType<t
   });
 }
 
-const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: FormCard[], onClick: (card: FormCard) => void, onFinish: (card: FormCard) => void) => {
-  drawBackground(init.ctx);
+const drawForm = (init: Init, state: FormState, quest: WordWithImage, falseAnswers: WordWithImage[], onClick: (card: WordWithImage) => void, onFinish: (card: WordWithImage) => void) => {
+  return new Form(init, quest, falseAnswers, onClick, onFinish, state);
+  
+  /*drawBackground(init.ctx);
   drawStatusText(init, quest.word.toLearnText, state.gameplay.score.total, state.gameplay.score.required, state.gameplay.score.health, state.gui.prepared);
   // imgs
   const cards = [ quest, ...falseAnswers ];
@@ -77,59 +81,47 @@ const drawForm = (init: Init, state: FormState, quest: FormCard, falseAnswers: F
   // shuffle
   const questions = shuffleCards(init, cards, tableSize);
   // form end
-  let finishTimeout: NodeJS.Timeout | undefined;
-  let clickedCard: FormCard | undefined;
+  let finishForm: () => void | undefined;
   // draw buttons
   const buttons = questions.map((q) => {
     const x = () => init.prepared.gameX + tableSize.start.x + (q.column - 1) * (state.gui.prepared.card.minWidth + settings.gui.margin);
     const y = () => tableSize.start.y + (q.row - 1) * (state.gui.prepared.card.minHeight + settings.gui.margin);
-    const bgColor = () => {
-      if (clickedCard == q.card) {
-        if (clickedCard == quest) return settings.colors.success;
-        else return settings.colors.fail;
+    return new Card(init, q.card, q.card === quest, x, y, () => false, function() {
+      if (finishForm) {
+        finishForm();
+      } else {
+        finishForm = () => {
+          clearTimeout(finishTimeout);
+          stop(true);
+          onFinish(q.card);
+        }
+        const finishTimeout = setTimeout(finishForm, formGame.pause);
+        onClick(q.card);
+        redraw();
+        return false;
       }
-    }
-    const button = new Button(
-      init, q.card.word.toLearnImg, x, y, () => ({ 
-        ...state.gui.prepared.card, 
-        bgColor: bgColor(),
-        onClick: () => {
-          if (finishTimeout) {
-            clearTimeout(finishTimeout);
-            stop(true);
-            onFinish(q.card);
-          } else {
-            clickedCard = q.card;
-            onClick(q.card);
-            finishTimeout = setTimeout(() => { 
-              stop(true);
-              onFinish(q.card);
-            }, formGame.pause);
-            button.update(true);
-            button.redraw();
-            return false;
-          }
-        },
-      })
-    );
-    return button;
+    });
   });
 
+  const formState = (): boolean | undefined => {
+    return false;
+  }
   const stop = (shouldRedraw?: boolean) => buttons.forEach((btn) => btn.stop(shouldRedraw));
   const redraw = () => {
     drawBackground(init.ctx);
-    if (clickedCard && clickedCard == quest) {
-      drawStatusTextSuccess(init, quest.word.toLearnText, state.gameplay.score.health, state.gui.prepared);
-    } else if (clickedCard && clickedCard != quest) {
-      drawStatusTextFail(init, quest.word.toLearnText, state.gameplay.score.health, state.gui.prepared);
-    } else {
+    const state = formState();
+    if (isSuccess === undefined) {
       drawStatusText(init, quest.word.toLearnText, state.gameplay.score.total, state.gameplay.score.required, state.gameplay.score.health, state.gui.prepared);
+    } else if (isSuccess === true) {
+      drawStatusTextSuccess(init, quest.word.toLearnText, state.gameplay.score.health, state.gui.prepared);
+    } else {
+      drawStatusTextFail(init, quest.word.toLearnText, state.gameplay.score.health, state.gui.prepared);
     }
     buttons.forEach((btn) => btn.redraw());
   }
-  const update = (everything?: boolean, dontUpdateHover?: boolean) => buttons.forEach((btn) => btn.update(everything, dontUpdateHover));
+  const update = () => buttons.forEach((btn) => btn.dynamicPos());
 
-  return { stop, redraw, update };
+  return { stop, redraw, update };*/
 }
 
 export default drawForm;

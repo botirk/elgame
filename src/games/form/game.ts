@@ -2,7 +2,7 @@ import { Init,reprepareInit } from "../../init";
 import { formGame, FormGameDifficulty } from "../../settings";
 import drawForm, { prepare, Prepared as PreparedDraw } from "./drawText";
 import { promiseMagic } from "../../utils";
-import { WordWithImage } from "..";
+import { AbstractGame, WordWithImage } from "..";
 import { EndGameStats } from "..";
 import FullscreenButton from "../../gui/fullscreenButton";
 
@@ -94,7 +94,7 @@ const form = (init: Init, words: WordWithImage[], dif: FormGameDifficulty) => as
   const stopResize = init.addResizeRequest(() => {
     init.prepared = reprepareInit(init);
     resizeCurrent?.();
-    buttonFS.update();
+    buttonFS.dynamicPos();
     buttonFS.redraw();
   });
   const buttonFS = new FullscreenButton(init, () => resizeCurrent?.());
@@ -102,19 +102,19 @@ const form = (init: Init, words: WordWithImage[], dif: FormGameDifficulty) => as
   const nextForm = (previousCard?: FormCard) => {
     const [target, others] = calcNextForm(state, dif, previousCard);
     if (target && others) return new Promise<FormCard>((resolve) => {
-      const form = drawForm(init, state, target, others, (clickCard) => {
-        if (clickCard == target) {
-          clickCard.successCount += 1;
+      const form = drawForm(init, state, target.word, others.map((formCard) => formCard.word), (clickCard) => {
+        if (clickCard == target.word) {
+          target.successCount += 1;
           state.gameplay.score.total += 1;
           // update here if screen was resized
-          state.gui.winHistory.push(() => { form.update(false, true); form.redraw(); });
+          state.gui.winHistory.push(() => { form.redraw(); });
         } else {
           // update here if screen was resized
-          state.gui.loseHistory.push(() => { form.update(false, true); form.redraw(); });
+          state.gui.loseHistory.push(() => { form.redraw(); });
           state.gameplay.score.health -= 1;
         }
-      }, (card) => resolve(card));
-      resizeCurrent = () => { form.update(); form.redraw(); };
+      }, (card) => resolve(state.gameplay.cards.find((formCard) => formCard.word === card) as FormCard));
+      resizeCurrent = () => { form.redraw(); };
     });
   }
 
@@ -142,6 +142,40 @@ const form = (init: Init, words: WordWithImage[], dif: FormGameDifficulty) => as
     stopResize();
   });
   return await promise;
+}
+
+class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficulty }, {}, {}, EndGameStats> {
+  constructor(init: Init, content: Form["content"]) {
+    super(init, content);
+  }
+  private score = {
+    total: 0, health: 3,
+    required: 
+      (this.content.dif.endCount + 1 - this.content.dif.startCount) 
+        * this.content.dif.stepCount * this.content.words.length,
+  }
+
+  protected onGameStart(): void {
+    
+  }
+  protected onGameEnd(): void {
+    
+  }
+  protected prepare(): {} {
+    return {};
+  }
+  protected preparePos(): {} {
+    return {};
+  }
+  protected redraw(): void {
+    
+  }
+  protected scrollOptions(): { oneStep: number; maxHeight: number; } {
+    return { maxHeight: 0, oneStep: 0 };
+  }
+  protected update(): void {
+    
+  }
 }
 
 export default form;

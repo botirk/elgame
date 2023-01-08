@@ -37,7 +37,7 @@ const generateQuest = (init: Init, words: WordWithImage[], state?: DropState) =>
 const calcGameplay = (init: Init, state: DropState) => {
   state.gameplay.targets.a.forEach((target, i) => {
     const isMiss = (target.y < dropGame.progressBarY - target.word.toLearnImg.height);
-    const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= settings.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= settings.hero.height);
+    const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= settings.gui.icon.width) && (Math.abs(state.gameplay.hero.y - target.y) <= settings.gui.icon.height);
     const isQuest = (target.word == state.gameplay.quest.word);
     if (isHit && isQuest) {
       if (state.gameplay.score.perWord[state.gameplay.quest.word.toLearnText] < state.gameplay.score.requiredPerWord) {
@@ -71,10 +71,10 @@ const calcGameplay = (init: Init, state: DropState) => {
 
 const calcNextFrame = (init: Init, state: DropState) => {
   if (state.gui.mouse.x) {
-    if (state.gameplay.hero.x > state.gui.mouse.x - settings.hero.width / 2)
-      state.gameplay.hero.x = Math.max(state.gameplay.hero.x - state.gameplay.hero.speed, state.gui.mouse.x - settings.hero.width / 2); 
+    if (state.gameplay.hero.x > state.gui.mouse.x - settings.gui.icon.width / 2)
+      state.gameplay.hero.x = Math.max(state.gameplay.hero.x - state.gameplay.hero.speed, state.gui.mouse.x - settings.gui.icon.width / 2); 
     else 
-      state.gameplay.hero.x = Math.min(state.gameplay.hero.x + state.gameplay.hero.speed, state.gui.mouse.x- settings.hero.width / 2);
+      state.gameplay.hero.x = Math.min(state.gameplay.hero.x + state.gameplay.hero.speed, state.gui.mouse.x - settings.gui.icon.width / 2);
     // fix
     state.gameplay.hero.x = Math.max(init.prepared.gameX, Math.min(state.gameplay.prepared.clickableGameXMax, state.gameplay.hero.x));
   }
@@ -101,7 +101,7 @@ const calcNextLoseFrame = (init: Init, state: DropState) => {
   // generate new
   if (state.gameplay.targets.nextGeneration <= 0) {
     let target = generateTarget(init, state);
-    for (let i = 0; i < 10 && Math.abs(target.x - state.gameplay.hero.x) < settings.hero.width * 2; i++)
+    for (let i = 0; i < 10 && Math.abs(target.x - state.gameplay.hero.x) < settings.gui.icon.width * 2; i++)
       target.x = init.prepared.gameX + Math.random() * state.gameplay.prepared.clickableGameWidth;
     state.gameplay.targets.a.push(target);
     state.gameplay.targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
@@ -113,7 +113,7 @@ const calcNextLoseFrame = (init: Init, state: DropState) => {
 const calcNextWonFrame = (init: Init, state: DropState) => {
   // move & remove
   state.gameplay.targets.a.forEach((target, i) => {
-    const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= settings.hero.width) && (Math.abs(state.gameplay.hero.y - target.y) <= settings.hero.height);
+    const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= settings.gui.icon.width) && (Math.abs(state.gameplay.hero.y - target.y) <= settings.gui.icon.height);
     if (isHit) {
       // remove
       state.gameplay.targets.a.splice(i, 1);
@@ -121,7 +121,7 @@ const calcNextWonFrame = (init: Init, state: DropState) => {
       return;
     } else {
       // x move
-      if (target.y < state.gameplay.hero.y + settings.hero.height * 4) {
+      if (target.y < state.gameplay.hero.y + settings.gui.icon.height * 4) {
         if (target.x > state.gameplay.hero.x) {
           target.x = Math.max(state.gameplay.hero.x, target.x - dropGame.difficulties.movie.targets.speed);
         } else {
@@ -145,11 +145,11 @@ const calcNextWonFrame = (init: Init, state: DropState) => {
 
 const prepare = (init: Init) => {
   return {
-    maxXHero: init.prepared.gameXMax - settings.hero.width, 
-    maxXTarget: init.prepared.gameXMax - settings.hero.width,
-    clickableGameX: (init.ctx.canvas.width - init.prepared.gameWidth) / 2 + settings.hero.width,
-    clickableGameXMax: (init.ctx.canvas.width + init.prepared.gameWidth) / 2 - settings.hero.width,
-    clickableGameWidth: init.prepared.gameWidth - settings.hero.width * 2,
+    maxXHero: init.prepared.gameXMax - settings.gui.icon.width, 
+    maxXTarget: init.prepared.gameXMax - settings.gui.icon.width,
+    clickableGameX: (init.ctx.canvas.width - init.prepared.gameWidth) / 2 + settings.gui.icon.width,
+    clickableGameXMax: (init.ctx.canvas.width + init.prepared.gameWidth) / 2 - settings.gui.icon.width,
+    clickableGameWidth: init.prepared.gameWidth - settings.gui.icon.width * 2,
   };
 }
 type Prepared = ReturnType<typeof prepare>;
@@ -216,7 +216,7 @@ const drop = (init: Init, words: WordWithImage[], dif: DropGameDifficulty, optio
     state.gui.prepared = prepareDraw(init, state.gameplay.quest.word.toLearnText);
     state.gameplay.prepared = prepare(init);
     // move fs button
-    buttonFS.update();
+    buttonFS.dynamicPos();
     // render
     render();
   });
@@ -235,7 +235,7 @@ const drop = (init: Init, words: WordWithImage[], dif: DropGameDifficulty, optio
     onPressed: () => { state.gui.mouse.x = -Infinity; },
     onReleased: () => { state.gui.mouse.x = undefined; },
   });
-  const buttonFS = FullscreenButton(init, () => render());
+  const buttonFS = new FullscreenButton(init, () => render());
 
   // general state
   const quest = generateQuest(init, words);
