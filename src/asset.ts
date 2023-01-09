@@ -4,10 +4,10 @@ import planJSON from "./compileTime/generated/plan.json";
 
 import { Game } from "./games";
 import drop from "./games/drop/game";
-import form from "./games/form/game";
-import memory from "./games/memory/game";
-import { UnloadedWord, Word, WordWithImage } from "./games";
+import Form from "./games/form/game";
+import Memory from "./games/memory/game";
 import Viewer from "./games/viewer/game";
+import { UnloadedWord, Word, WordWithImage } from "./games";
 import { Init } from "./init";
 
 const loadAsset = async (b64: string, pxValue: number, side: "width" | "heigth"): Promise<HTMLImageElement> => {
@@ -99,7 +99,7 @@ export const loadPlans = (init: Init) => {
   for (const plan of planJSON.form) {
     const words = getWordsWithImage(init, plan.words);
     if (typeof(words) == "string") return words;
-    add("Form", plan, form(init, words, plan.difficulty), () => new Viewer(init, words).promise);
+    add("Form", plan, () => new Form(init, { words, dif: plan.difficulty }).promise, () => new Viewer(init, words).promise);
   }
 
   for (const plan of planJSON.drop) {
@@ -111,7 +111,7 @@ export const loadPlans = (init: Init) => {
   for (const plan of planJSON.memory) {
     const words = getWordsWithImage(init, plan.words);
     if (typeof(words) == "string") return words;
-    add("Memory", plan, memory(init, words), () => new Viewer(init, words).promise);
+    add("Memory", plan, () => new Memory(init, words).promise, () => new Viewer(init, words).promise);
   }
 
   return plans.sort((a, b) => a.place - b.place);

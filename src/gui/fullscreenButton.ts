@@ -9,8 +9,10 @@ class FullscreenButton extends Button {
 
   private setInvisible(state: boolean) {
     if (!state && this.invisible) {
-      this.invisible = false;
-      this.redraw();
+      if (!document.fullscreenElement) {
+        this.invisible = false;
+        this.redraw();
+      }
     } else if (state && !this.invisible) {
       this.invisible = true;
       this.ownerRedraw();
@@ -30,7 +32,7 @@ class FullscreenButton extends Button {
     this.ownerRedraw = ownerRedraw;
     this.moreHover = init.addHoverRequest({ 
       isInArea: (xIn, yIn) => xIn >= x() - 70 && yIn >= y() - 70,
-      onHover: () => { if (!document.fullscreenElement) this.setInvisible(false); },
+      onHover: () => this.setInvisible(false),
       onLeave: () => this.setInvisible(true),
     });
     this.moreClick = init.addClickRequest({
@@ -47,6 +49,10 @@ class FullscreenButton extends Button {
     this.moreHover.stop();
     this.moreClick.stop();
     super.stop(shouldRedrawToDefault);
+  }
+  dynamicPos(): void {
+    super.dynamicPos();
+    this.moreHover.update();
   }
 }
 

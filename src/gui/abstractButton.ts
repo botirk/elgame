@@ -1,6 +1,6 @@
 import { Init } from "../init";
 import settings from "../settings";
-import { drawRoundedRect } from "./roundedRect";
+import { drawRoundedBorder, drawRoundedRect } from "./roundedRect";
 
 type ShouldRedrawAfterClick = boolean | void | Promise<void>;
 export interface ButtonOptional {
@@ -8,14 +8,19 @@ export interface ButtonOptional {
   minHeight?: number,
   bgColor?: string,
   likeLabel?: boolean,
+  justBorder?: boolean,
   onClick?: (this) => ShouldRedrawAfterClick,
   disabled?: boolean,
   lateGlue?: boolean,
   invisible?: boolean,
 }
 
-abstract class AbstractButton<TContent> implements ButtonOptional {
-  protected abstract calcContentSize(): { width: number, height: number };
+export interface Size { width: number, height: number }
+
+abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> implements ButtonOptional {
+  protected abstract calcContentSize(): TSize;
+  protected abstract calcContentCacheX(): TCacheX;
+  protected abstract calcContentCacheY(): TCacheY;
   protected abstract drawer(): void;
   constructor(init: Init, content: TContent, x: number | (() => number), y: number | (() => number), optional?: ButtonOptional, isLateGlue?: boolean) {    
     this.init = init;
@@ -69,15 +74,49 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
     return !!this._invisible;
   }
 
-  private _contentWidth: number;
-  private set contentWidth(contentWidth: number) {
-    if (this._contentWidth === contentWidth) return;
-    this._contentWidth = contentWidth;
-    this.width = Math.max(this._minWidth, contentWidth + settings.gui.button.padding * 2);
+  private _justBorder?: boolean;
+  set justBorder(justBorder: boolean) {
+    if (this._justBorder === justBorder) return;
+    this._justBorder = justBorder;
+    this.updateManagers();
+  }
+  get justBorder() {
+    return !!this._justBorder;
+  }
+
+  private _contentSize: TSize;
+  protected get contentSize() {
+    return this._contentSize;
+  }
+  private set contentSize(contentSize: TSize) {
+    const oldContentSize = this._contentSize;
+    this._contentSize = contentSize;
+    if (!oldContentSize || oldContentSize.width !== contentSize.width) {
+      this.width = Math.max(this._minWidth, contentSize.width + settings.gui.button.padding * 2);
+      this._contentCacheX = this.calcContentCacheX();
+    }
+    if (!oldContentSize || oldContentSize.height !== contentSize.height) {
+      this.height = Math.max(this._minHeight, contentSize.height + settings.gui.button.padding * 2);
+      this._contentCacheY = this.calcContentCacheY();
+    }
   }
   public get contentWidth() {
-    return this._contentWidth;
+    return this._contentSize.width;
   }
+  public get contentHeight() {
+    return this.contentSize.height;
+  }
+
+  private _contentCacheX: TCacheX;
+  protected get contentCacheX() {
+    return this._contentCacheX;
+  }
+
+  private _contentCacheY: TCacheY;
+  protected get contentCacheY() {
+    return this._contentCacheY;
+  }
+  
 
   private _width: number;
   private set width(width: number) {
@@ -93,20 +132,10 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
   private _minWidth: number = 0;
   set minWidth(minWidth: number) {
     this._minWidth = minWidth;
-    this.width = Math.max(this._contentWidth + settings.gui.button.padding * 2, minWidth);
+    this.width = Math.max(this.contentWidth + settings.gui.button.padding * 2, minWidth);
   }
   get minWidth() {
     return this.minWidth;
-  }
-
-  private _contentHeight: number;
-  private set contentHeight(contentHeight: number) {
-    if (this._contentHeight === contentHeight) return;
-    this._contentHeight = contentHeight;
-    this.height = Math.max(this._minHeight, contentHeight + settings.gui.button.padding * 2);
-  }
-  public get contentHeight() {
-    return this._contentHeight;
   }
 
   private _height: number;
@@ -123,7 +152,7 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
   private _minHeight: number = 0;
   set minHeight(minHeight: number) {
     this._minHeight = minHeight;
-    this.height = Math.max(this._contentHeight + settings.gui.button.padding * 2, this._minHeight);
+    this.height = Math.max(this.contentHeight + settings.gui.button.padding * 2, this._minHeight);
   }
   get minHeight() {
     return this.minHeight;
@@ -143,12 +172,13 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
   set x(x: number | (() => number)) {
     if (typeof(x) == "function") {
       this._dynamicX = x;
-      this._x = x();
-    } else {
-      this._x = x;
+      x = x();
     }
+    if (this._x === x) return;
+    this._x = x;
     this._startX = this._x - this._width / 2;
     this._endX = this._startX + this._width;
+    this._contentCacheX = this.calcContentCacheX();
   }
   get x(): number {
     return this._x;
@@ -168,12 +198,13 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
   set y(y: number | (() => number)) {
     if (typeof(y) == "function") {
       this._dynamicY = y;
-      this._y = y();
-    } else {
-      this._y = y;
+      y = y();
     }
+    if (this._y === y) return;
+    this._y = y;
     this._startY = this._y - this._height / 2;
     this._endY = this._startY + this._height;
+    this._contentCacheY = this.calcContentCacheY();
   }
   get y(): number {
     return this._y;
@@ -186,14 +217,18 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
   set content(content: TContent) {
     if (this._content === content) return;
     this._content = content;
-    const contentSize = this.calcContentSize();
-    this.contentWidth = contentSize.width;
-    this.contentHeight = contentSize.height;
+    this.contentSize = this.calcContentSize();
   }
 
   hoverManager?: ReturnType<Init["addHoverRequest"]>;
   clickManager?: ReturnType<Init["addClickRequest"]>;
   
+  private redrawBorder() {
+    this.init.ctx.fillStyle = settings.colors.bg;
+    drawRoundedRect(this.init.ctx, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, settings.gui.button.rounding);
+    this.init.ctx.fillStyle = settings.colors.button.bg;
+    drawRoundedBorder(this.init.ctx, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, settings.gui.button.rounding);
+  }
   private redrawLabel() {
     if (this?.bgColor) {
       this.init.ctx.fillStyle = this.bgColor;
@@ -226,7 +261,7 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
     this.drawer();
   }
   private updateManagers() {
-    if (this?._invisible || this?._disabled || this?._likeLabel || !this?.onClick) {
+    if (this?.justBorder || this?._invisible || this?._disabled || this?._likeLabel || !this?.onClick) {
       this.hoverManager?.stop();
       this.hoverManager = undefined;
       this.clickManager?.stop();
@@ -255,7 +290,7 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
     return x >= this._startX && x <= this._endX && y >= this._startY && y <= this._endY;
   }
   redraw() {
-    if (!this?._invisible) this?._likeLabel ? this.redrawLabel() : this.redrawContent();
+    if (!this?._invisible) this?._justBorder ? this.redrawBorder() : this?._likeLabel ? this.redrawLabel() : this.redrawContent();
   }
   stop(shouldRedrawToDefault?: boolean) {
     this.clickManager?.stop();
@@ -269,8 +304,8 @@ abstract class AbstractButton<TContent> implements ButtonOptional {
     if (this._dynamicY) this.y = this._dynamicY();
   }
   glue() {
-    this.redraw();
     this.updateManagers();
+    this.redraw();
   }
 }
 

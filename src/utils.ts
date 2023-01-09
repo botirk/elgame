@@ -35,6 +35,8 @@ export const randomInArray = <T>(a: Array<T>) => {
   return a[Math.floor(Math.random() * a.length)];
 }
 
+export const randomiseArray = <T>(a: Array<T>) => randomNInArray(a, a.length);
+
 export const randomNInArray = <T>(a: Array<T>, n: number) => {
   const avail = a.map((_,i) => i);
 

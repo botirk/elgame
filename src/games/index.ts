@@ -67,7 +67,7 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
   protected abstract redraw(): void;
   protected abstract update(): void;
   protected abstract scrollOptions(): { oneStep: number, maxHeight: number };
-  constructor(init: Init, initialContent: TContent) {
+  constructor(init: Init, initialContent: TContent, isLateGlue?: boolean) {
     this.init = init;
     this.content = initialContent;
     const magic = promiseMagic<TEndGameStats>(() => {
@@ -84,12 +84,14 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
     this._stopResize = init.addResizeRequest(() => {
       init.prepared = reprepareInit(init);
       this._preparedPos = this.preparePos();
+      this._fullScreenButton.dynamicPos();
       this.scroll.update();
       this.update();
       this.redraw();
+      this.scroll.drawScroll();
     });
     this.scroll = new Scroll(init, () => ({ ...this.scrollOptions(), redraw: () => this.redraw(), update: () => this.update() }));
-    this.onGameStart();
+    if (!isLateGlue) this.onGameStart();
   }
 
   private _prepared: TPrepare;

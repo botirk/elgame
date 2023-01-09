@@ -13,52 +13,37 @@ export const calcButtonWithDescription = (init: Init, text: string, description:
     height: oneHeight * 2 + 1,
   };
 }
-type ButtonWithDescriptionContentSize = ReturnType<typeof calcButtonWithDescription>;
 
-export class ButtonWithDescription<TData> extends AbstractButton<{ text: string, description: string }> {
-  private cachedTextX: number;
-  private cachedTextY: number;
-  private cachedDescX: number;
-  private cachedDescY: number;
-  private cachedContentSize: ButtonWithDescriptionContentSize;
-  
-  set x(x: number | (() => number)) {
-    super.x = x;
-    this.cachedTextX = this.x - this.cachedContentSize.firstWidth / 2;
-    this.cachedDescX = this.x - this.cachedContentSize.secondWidth / 2;
-  }
-  get x(): number {
-    return super.x;
-  }
-
-  set y(y: number | (() => number)) {
-    super.y = y;
-    this.cachedTextY = this.y - 1 - settings.fonts.fontSize / 3,
-    this.cachedDescY = this.y + settings.fonts.fontSize;
-  }
-  get y(): number {
-    return super.y;
-  }
-
-  set content(content: { text: string, description: string }) {
-    this.cachedContentSize = calcButtonWithDescription(this.init, content.text, content.description);
-    super.content = content;
-  }
-  get content() {
-    return super.content;
-  }
+export class ButtonWithDescription extends AbstractButton<
+  { text: string, description: string }, 
+  { text: number, desc: number }, 
+  { text: number, desc: number },
+  ReturnType<typeof calcButtonWithDescription>
+> {
 
   protected drawer(): void {
     this.init.ctx.fillStyle = settings.colors.textColor;
-    this.init.ctx.fillText(this.content.text, this.cachedTextX, this.cachedTextY);
+    this.init.ctx.fillText(this.content.text, this.contentCacheX.text, this.contentCacheY.text);
     this.init.ctx.strokeStyle = settings.colors.textColor;
     this.init.ctx.beginPath();
     this.init.ctx.moveTo(this.startX, this.y);
     this.init.ctx.lineTo(this.endX, this.y);
     this.init.ctx.stroke();
-    this.init.ctx.fillText(this.content.description, this.cachedDescX, this.cachedDescY);
+    this.init.ctx.fillText(this.content.description, this.contentCacheX.desc, this.contentCacheY.desc);
   }
   protected calcContentSize() {
-    return this.cachedContentSize;
+    return calcButtonWithDescription(this.init, this.content.text, this.content.description);
+  }
+  protected calcContentCacheX() {
+    return {
+      text: this.x - this.contentSize.firstWidth / 2,
+      desc: this.x - this.contentSize.secondWidth / 2,
+    }
+  }
+  protected calcContentCacheY() {
+    return {
+      text: this.y - 1 - settings.fonts.fontSize / 3,
+      desc: this.y + settings.fonts.fontSize,
+    }
   }
 }

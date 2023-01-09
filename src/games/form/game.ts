@@ -1,181 +1,132 @@
-import { Init,reprepareInit } from "../../init";
-import { formGame, FormGameDifficulty } from "../../settings";
-import drawForm, { prepare, Prepared as PreparedDraw } from "./drawText";
-import { promiseMagic } from "../../utils";
+import { Init } from "../../init";
+import settings, { formGame, FormGameDifficulty } from "../../settings";
 import { AbstractGame, WordWithImage } from "..";
 import { EndGameStats } from "..";
-import FullscreenButton from "../../gui/fullscreenButton";
+import OneForm from "./oneForm";
+import { drawStatusText, drawStatusTextFail, drawStatusTextSuccess, prepareStatusText } from "../../gui/status";
 
-const calcCardStep = (card: FormCard, dif: FormGameDifficulty) => {
-  return dif.startCount + Math.floor(card.successCount / dif.stepCount);
-}
-
-const calcNextCard = (cards: FormCard[], previousCard?: FormCard): FormCard | undefined => {
-  let candidates: FormCard[] = [];
-  let successCount = Infinity;
-
-  cards.forEach((card) => {
-    if (successCount > card.successCount) {
-      successCount = card.successCount;
-      candidates = [];
-    }
-    if (successCount == card.successCount) {
-      candidates.push(card);
-    }
+const calculateCardSize = (init: Init, words: WordWithImage[]) => {
+  let minHeight = 0;
+  let minWidth = 0;
+  words.forEach((word) => {
+    minHeight = Math.max(minHeight, word.toLearnImg.height + settings.gui.button.padding * 2);
+    minWidth = Math.max(minWidth, word.toLearnImg.width + settings.gui.button.padding * 2);
   });
-
-  if (candidates.length > 0) {
-    if (candidates.length >= 2 && previousCard) {
-      const prevI = candidates.indexOf(previousCard);
-      if (prevI != -1) candidates.splice(prevI, 1);
-    }
-    return candidates[Math.floor(Math.random() * candidates.length)];
-  }
+  return { minHeight, minWidth };
 }
 
-const calcNextOthers = (card: FormCard, state: FormState, dif: FormGameDifficulty): FormCard[] => {
-  const array = state.gameplay.cards.filter((cardf) => cardf != card);
-  let currentIndex = array.length;
-  while (currentIndex != 0) {
-    const randomIndex = Math.floor(Math.random() * currentIndex--);
-    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
-  }
-  return array.slice(0, calcCardStep(card, dif) - 1);
+const calcForm = (init: Init, words: WordWithImage[]) => {
+  return {
+    card: calculateCardSize(init, words),
+  };
 }
 
-const calcNextForm = (state: FormState, dif: FormGameDifficulty, previousCard?: FormCard): [FormCard, FormCard[]] | [] => {
-  if (state.gameplay.score.health <= 0) return [];
-  if (state.gameplay.score.total >= state.gameplay.score.required) return [];
-  const card = calcNextCard(state.gameplay.cards, previousCard);
-  if (!card) return [];
-  return [card, calcNextOthers(card, state, dif)];
+const calcFormPos = (init: Init) => {
+  return {
+    ...prepareStatusText(init),
+  };
 }
 
-export interface FormCard {
-  word: WordWithImage,
-  successCount: number,
-}
-export interface FormState {
-  // gameplay
-  gameplay: {
-    cards: FormCard[],
-    score: {
-      total: number, required: number,
-      health: number,
-    }
-  },
-  // gui
-  gui: {
-    prepared: PreparedDraw,
-    winHistory: (() => void)[],
-    loseHistory: (() => void)[],
-  },
-  lastTick: number,
-}
-
-const form = (init: Init, words: WordWithImage[], dif: FormGameDifficulty) => async () => {
-  const state: FormState = {
-    gameplay: {
-      cards: words.map((word) => ({ word, successCount: 0 })),
-      score: {
-        total: 0, required: (dif.endCount + 1 - dif.startCount) * dif.stepCount * words.length,
-        health: 3,
-      }
-    },
-    gui: {
-      prepared: prepare(init, words),
-      winHistory: [],
-      loseHistory: [],
-    },
-    lastTick: 0,
-  }
-
-  let resizeCurrent: () => void | undefined;
-  const stopResize = init.addResizeRequest(() => {
-    init.prepared = reprepareInit(init);
-    resizeCurrent?.();
-    buttonFS.dynamicPos();
-    buttonFS.redraw();
-  });
-  const buttonFS = new FullscreenButton(init, () => resizeCurrent?.());
-
-  const nextForm = (previousCard?: FormCard) => {
-    const [target, others] = calcNextForm(state, dif, previousCard);
-    if (target && others) return new Promise<FormCard>((resolve) => {
-      const form = drawForm(init, state, target.word, others.map((formCard) => formCard.word), (clickCard) => {
-        if (clickCard == target.word) {
-          target.successCount += 1;
-          state.gameplay.score.total += 1;
-          // update here if screen was resized
-          state.gui.winHistory.push(() => { form.redraw(); });
-        } else {
-          // update here if screen was resized
-          state.gui.loseHistory.push(() => { form.redraw(); });
-          state.gameplay.score.health -= 1;
-        }
-      }, (card) => resolve(state.gameplay.cards.find((formCard) => formCard.word === card) as FormCard));
-      resizeCurrent = () => { form.redraw(); };
-    });
-  }
-
-  const onFormEnd = (endCard?: FormCard) => {
-    let form = nextForm(endCard);
-    if (form) form.then(onFormEnd);
-    else endAnimation();
-  }
-  onFormEnd();
-
-  // win
-  const endAnimation = () => {
-    const history = 
-        (state.gameplay.score.health >= 1 && state.gui.winHistory.length > 0) ? state.gui.winHistory 
-        : (state.gameplay.score.health <= 0 && state.gui.loseHistory.length > 0) ? state.gui.loseHistory
-        : undefined;
-    const totalScreens = (state.gameplay.score.health >= 1) ? state.gameplay.score.required : dif.maxHealth;
-    
-    if (history) (resizeCurrent = (history.pop() as () => void))(); else gameEnder({ isSuccess: state.gameplay.score.health >= 1 });
-    setTimeout(endAnimation, formGame.endAnimationTime / totalScreens);
-  }
-
-  const [promise, gameEnder] = promiseMagic<EndGameStats>(() => {
-    buttonFS.stop(false);
-    stopResize();
-  });
-  return await promise;
-}
-
-class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficulty }, {}, {}, EndGameStats> {
+class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficulty }, ReturnType<typeof calcForm>, ReturnType<typeof calcFormPos>, EndGameStats> {
   constructor(init: Init, content: Form["content"]) {
-    super(init, content);
+    super(init, content, true);
+    this.onGameStart();
   }
+  private _curForm: OneForm;
+  private _wonForms: OneForm[] = [];
+  private _lostForms: OneForm[] = [];
   private score = {
     total: 0, health: 3,
     required: 
       (this.content.dif.endCount + 1 - this.content.dif.startCount) 
         * this.content.dif.stepCount * this.content.words.length,
   }
+  private wordsStats() {
+    const allForms = [ ...this._wonForms, ...this._lostForms ];
+    return this.content.words.map((word) => {
+      const forms = allForms.filter((form) => form.answers.includes(word));
+      const answerForms = forms.filter((form) => form.answer === word);
+      const answerFormsSuccess = answerForms.filter((form) => form.clickedWord === word);
+      const falseAnswers = forms.filter((form) => form.falseAnswers.includes(word));
+      return { word, asAnswers: forms.length, asAnswer: answerForms.length, asSuccessfullAnswer: answerFormsSuccess.length, asFalseAnswers: falseAnswers.length };
+    });
+  }
+  private async showLoseAnimation() {
+    for (const form of this._lostForms) {
+      this._curForm = form;
+      form.redraw();
+      await new Promise((resolve) => {
+        setTimeout(resolve, formGame.endAnimationTime / this._lostForms.length);
+      });
+    }
+    this.gameEnder({ isSuccess: false });
+  }
+  private async showWinAnimation() {
+    for (const form of this._wonForms) {
+      this._curForm = form;
+      form.redraw();
+      await new Promise((resolve) => {
+        setTimeout(resolve, formGame.endAnimationTime / this._wonForms.length);
+      });
+    }
+    this.gameEnder({ isSuccess: true });
+  }
+  private showNextForm() {
+    const wordsStats = this.wordsStats().sort((a, b) => a.asAnswer - b.asAnswer);
+    const nextAnswerCandidates = wordsStats.filter((word) => word.asSuccessfullAnswer === wordsStats[0].asSuccessfullAnswer);
+    const nextAnswerStat = nextAnswerCandidates[Math.floor(Math.random() * nextAnswerCandidates.length)];
+    const nextAnswer = nextAnswerStat.word;
+    const nextFalseAnswersCount = nextAnswerStat.asSuccessfullAnswer < this.content.dif.stepCount ? this.content.dif.startCount - 1 : this.content.dif.endCount - 1;
+    const nextFalseAnswers = wordsStats.filter((wordStat) => wordStat.word !== nextAnswer).sort((a, b) => a.asAnswers - b.asAnswers).slice(0, nextFalseAnswersCount).map((stat) => stat.word);
+    const this2 = this;
+    this._curForm = new OneForm(this.init, nextAnswer, nextFalseAnswers, function(word) {
+      if (word !== nextAnswer) {
+        this2.score.health -= 1;
+        this2._lostForms.unshift(this);
+      } else {
+        this2.score.total += 1;
+        this2._wonForms.unshift(this);
+      }
+    }, function() {
+      if (this2.score.health <= 0) this2.showLoseAnimation();
+      else if (this2.score.total >= this2.score.required) this2.showWinAnimation();
+      else this2.showNextForm();
+    }, this.prepared.card.minWidth, this.prepared.card.minHeight, () => this.drawStatus(), true);
+    this._curForm.glue();
+  }
+  private drawStatus() {
+    if (!this._curForm.clickedWord) {
+      drawStatusText(this.init, this._curForm.answer.toLearnText, this.score.total, this.score.required, this.score.health, this.preparedPos);
+    } else if (this._curForm.clickedWord === this._curForm.answer) {
+      drawStatusTextSuccess(this.init, this._curForm.answer.toLearnText, this.score.health, this.preparedPos);
+    } else {
+      drawStatusTextFail(this.init, this._curForm.answer.toLearnText, this.score.health, this.preparedPos);
+    }
+  }
 
   protected onGameStart(): void {
-    
+    this.showNextForm();
   }
   protected onGameEnd(): void {
     
   }
-  protected prepare(): {} {
-    return {};
+  protected prepare() {
+    return calcForm(this.init, this.content.words);
   }
-  protected preparePos(): {} {
-    return {};
+  protected preparePos() {
+    return calcFormPos(this.init);
   }
   protected redraw(): void {
-    
+    this._curForm.redraw();
   }
   protected scrollOptions(): { oneStep: number; maxHeight: number; } {
     return { maxHeight: 0, oneStep: 0 };
   }
   protected update(): void {
-    
+    this._curForm.reposition();
+    for (const form of this._wonForms) form.reposition();
+    for (const form of this._lostForms) form.reposition();
   }
 }
 
-export default form;
+export default Form;
