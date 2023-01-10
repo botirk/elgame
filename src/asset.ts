@@ -3,7 +3,7 @@ import wordsJSON from "./compileTime/generated/words.json";
 import planJSON from "./compileTime/generated/plan.json";
 
 import { Game } from "./games";
-import drop from "./games/drop/game";
+import Drop from "./games/drop/game";
 import Form from "./games/form/game";
 import Memory from "./games/memory/game";
 import Viewer from "./games/viewer/game";
@@ -105,7 +105,7 @@ export const loadPlans = (init: Init) => {
   for (const plan of planJSON.drop) {
     const words = getWordsWithImage(init, plan.words);
     if (typeof(words) == "string") return words;
-    add("Drop", plan, drop(init, words, plan.difficulty), () => new Viewer(init, words).promise);
+    add("Drop", plan, () => new Drop(init, { words, dif: plan.difficulty}).promise, () => new Viewer(init, words).promise);
   }
 
   for (const plan of planJSON.memory) {

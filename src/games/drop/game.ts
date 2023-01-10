@@ -4,8 +4,9 @@ import { Init } from "../../init";
 import { mergeDeep, promiseMagic, randomInArray, RecursivePartial } from "../../utils";
 import { reprepareInit } from "../../init";
 import FullscreenButton from "../../gui/fullscreenButton";
-import { WordWithImage } from "..";
+import { AbstractGame, WordWithImage } from "..";
 import { EndGameStats, Game } from "..";
+import { drawStatusText, prepareStatusText } from "../../gui/status";
 
 const generateTarget = (init: Init, state: DropState) => {
   const x = state.gameplay.prepared.clickableGameX + Math.random() * state.gameplay.prepared.clickableGameWidth, y = 1000;
@@ -242,7 +243,7 @@ const drop = (init: Init, words: WordWithImage[], dif: DropGameDifficulty, optio
   const state: DropState = mergeDeep({
     gameplay: {
       words,
-      hero: { 
+      hero: {
         x: init.prepared.gameX + init.prepared.gameWidth / 2, y: dropGame.heroY, 
         speed: dropGame.mouseSpeed * init.prepared.verticalSpeedMultiplier 
       },
@@ -311,4 +312,193 @@ const drop = (init: Init, words: WordWithImage[], dif: DropGameDifficulty, optio
   return await promise;
 }
 
-export default drop;
+const preparePos = (init: Init) => ({
+  maxXHero: init.prepared.gameXMax - settings.gui.icon.width, 
+  maxXTarget: init.prepared.gameXMax - settings.gui.icon.width,
+  clickableGameX: (init.ctx.canvas.width - init.prepared.gameWidth) / 2 + settings.gui.icon.width,
+  clickableGameXMax: (init.ctx.canvas.width + init.prepared.gameWidth) / 2 - settings.gui.icon.width,
+  clickableGameWidth: init.prepared.gameWidth - settings.gui.icon.width * 2,
+});
+
+const prepareDrop =  (init: Init) => ({
+  ...prepareStatusText(init)
+})
+
+interface DropContent { words: WordWithImage[], dif: DropGameDifficulty };
+
+class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareDrop>, ReturnType<typeof preparePos>, EndGameStats> {
+  constructor(init: Init, content: DropContent) {
+    super(init, content, true);
+    this.onGameStart();
+  }
+
+  
+  private _timer: NodeJS.Timer;
+  private _lastTick: number;
+  private _mouse=  { 
+    x: undefined as number | undefined, 
+    y: undefined as number | undefined,
+    acceleration: false, 
+    accelerationKB: false,
+  }
+  private _quest: WordWithImage;
+  private _hero = {
+    x: this.init.prepared.gameX + this.init.prepared.gameWidth / 2, 
+    y: dropGame.heroY, 
+    speed: dropGame.mouseSpeed * this.init.prepared.verticalSpeedMultiplier 
+  }
+  private _targets = {
+    a: [] as { word: WordWithImage, x: number, y: number, timeGenerated: number }[],
+    candidates: [...this.content.words],
+    nextGeneration: 0,
+    speed: this.content.dif.targets.speed,
+    cd: this.content.dif.targets.cd,
+  }
+  private _score = {
+    health: this.content.dif.maxHealth,
+    required: this.content.dif.successCountPerWord * this.content.words.length, total: 0,
+    requiredPerWord: this.content.dif.successCountPerWord,
+    perWord: this.content.words.reduce((prev, word) => { prev[word.toLearnText] = 0; return prev; }, {}),
+    wonTime: undefined as number | undefined, 
+    loseTime: undefined as number | undefined,
+    lastHealthLostTime: undefined as number | undefined, 
+    lastScoreIncreasedTime: undefined as number | undefined,
+  }
+  
+  private generateQuest() {
+    let wordsAvailable = this.content.words;
+    if (this._quest) {
+      const remaining = wordsAvailable.filter((word) => this._score.perWord[word.toLearnText] < this._score.requiredPerWord);
+      if (remaining.length == 1) {
+        wordsAvailable = remaining;
+      } else if (remaining.length > 0) {
+        wordsAvailable = remaining.filter((word) => word != this._quest);
+      }
+    }
+    return randomInArray(wordsAvailable);
+  }
+  private generateTarget() {
+    const x = this.preparedPos.clickableGameX + Math.random() * this.preparedPos.clickableGameWidth, y = 1000;
+    const word = randomInArray(this._targets.candidates);
+    if (this._targets.candidates.length == 0 || (this._targets.candidates.length == 1 && this.content.words.length <= 2)) {
+      this._targets.candidates = [...this.content.words];
+    } else if (this._targets.candidates.length == 1) {
+      this._targets.candidates = this.content.words.filter((word) => word != this._targets.candidates[0]);
+    } else {
+      this._targets.candidates.splice(this._targets.candidates.indexOf(word), 1);
+    }
+    return { word, x, y, timeGenerated: this._lastTick };
+  }
+  private gameplay() {
+    this._targets.a.forEach((target, i) => {
+      const isMiss = (target.y < dropGame.progressBarY - target.word.toLearnImg.height);
+      const isHit = (Math.abs(this._hero.x - target.x) <= settings.gui.icon.width) && (Math.abs(this._hero.y - target.y) <= settings.gui.icon.height);
+      const isQuest = (target.word === this._quest);
+      if (isHit && isQuest) {
+        if (this._score.perWord[this._quest.toLearnText] < this._score.requiredPerWord) {
+          this._score.perWord[this._quest.toLearnText] += 1;
+          this._score.total += 1;
+          this._score.lastScoreIncreasedTime = this._lastTick;
+        }
+        if (this._score.total == this._score.required) {
+          this._targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
+          this._score.wonTime = this._lastTick;
+        } else {
+          this._quest = this.generateQuest();
+          return true;
+        }
+      } else if ((isMiss && isQuest) || (isHit && !isQuest)) {
+        this._score.health = this._score.health - 1;
+        this._score.lastHealthLostTime = this._lastTick;
+        if (this._score.health == 0) {
+          this._targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
+          this._score.loseTime = this._lastTick;
+        }
+      }
+      if (isHit || isMiss) this._targets.a.splice(i, 1);
+    });
+    // generate new
+    if (this._targets.nextGeneration <= 0) {
+      this._targets.a.push(this.generateTarget());
+      this._targets.nextGeneration = this._targets.cd;
+    }
+    return false;
+  }
+  private motion() {
+    if (this._mouse.x) {
+      if (this._hero.x > this._mouse.x - settings.gui.icon.width / 2)
+        this._hero.x = Math.max(this._hero.x - this._hero.speed, this._mouse.x - settings.gui.icon.width / 2); 
+      else 
+        this._hero.x = Math.min(this._hero.x + this._hero.speed, this._mouse.x - settings.gui.icon.width / 2);
+      // fix
+      this._hero.x = Math.max(this.init.prepared.gameX, Math.min(this.preparedPos.clickableGameXMax, this._hero.x));
+    }
+    let speed = this._targets.speed;
+    let betaTime = 1000 / dropGame.fps;
+    if (this._mouse.accelerationKB || this._mouse.acceleration) {
+      speed *= dropGame.acceleration;
+      betaTime *= dropGame.acceleration;
+    } 
+    this._targets.a.forEach((target) => target.y -= speed);
+    this._targets.nextGeneration -= betaTime;
+  }
+  private drawGameBackground() {
+    this.init.ctx.fillStyle = settings.colors.sky;
+    this.init.ctx.fillRect(this.init.prepared.gameX, 0, this.init.prepared.gameWidth, settings.dimensions.heigth);
+  }
+  private drawTargets() {
+    for (const target of this._targets.a) {
+      this.init.ctx.drawImage(target.word.toLearnImg, target.x,target.y, target.word.toLearnImg.width, target.word.toLearnImg.height);
+    }
+  }
+  private drawHero() {
+    this.init.ctx.fillStyle = "#03fc28";
+    this.init.ctx.fillRect(this._hero.x, this._hero.y, settings.gui.icon.width, settings.gui.icon.height);
+  }
+  private renderStatus() {
+    drawStatusText(this.init, this._quest.toLearnText, this._score.total, this._score.required, this._score.health, this.prepared);
+  }
+  private render() {
+    this.drawGameBackground();
+    this.drawHero();
+    this.drawTargets();
+  }
+  private onTick() {
+    this.motion();
+    if (this.gameplay()) {
+      this.render();
+      this.renderStatus();
+    } else {
+      this.render();
+    }
+    
+  }
+  protected onGameStart(): void {
+    this._timer = setInterval(this.onTick.bind(this), 1000 / dropGame.fps);
+  }
+  protected onGameEnd(): void {
+    clearInterval(this._timer);
+  }
+  protected prepare() {
+    return {
+      ...prepareStatusText(this.init)
+    };
+  }
+  protected preparePos() {
+    return preparePos(this.init);
+  }
+  protected redraw() {
+    
+  }
+  protected scrollOptions() {
+    return {
+      oneStep: 0,
+      maxHeight: 0,
+    }
+  }
+  protected update() {
+    
+  }
+}
+
+export default Drop;

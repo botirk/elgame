@@ -51,7 +51,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
       return { word, asAnswers: forms.length, asAnswer: answerForms.length, asSuccessfullAnswer: answerFormsSuccess.length, asFalseAnswers: falseAnswers.length };
     });
   }
-  private async showLoseAnimation() {
+  private async loseAnimation() {
     for (const form of this._lostForms) {
       this._curForm = form;
       form.redraw();
@@ -61,13 +61,12 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
     }
     this.gameEnder({ isSuccess: false });
   }
-  private async showWinAnimation() {
+  private async winAnimation() {
+    await new Promise((resolve) => setTimeout(resolve, formGame.endAnimationTime / this._wonForms.length));
     for (const form of this._wonForms) {
       this._curForm = form;
       form.redraw();
-      await new Promise((resolve) => {
-        setTimeout(resolve, formGame.endAnimationTime / this._wonForms.length);
-      });
+      await new Promise((resolve) => setTimeout(resolve, formGame.endAnimationTime / this._wonForms.length));
     }
     this.gameEnder({ isSuccess: true });
   }
@@ -88,8 +87,8 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
         this2._wonForms.unshift(this);
       }
     }, function() {
-      if (this2.score.health <= 0) this2.showLoseAnimation();
-      else if (this2.score.total >= this2.score.required) this2.showWinAnimation();
+      if (this2.score.health <= 0) this2.loseAnimation();
+      else if (this2.score.total >= this2.score.required) this2.winAnimation();
       else this2.showNextForm();
     }, this.prepared.card.minWidth, this.prepared.card.minHeight, () => this.drawStatus(), true);
     this._curForm.glue();

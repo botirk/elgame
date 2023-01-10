@@ -1,9 +1,7 @@
-import { Word, WordWithImage } from "..";
+import { WordWithImage } from "..";
 import { Button } from "../../gui/button";
-import { drawRoundedBorder, drawRoundedRect } from "../../gui/roundedRect";
 import { Init } from "../../init";
 import settings from "../../settings";
-import { MemoryCard } from "./game";
 
 export type GuessState = "image" | "word";
 type GameState = "open" | "closed" | "failed" | "solved&open" | "solved&closed";

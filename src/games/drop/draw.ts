@@ -31,7 +31,7 @@ const drawTargets = (init: Init, state: DropState) => {
 
 const drawHero = (init: Init, state: DropState) => {
   init.ctx.fillStyle = "#03fc28";
-  init.ctx.fillRect(state.gameplay.hero.x, state.gameplay.hero.y, settings.hero.width, settings.hero.height);
+  init.ctx.fillRect(state.gameplay.hero.x, state.gameplay.hero.y, settings.gui.icon.width, settings.gui.icon.height);
 }
 
 const drawHealth = (init: Init, x: number, y: number) => {

@@ -57,18 +57,17 @@ const calcTablePos = (init: Init, prepared: ReturnType<typeof calcTable>) => {
 }
 
 class Viewer extends AbstractGame<Word[], ReturnType<typeof calcTable>, ReturnType<typeof calcTablePos>, EndGameStats> {
+  private _buttons: Button[] = [];
+  private _click = this.init.addClickRequest({
+    isInArea: () => true,
+    zIndex: -1000,
+    onReleased: (isInside) => { if (isInside) this.gameEnder({ isSuccess: true }); },
+  });;
   constructor(init: Init, words: Word[]) {
-    super(init, words);
-    this._click = init.addClickRequest({
-      isInArea: () => true,
-      zIndex: -1000,
-      onReleased: (isInside) => { if (isInside) this.gameEnder({ isSuccess: true }); },
-    });
+    super(init, words, true);
+    this.onGameStart();
   }
-  private _buttons: Button[];
-  private _click: ReturnType<Init["addClickRequest"]>;
   protected onGameStart() {
-    this._buttons = [];
     // draw background
     drawBackground(this.init.ctx);
     // text
