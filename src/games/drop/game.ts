@@ -4,9 +4,11 @@ import { Init } from "../../init";
 import { mergeDeep, promiseMagic, randomInArray, RecursivePartial } from "../../utils";
 import { reprepareInit } from "../../init";
 import FullscreenButton from "../../gui/fullscreenButton";
-import { AbstractGame, WordWithImage } from "..";
+import { AbstractGame, Word, WordWithImage } from "..";
 import { EndGameStats, Game } from "..";
 import { drawStatusText, prepareStatusText } from "../../gui/status";
+import { randomNInArray } from "../../utils";
+import drawBackground from "../../gui/background";
 
 const generateTarget = (init: Init, state: DropState) => {
   const x = state.gameplay.prepared.clickableGameX + Math.random() * state.gameplay.prepared.clickableGameWidth, y = 1000;
@@ -37,7 +39,7 @@ const generateQuest = (init: Init, words: WordWithImage[], state?: DropState) =>
 
 const calcGameplay = (init: Init, state: DropState) => {
   state.gameplay.targets.a.forEach((target, i) => {
-    const isMiss = (target.y < dropGame.progressBarY - target.word.toLearnImg.height);
+    const isMiss = (target.y < settings.gui.status.height - target.word.toLearnImg.height);
     const isHit = (Math.abs(state.gameplay.hero.x - target.x) <= settings.gui.icon.width) && (Math.abs(state.gameplay.hero.y - target.y) <= settings.gui.icon.height);
     const isQuest = (target.word == state.gameplay.quest.word);
     if (isHit && isQuest) {
@@ -93,7 +95,7 @@ const calcNextLoseFrame = (init: Init, state: DropState) => {
   // move & remove
   let speed = dropGame.difficulties.movie.targets.speed;
   state.gameplay.targets.a.forEach((target, i) => {
-    if (target.y < dropGame.progressBarY - target.word.toLearnImg.height) {
+    if (target.y < settings.gui.status.height - target.word.toLearnImg.height) {
       state.gameplay.targets.a.splice(i, 1);
       state.gameplay.score.lastHealthLostTime = state.lastTick;
     } 
@@ -191,7 +193,7 @@ export interface DropState {
 const drop = (init: Init, words: WordWithImage[], dif: DropGameDifficulty, optional?: RecursivePartial<DropState>) => async () => {
   const stopMove = init.addMoveRequest((x, y) => {
     state.gui.mouse.x = x, state.gui.mouse.y = y;
-    state.gui.accelerationMouse = (y <= dropGame.progressBarY);
+    state.gui.accelerationMouse = (y <= settings.gui.status.height);
   });
   const stopResize = init.addResizeRequest(() => {
     // change canvas size
@@ -332,10 +334,28 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareDrop>, Ret
     this.onGameStart();
   }
 
-  
+  private stopMouse = this.init.addMoveRequest((x, y) => {
+    this._mouse.x = x, this._mouse.y = y;
+    this._mouse.acceleration = (y <= settings.gui.status.height);
+  });
+  private stopSpace = this.init.addButtonRequest({
+    button: " ",
+    onReleased: () => this._mouse.accelerationKB = false,
+    onPressed: () => this._mouse.accelerationKB = true,
+  });
+  private stopRight = this.init.addButtonRequest({
+    button: "ArrowRight",
+    onPressed: () => { this._mouse.x = Infinity; },
+    onReleased: () => { this._mouse.x = undefined; },
+  });
+  private stopLeft = this.init.addButtonRequest({
+    button: "ArrowLeft",
+    onPressed: () => { this._mouse.x = -Infinity; },
+    onReleased: () => { this._mouse.x = undefined; },
+  });
   private _timer: NodeJS.Timer;
   private _lastTick: number;
-  private _mouse=  { 
+  private _mouse = { 
     x: undefined as number | undefined, 
     y: undefined as number | undefined,
     acceleration: false, 
@@ -349,7 +369,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareDrop>, Ret
   }
   private _targets = {
     a: [] as { word: WordWithImage, x: number, y: number, timeGenerated: number }[],
-    candidates: [...this.content.words],
+    candidates: [] as WordWithImage[],
     nextGeneration: 0,
     speed: this.content.dif.targets.speed,
     cd: this.content.dif.targets.cd,
@@ -378,20 +398,25 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareDrop>, Ret
     return randomInArray(wordsAvailable);
   }
   private generateTarget() {
-    const x = this.preparedPos.clickableGameX + Math.random() * this.preparedPos.clickableGameWidth, y = 1000;
-    const word = randomInArray(this._targets.candidates);
-    if (this._targets.candidates.length == 0 || (this._targets.candidates.length == 1 && this.content.words.length <= 2)) {
-      this._targets.candidates = [...this.content.words];
-    } else if (this._targets.candidates.length == 1) {
-      this._targets.candidates = this.content.words.filter((word) => word != this._targets.candidates[0]);
+    if (this._score.loseTime || this._score.wonTime) {
+      if (this._targets.candidates.length === 0) {
+        this._targets.candidates = randomNInArray(this.content.words, dropGame.difficulties.movie.maxWordsTillQuest + 1);
+      }
     } else {
-      this._targets.candidates.splice(this._targets.candidates.indexOf(word), 1);
+      if (this._targets.candidates.length === 0 || !this._targets.candidates.includes(this._quest)) {
+        this._targets.candidates = randomNInArray(this.content.words, this.content.dif.maxWordsTillQuest + 1);
+        if (!this._targets.candidates.includes(this._quest)) {
+          this._targets.candidates[Math.floor(Math.random() * this._targets.candidates.length)] = this._quest;
+        }
+      }
     }
+    const word = this._targets.candidates.pop() as WordWithImage;
+    const x = this.preparedPos.clickableGameX + Math.random() * this.preparedPos.clickableGameWidth, y = settings.dimensions.heigth + settings.gui.icon.height * 1.5;
     return { word, x, y, timeGenerated: this._lastTick };
   }
   private gameplay() {
     this._targets.a.forEach((target, i) => {
-      const isMiss = (target.y < dropGame.progressBarY - target.word.toLearnImg.height);
+      const isMiss = (target.y < settings.gui.status.height - target.word.toLearnImg.height);
       const isHit = (Math.abs(this._hero.x - target.x) <= settings.gui.icon.width) && (Math.abs(this._hero.y - target.y) <= settings.gui.icon.height);
       const isQuest = (target.word === this._quest);
       if (isHit && isQuest) {
@@ -403,9 +428,11 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareDrop>, Ret
         if (this._score.total == this._score.required) {
           this._targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
           this._score.wonTime = this._lastTick;
+          clearInterval(this._timer);
+          this._timer = setInterval(this.onWinTick.bind(this), 1000 / dropGame.fps);
+          setTimeout(() => this.gameEnder({ isSuccess: true }), dropGame.winTime);
         } else {
           this._quest = this.generateQuest();
-          return true;
         }
       } else if ((isMiss && isQuest) || (isHit && !isQuest)) {
         this._score.health = this._score.health - 1;
@@ -413,6 +440,9 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareDrop>, Ret
         if (this._score.health == 0) {
           this._targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
           this._score.loseTime = this._lastTick;
+          clearInterval(this._timer);
+          this._timer = setInterval(this.onLoseTick.bind(this), 1000 / dropGame.fps);
+          setTimeout(() => this.gameEnder({ isSuccess: false }), dropGame.loseTime);
         }
       }
       if (isHit || isMiss) this._targets.a.splice(i, 1);
@@ -422,7 +452,59 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareDrop>, Ret
       this._targets.a.push(this.generateTarget());
       this._targets.nextGeneration = this._targets.cd;
     }
-    return false;
+  }
+  private lostMotion() {
+    // move & remove
+    let speed = dropGame.difficulties.movie.targets.speed;
+    this._targets.a.forEach((target, i) => {
+      if (target.y < settings.gui.status.height - target.word.toLearnImg.height) {
+        this._targets.a.splice(i, 1);
+        this._score.lastHealthLostTime = this._lastTick;
+      } 
+      else target.y -= speed;
+    });
+    // generate new
+    if (this._targets.nextGeneration <= 0) {
+      let target = this.generateTarget();
+      for (let i = 0; i < 10 && Math.abs(target.x - this._hero.x) < settings.gui.icon.width * 2; i++)
+        target.x = this.init.prepared.gameX + Math.random() * this.preparedPos.clickableGameWidth;
+      this._targets.a.push(target);
+      this._targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
+    } else {
+      this._targets.nextGeneration -= 1000 / dropGame.fps;
+    }
+  }
+  private wonMotion() {
+    // move & remove
+    this._targets.a.forEach((target, i) => {
+      const isHit = (Math.abs(this._hero.x - target.x) <= settings.gui.icon.width) && (Math.abs(this._hero.y - target.y) <= settings.gui.icon.height);
+      if (isHit) {
+        // remove
+        this._targets.a.splice(i, 1);
+        this._score.lastScoreIncreasedTime = this._lastTick;
+        return;
+      } else {
+        // x move
+        if (target.y < this._hero.y + settings.gui.icon.height * 4) {
+          if (target.x > this._hero.x) {
+            target.x = Math.max(this._hero.x, target.x - dropGame.difficulties.movie.targets.speed);
+          } else {
+            target.x = Math.min(this._hero.x, target.x + dropGame.difficulties.movie.targets.speed);
+          }
+        }
+        // y move
+        if (target.y > this._hero.y) {
+          target.y = Math.max(this._hero.y, target.y - dropGame.difficulties.movie.targets.speed);
+        }
+      }
+    });
+    // generate new
+    if (this._targets.nextGeneration <= 0) {
+      this._targets.a.push(this.generateTarget());
+      this._targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
+    } else {
+      this._targets.nextGeneration -= 1000 / dropGame.fps;
+    }
   }
   private motion() {
     if (this._mouse.x) {
@@ -444,7 +526,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareDrop>, Ret
   }
   private drawGameBackground() {
     this.init.ctx.fillStyle = settings.colors.sky;
-    this.init.ctx.fillRect(this.init.prepared.gameX, 0, this.init.prepared.gameWidth, settings.dimensions.heigth);
+    this.init.ctx.fillRect(this.init.prepared.gameX, settings.gui.status.height, this.init.prepared.gameWidth, settings.dimensions.heigth);
   }
   private drawTargets() {
     for (const target of this._targets.a) {
@@ -455,29 +537,37 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareDrop>, Ret
     this.init.ctx.fillStyle = "#03fc28";
     this.init.ctx.fillRect(this._hero.x, this._hero.y, settings.gui.icon.width, settings.gui.icon.height);
   }
-  private renderStatus() {
-    drawStatusText(this.init, this._quest.toLearnText, this._score.total, this._score.required, this._score.health, this.prepared);
-  }
   private render() {
+    drawBackground(this.init.ctx);
     this.drawGameBackground();
     this.drawHero();
     this.drawTargets();
+    drawStatusText(this.init, this._quest.toLearnText, this._score.total, this._score.required, this._score.health, this.prepared);
   }
   private onTick() {
     this.motion();
-    if (this.gameplay()) {
-      this.render();
-      this.renderStatus();
-    } else {
-      this.render();
-    }
-    
+    this.gameplay();
+    this.render();
+  }
+  private onLoseTick() {
+    this.lostMotion();
+    this.render();
+  }
+  private onWinTick() {
+    this.wonMotion();
+    this.render();
   }
   protected onGameStart(): void {
-    this._timer = setInterval(this.onTick.bind(this), 1000 / dropGame.fps);
+    this._quest = this.generateQuest();
+    this.render();
+    this._timer = setInterval(this.onTick.bind(this), 1000 / dropGame.fps)
   }
   protected onGameEnd(): void {
     clearInterval(this._timer);
+    this.stopMouse();
+    this.stopLeft();
+    this.stopRight();
+    this.stopSpace();
   }
   protected prepare() {
     return {

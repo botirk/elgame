@@ -4,7 +4,6 @@ export const dropGame = {
   mouseSpeed: 5.5,
   fps: 100,
   heroY: 150,
-  progressBarY: 100,
   accelerationButton: " ",
   difficulties: {
     easy: {
@@ -14,6 +13,7 @@ export const dropGame = {
       },
       successCountPerWord: 3,
       maxHealth: 3,
+      maxWordsTillQuest: 3,
     },
     normal: {
       targets: {
@@ -22,6 +22,7 @@ export const dropGame = {
       },
       successCountPerWord: 4,
       maxHealth: 2,
+      maxWordsTillQuest: 4,
     },
     hard: {
       targets: {
@@ -30,6 +31,7 @@ export const dropGame = {
       },
       successCountPerWord: 5,
       maxHealth: 1,
+      maxWordsTillQuest: 5,
     },
     movie: {
       targets: {
@@ -38,6 +40,7 @@ export const dropGame = {
       },
       successCountPerWord: Infinity,
       maxHealth: Infinity,
+      maxWordsTillQuest: 50,
     }
   },
   winTime: 4000, loseTime: 3000,

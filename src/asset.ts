@@ -105,7 +105,7 @@ export const loadPlans = (init: Init) => {
   for (const plan of planJSON.drop) {
     const words = getWordsWithImage(init, plan.words);
     if (typeof(words) == "string") return words;
-    add("Drop", plan, () => new Drop(init, { words, dif: plan.difficulty}).promise, () => new Viewer(init, words).promise);
+    add("Drop", plan, () => new Drop(init, { words, dif: plan.difficulty }).promise, () => new Viewer(init, words).promise);
   }
 
   for (const plan of planJSON.memory) {
