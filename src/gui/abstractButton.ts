@@ -302,6 +302,7 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> im
   dynamicPos() {
     if (this._dynamicX) this.x = this._dynamicX();
     if (this._dynamicY) this.y = this._dynamicY();
+    if (this._dynamicX || this._dynamicY) this.hoverManager?.update();
   }
   glue() {
     this.updateManagers();

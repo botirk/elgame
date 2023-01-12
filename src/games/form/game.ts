@@ -1,5 +1,6 @@
 import { Init } from "../../init";
-import settings, { formGame, FormGameDifficulty } from "../../settings";
+import settings from "../../settings";
+import { settings as formGame, FormGameDifficulty  } from "./settings";
 import { AbstractGame, WordWithImage } from "..";
 import { EndGameStats } from "..";
 import OneForm from "./oneForm";

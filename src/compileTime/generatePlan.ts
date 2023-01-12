@@ -1,5 +1,7 @@
 import { Plan } from "../games";
-import { dropGame, formGame, memoryGame } from "../settings";
+import { settings as dropGame } from "../games/drop/settings";
+import { settings as formGame } from "../games/form/settings";
+import { settings as memoryGame } from "../games/memory/settings";
 import wordsJSON from "./generated/words.json";
 import { writeFileSync } from "fs";
 import { randomNInArray } from "../utils";

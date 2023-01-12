@@ -1,7 +1,8 @@
 import { AbstractGame, EndGameStats } from "..";
 import { Init } from "../../init";
 import { removeRandomInArray } from "../../utils";
-import settings, { memoryGame } from "../../settings";
+import settings from "../../settings";
+import { settings as memoryGame } from "./settings";
 import { WordWithImage } from "..";
 import Card, { GuessState } from "./card";
 import { calcTextWidth } from "../../gui/text";
@@ -30,15 +31,15 @@ const calcTable = (init: Init, words: WordWithImage[], cardSize: ReturnType<type
   const lastRowColumns = (words.length * 2) - (columns * (rows - 1));
   if (rows == 1) columns = lastRowColumns;
   // x 
-  const totalWidth = columns * (cardSize.width + memoryGame.margin) - memoryGame.margin;
+  const totalWidth = memoryGame.margin * 2 + columns * (cardSize.width + memoryGame.margin) - memoryGame.margin;
   const widthRemaining = Math.max(0, init.prepared.gameWidth - totalWidth);
   const x = memoryGame.margin + cardSize.width / 2 + widthRemaining / 2;
   // y
-  const totalHeight = rows * (cardSize.height + memoryGame.margin) - memoryGame.margin;
+  const totalHeight = memoryGame.margin * 2 + rows * (cardSize.height + memoryGame.margin) - memoryGame.margin;
   const heightRemaining = Math.max(0, init.ctx.canvas.height - totalHeight);
   const y = memoryGame.margin + cardSize.height / 2 + heightRemaining / 2;
 
-  return { columns, rows, lastRowColumns, start: { x, y } };
+  return { columns, rows, lastRowColumns, start: { x, y }, totalHeight, totalWidth };
 }
 
 const calcCards = (init: Init, cardSize: ReturnType<typeof calcCardSize>, table: ReturnType<typeof calcTable>) => {
@@ -70,7 +71,6 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
   private _cards: Card[];
   private _timer?: NodeJS.Timer;
   private _wonCards: Card[] = [];
-
   
   private finishCardAction() {
     for (const failed of this._cards.filter((card) => card.gameState == "failed")) {
@@ -86,7 +86,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
       }
     }
   };
-  private shuffleWords()  {
+  private shuffleWords() {
     const result: { word: WordWithImage, guessState: GuessState }[] = [];
     const freePos: number[] = [];
     for (let i = 0; i < this.content.length * 2; i++) freePos.push(i);
@@ -136,7 +136,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
     this._cards = this.shuffleWords().map((shuffled, i) => new Card(
       this.init, shuffled.word, shuffled.guessState, 
       () => this.preparedPos.cards[i].x,
-      () => this.preparedPos.cards[i].y, 
+      () => -this.scroll.pos() + this.preparedPos.cards[i].y,
       this.prepared.card.width, this.prepared.card.height,
       function() {
         if (this2._remainingCards <= 0) return;
@@ -165,7 +165,8 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
     ));
   }
   protected onGameEnd(): void {
-    
+    for (const card of this._cards) card.stop();
+    clearTimeout(this._timer);
   }
   protected prepare() {
     return calcMemory(this.init, this.content);
@@ -174,13 +175,14 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
     return calcMemoryPos(this.init, this.content, this.prepared.card);
   }
   protected redraw(): void {
-    
+    drawBackground(this.init.ctx);
+    for (const card of this._cards) card.redraw();
   }
   protected scrollOptions(): { oneStep: number; maxHeight: number; } {
-    return { oneStep: 0, maxHeight: 0 };
+    return { oneStep: this.prepared.card.height, maxHeight: this.preparedPos.table.totalHeight };
   }
   protected update(): void {
-    
+    for (const card of this._cards) card.dynamicPos();
   }
 }
 

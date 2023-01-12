@@ -111,7 +111,6 @@ class Scroll {
   }
 
   constructor(init: Init, options: () => ScrollOptions) {
-    init.ctx.canvas.style.touchAction = "none";
     this.pos = this.pos.bind(this);
     this.beforeUnloadListener = this.beforeUnloadListener.bind(this);
     this.wheelListener = this.wheelListener.bind(this);

@@ -1,5 +1,5 @@
 import { Init } from "../init";
-import settings, { formGame } from "../settings";
+import settings from "../settings";
 import { calcTextWidth } from "./text";
 
 interface PreparedQuestText {
