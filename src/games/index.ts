@@ -1,14 +1,15 @@
 import Scroll, { ScrollOptions } from "../gui/events/scroll";
 import FullscreenButton from "../gui/fullscreenButton";
 import { Init, reprepareInit } from "../init";
-import { DropGameDifficulty, FormGameDifficulty } from "../settings";
 import { promiseMagic } from "../utils";
+import { DropGameDifficulty } from "./drop/settings";
+import { FormGameDifficulty } from "./form/settings";
 
 export interface EndGameStats {
   isSuccess: boolean
 }
 
-export type Game = () => Promise<EndGameStats>;
+export type Game = () => AbstractGame<any, any, any, any>;
 
 export interface UnloadedWord {
   toLearnText: string,
@@ -104,6 +105,6 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
   protected readonly scroll: Scroll;
   protected readonly init: Init;
   protected readonly content: TContent;
-  readonly promise: Promise<EndGameStats>;
+  readonly promise: Promise<TEndGameStats>;
   protected readonly gameEnder: (result: TEndGameStats) => void;
 }

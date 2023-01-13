@@ -55,8 +55,6 @@ const init = async (elementId: string, isDev?: boolean) => {
   if (el.tagName != "CANVAS") return `Element is not <canvas>`;
   const ctx = (el as HTMLCanvasElement).getContext('2d');
   if (!ctx) return `canvas.getContext does not work`;
-  if (ctx.canvas.clientHeight < settings.dimensions.desiredClientMinHeight) return `canvas.clientHeight is too small, ${settings.dimensions.desiredClientMinHeight} required`;
-  if (ctx.canvas.clientWidth < settings.dimensions.desiredClientMinWidth) return `canvas.clientWidth is too small, ${settings.dimensions.desiredClientMinWidth} required`;
   return {
     isDev,
     ctx,

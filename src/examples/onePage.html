@@ -1,6 +1,6 @@
 <!doctype html>
 
-<html lang="en" style="height: 100%; overflow: hidden;">
+<html lang="en" style="height: 100%;">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,13 +10,13 @@
   <meta name="author" content="botirk"  >
 </head>
 
-<body style="margin:0; height: 100%; overflow: hidden;">
+<body style="margin:0; height: 100%;">
   <!-- your content here... -->
   <canvas id="elgame" style="height:100%; width:100%; float: left;"></canvas>
   <script type="module">
     import index from '../index';
     index('elgame').then((error) => {
-      if (error) alert(error);
+      //if (error) alert(error);
     });
   </script>
 </body>

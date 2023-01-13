@@ -48,8 +48,6 @@ const gui = {
 }
 
 const dimensions = {
-  desiredClientMinHeight: 500,
-  desiredClientMinWidth: 500 * 1080/2400,
   widthToHeightRatio: 1080/2400,
   heigth: 900,
 }

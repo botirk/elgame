@@ -1,15 +1,16 @@
 import { Init } from "../init";
 import settings from "../settings";
-import drawBackground from "./background";
+import drawBackground from "../gui/background";
 import { reprepareInit } from "../init";
 import { LoadedPlans, loadPlans } from "../asset";
-import { calcTextWidth } from "./text";
+import { calcTextWidth } from "../gui/text";
 import { loadProgress, saveProgress } from "../progress";
-import Scroll from "./events/scroll";
-import { ButtonWithDescription, calcButtonWithDescription } from "./buttonWithDescription";
-import AbstractButton from "./abstractButton";
-import { Button } from "./button";
-import FullscreenButton from "./fullscreenButton";
+import Scroll from "../gui/events/scroll";
+import { ButtonWithDescription, calcButtonWithDescription } from "../gui/buttonWithDescription";
+import AbstractButton from "../gui/abstractButton";
+import { Button } from "../gui/button";
+import FullscreenButton from "../gui/fullscreenButton";
+import { AbstractGame, EndGameStats, Game } from ".";
 
 const calcMenu = (init: Init, plans: LoadedPlans, desc: string) => {
   // menu width
@@ -69,9 +70,9 @@ const drawMenu = (init: Init) => {
   drawBackground(init.ctx);
 
   // drawing
-  const buttons: AbstractButton<any>[] = [];
+  const buttons: AbstractButton<any, any, any, any>[] = [];
   plans.forEach((plan) => {
-    if (plan.viewer) buttons.push(new Button(init, desc, calced.xDesc(), calced.yDesc(plan.place, buttons.length, scroll.pos), { 
+    if (plan.viewer) buttons.push(new Button(init, desc, calced.xDesc(), calced.yDesc(plan.place, buttons.length, () => scroll.pos), { 
       minWidth: calced.minWidth(), minHeight: calced.minHeight,
       disabled: !progress[plan.place],
       onClick: async () => {
@@ -80,16 +81,10 @@ const drawMenu = (init: Init) => {
         drawMenu(init);
       },
     }, true));
-    buttons.push(new ButtonWithDescription(init, { text: plan.name, description: plan.label }, calced.xGame(), calced.yGame(plan.place, buttons.length, scroll.pos), { 
+    buttons.push(new ButtonWithDescription(init, { text: plan.name, description: plan.label }, calced.xGame(), calced.yGame(plan.place, buttons.length, () => scroll.pos), { 
       minWidth: calced.minWidthGame, minHeight: calced.minHeight, disabled: !progress[plan.place],
       onClick: async () => { 
-        stop();
-        const stat = await plan.game();
-        if (stat.isSuccess && plan.openPlace) {
-          plan.openPlace.forEach((openPlace) => progress[openPlace] = true);
-          saveProgress(init, progress);
-        }
-        drawMenu(init);
+        
       },
     }, true));
   });
@@ -108,6 +103,82 @@ const drawMenu = (init: Init) => {
   // late glue
   redraw();
   scroll.drawScroll();
+}
+
+const prepare = (init: Init, desc: string) => {
+  let plans = loadPlans(init);
+  if (typeof(plans) === "string") plans = [];
+  const pos = calcMenu(init, plans, desc);
+  return { plans, pos };
+}
+
+interface MenuEnd extends EndGameStats { game: Game; }
+
+export class Menu extends AbstractGame<{}, ReturnType<typeof prepare>, {}, MenuEnd> {
+  constructor(init: Init) {
+    super(init, {}, true);
+    this.onGameStart();
+  }
+
+  private _buttons: AbstractButton<any, any, any, any>[] = [];
+  private _desc = "Слова";
+  private _progress = loadProgress(this.init);
+
+  protected onGameStart() {
+    drawBackground(this.init.ctx);
+    this.prepared.plans.forEach((plan) => {
+      if (plan.viewer) this._buttons.push(
+        new Button(
+          this.init, this._desc, 
+          this.prepared.pos.xDesc(), this.prepared.pos.yDesc(plan.place, this._buttons.length, () => this.scroll.pos), 
+          { 
+            minWidth: this.prepared.pos.minWidth(), minHeight: this.prepared.pos.minHeight,
+            disabled: !this._progress[plan.place],
+            onClick: () => {
+              this.gameEnder({ isSuccess: true, game: plan.viewer as Game });
+              return false;
+            },
+          },
+        )
+      );
+      this._buttons.push(
+        new ButtonWithDescription(
+          this.init, 
+          { text: plan.name, description: plan.label }, 
+          this.prepared.pos.xGame(), this.prepared.pos.yGame(plan.place, this._buttons.length, () => this.scroll.pos), 
+          { 
+            minWidth: this.prepared.pos.minWidthGame, minHeight: this.prepared.pos.minHeight, disabled: !this._progress[plan.place],
+            onClick: () => { 
+              this.gameEnder({ isSuccess: true, game: plan.game })
+              return false;
+            },
+          },
+        )
+      );
+    });
+  }
+  protected onGameEnd(): void {
+    for (const btn of this._buttons) btn.stop();
+  }
+  protected prepare() {
+    return prepare(this.init, this._desc);
+  }
+  protected preparePos() {
+    return {};
+  }
+  protected redraw() {
+    drawBackground(this.init.ctx);
+    for (const btn of this._buttons) btn.redraw();
+  }
+  protected scrollOptions() {
+    return {
+      oneStep: this.prepared.pos.minWidth(),
+      maxHeight: this.prepared.pos.totalHeight(),
+    }
+  }
+  protected update() {
+    for (const btn of this._buttons) btn.dynamicPos();
+  }
 }
 
 export default drawMenu;

@@ -93,25 +93,25 @@ export const loadPlans = (init: Init) => {
   for (const plan of planJSON.viewer) {
     const words = getWords(init, plan.words);
     if (typeof(words) == "string") return words;
-    add("Viewer", plan, () => new Viewer(init, words).promise);
+    add("Обзор", plan, () => new Viewer(init, words));
   }
 
   for (const plan of planJSON.form) {
     const words = getWordsWithImage(init, plan.words);
     if (typeof(words) == "string") return words;
-    add("Form", plan, () => new Form(init, { words, dif: plan.difficulty }).promise, () => new Viewer(init, words).promise);
+    add("Анкета", plan, () => new Form(init, { words, dif: plan.difficulty }), () => new Viewer(init, words));
   }
 
   for (const plan of planJSON.drop) {
     const words = getWordsWithImage(init, plan.words);
     if (typeof(words) == "string") return words;
-    add("Drop", plan, () => new Drop(init, { words, dif: plan.difficulty }).promise, () => new Viewer(init, words).promise);
+    add("Падение", plan, () => new Drop(init, { words, dif: plan.difficulty }), () => new Viewer(init, words));
   }
 
   for (const plan of planJSON.memory) {
     const words = getWordsWithImage(init, plan.words);
     if (typeof(words) == "string") return words;
-    add("Memory", plan, () => new Memory(init, words).promise, () => new Viewer(init, words).promise);
+    add("Карточки", plan, () => new Memory(init, words), () => new Viewer(init, words));
   }
 
   return plans.sort((a, b) => a.place - b.place);
