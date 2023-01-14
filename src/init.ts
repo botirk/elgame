@@ -39,8 +39,7 @@ const reprepareLocal = (ctx: CanvasRenderingContext2D) => {
 const prepareLocal = async (ctx: CanvasRenderingContext2D) => {
   return {
     ...reprepareLocal(ctx),
-    imgs: await loadAssets(settings.gui.icon.width, "width"),
-    words: await loadWords(settings.gui.icon.width, "width"),
+    assets: await loadAssets(settings.gui.icon.width, "width"),
   }
 }
 

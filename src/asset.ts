@@ -9,6 +9,7 @@ import Memory from "./games/memory/game";
 import Viewer from "./games/viewer/game";
 import { UnloadedWord, Word, WordWithImage } from "./games";
 import { Init } from "./init";
+import settings from "./settings";
 
 const loadAsset = async (b64: string, pxValue: number, side: "width" | "heigth"): Promise<HTMLImageElement> => {
   return new Promise<HTMLImageElement>((resolve) => {
@@ -54,9 +55,9 @@ export const loadWords = async (maxWidth: number, side: "width" | "heigth" = "wi
   return result as Words;
 }
 
-const getWordsWithImage = (init: Init, words: string[]) => {
-  const [found, missing] = words.reduce((prev, cur) => {
-    if (init.prepared.words[cur] && init.prepared.words[cur]?.toLearnImg) prev[0].push(init.prepared.words[cur]);
+const getWordsWithImage = (words: Words, wordsStrings: string[]) => {
+  const [found, missing] = wordsStrings.reduce((prev, cur) => {
+    if (words[cur] && words[cur]?.toLearnImg) prev[0].push(words[cur]);
     else prev[1].push(cur);
     return prev;
   }, [[], []] as [WordWithImage[], string[]]);
@@ -64,9 +65,9 @@ const getWordsWithImage = (init: Init, words: string[]) => {
   return found;
 }
 
-const getWords = (init: Init, words: string[]) => {
-  const [found, missing] = words.reduce((prev, cur) => {
-    if (init.prepared.words[cur]) prev[0].push(init.prepared.words[cur]);
+const getWords = (words: Words, wordsStrings: string[]) => {
+  const [found, missing] = wordsStrings.reduce((prev, cur) => {
+    if (words[cur]) prev[0].push(words[cur]);
     else prev[1].push(cur);
     return prev;
   }, [[], []] as [Word[], string[]]);
@@ -74,12 +75,12 @@ const getWords = (init: Init, words: string[]) => {
   return found;
 }
 
-export interface LoadedPlan { place: number, name: string, label: string, game: Game, viewer?: Game, openPlace?: number[] };
+export interface LoadedPlan { openedInitialy?: boolean, place: number, name: string, label: string, game: Game, viewer?: Game, openPlace?: number[] };
 export type LoadedPlans = LoadedPlan[];
 
-export const loadPlans = (init: Init) => {
+export const loadPlans = (init: Init, allWords: Words) => {
   const plans: LoadedPlans = [];
-  const add = (name: string, { place, label , openPlace }: { place: number, label: string, openPlace?: number[] }, game: Game, viewer?: Game) => {
+  const add = (name: string, { place, label , openPlace, openedInitialy }: { place: number, label: string, openPlace?: number[], openedInitialy?: boolean }, game: Game, viewer?: Game) => {
     plans.push({
       name,
       place,
@@ -87,29 +88,30 @@ export const loadPlans = (init: Init) => {
       label,
       viewer,
       game,
+      openedInitialy,
     });
   }
 
   for (const plan of planJSON.viewer) {
-    const words = getWords(init, plan.words);
+    const words = getWords(allWords, plan.words);
     if (typeof(words) == "string") return words;
     add("Обзор", plan, () => new Viewer(init, words));
   }
 
   for (const plan of planJSON.form) {
-    const words = getWordsWithImage(init, plan.words);
+    const words = getWordsWithImage(allWords, plan.words);
     if (typeof(words) == "string") return words;
     add("Анкета", plan, () => new Form(init, { words, dif: plan.difficulty }), () => new Viewer(init, words));
   }
 
   for (const plan of planJSON.drop) {
-    const words = getWordsWithImage(init, plan.words);
+    const words = getWordsWithImage(allWords, plan.words);
     if (typeof(words) == "string") return words;
     add("Падение", plan, () => new Drop(init, { words, dif: plan.difficulty }), () => new Viewer(init, words));
   }
 
   for (const plan of planJSON.memory) {
-    const words = getWordsWithImage(init, plan.words);
+    const words = getWordsWithImage(allWords, plan.words);
     if (typeof(words) == "string") return words;
     add("Карточки", plan, () => new Memory(init, words), () => new Viewer(init, words));
   }

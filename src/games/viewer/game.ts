@@ -61,27 +61,27 @@ class Viewer extends AbstractGame<Word[], ReturnType<typeof calcTable>, ReturnTy
   private _click = this.init.addClickRequest({
     isInArea: () => true,
     zIndex: -1000,
-    onReleased: (isInside) => { if (isInside) this.gameEnder({ isSuccess: true }); },
+    onReleased: (isInside) => { if (isInside) this.stop({ isSuccess: true }); },
   });;
   constructor(init: Init, words: Word[]) {
     super(init, words, true);
-    this.onGameStart();
+    this.start();
   }
-  protected onGameStart() {
+  protected start() {
     // draw background
     drawBackground(this.init.ctx);
     // text
     this._buttons.push(...this.content.map((word, i) => new Button(
-      this.init, word.toLearnText, () => this.preparedPos.wordX, () => -this.scroll.pos() + this.preparedPos.columnY + ((this.prepared.rowHeight + settings.gui.button.distance) * i),
+      this.init, word.toLearnText, () => this.preparedPos.wordX, () => -this.scroll.pos + this.preparedPos.columnY + ((this.prepared.rowHeight + settings.gui.button.distance) * i),
       { likeLabel: true, minHeight: this.prepared.rowHeight, minWidth: this.prepared.wordColumnWidth, lateGlue: true }
     )));
     // imgs
     this._buttons.push(...(this.content.filter((word) => word.toLearnImg) as WordWithImage[]).map((word, i) => new Button(
-      this.init, word.toLearnImg, () => this.preparedPos.imgX, () => -this.scroll.pos() + this.preparedPos.columnY + ((this.prepared.rowHeight + settings.gui.button.distance) * i), 
+      this.init, word.toLearnImg, () => this.preparedPos.imgX, () => -this.scroll.pos + this.preparedPos.columnY + ((this.prepared.rowHeight + settings.gui.button.distance) * i), 
       { likeLabel: true, minHeight: this.prepared.rowHeight, minWidth: this.prepared.imgColumnWidth, lateGlue: true }
     )));
   }
-  protected onGameEnd() {
+  protected freeResources() {
     this._click.stop();
     for (const button of this._buttons) button.stop();
   }

@@ -20,9 +20,9 @@ class FullscreenButton extends Button {
   };
 
   constructor(init: Init, ownerRedraw: () => void) {
-    const x = () => init.ctx.canvas.width - init.prepared.imgs.fullscreen.width / 2 - settings.gui.button.padding - 15;
-    const y = () => init.ctx.canvas.height - init.prepared.imgs.fullscreen.height / 2 - settings.gui.button.padding - 15;
-    super(init, init.prepared.imgs.fullscreen, x, y, {
+    const x = () => init.ctx.canvas.width - init.prepared.assets.fullscreen.width / 2 - settings.gui.button.padding - 15;
+    const y = () => init.ctx.canvas.height - init.prepared.assets.fullscreen.height / 2 - settings.gui.button.padding - 15;
+    super(init, init.prepared.assets.fullscreen, x, y, {
       onClick: () => {
         init.ctx.canvas.requestFullscreen();
         this.invisible = true;

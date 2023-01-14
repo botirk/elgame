@@ -31,7 +31,7 @@ const calcFormPos = (init: Init) => {
 class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficulty }, ReturnType<typeof calcForm>, ReturnType<typeof calcFormPos>, EndGameStats> {
   constructor(init: Init, content: Form["content"]) {
     super(init, content, true);
-    this.onGameStart();
+    this.start();
   }
   private _curForm: OneForm;
   private _wonForms: OneForm[] = [];
@@ -60,7 +60,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
         setTimeout(resolve, formGame.endAnimationTime / this._lostForms.length);
       });
     }
-    this.gameEnder({ isSuccess: false });
+    this.stop({ isSuccess: false });
   }
   private async winAnimation() {
     await new Promise((resolve) => setTimeout(resolve, formGame.endAnimationTime / this._wonForms.length));
@@ -69,7 +69,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
       form.redraw();
       await new Promise((resolve) => setTimeout(resolve, formGame.endAnimationTime / this._wonForms.length));
     }
-    this.gameEnder({ isSuccess: true });
+    this.stop({ isSuccess: true });
   }
   private showNextForm() {
     const wordsStats = this.wordsStats().sort((a, b) => a.asAnswer - b.asAnswer);
@@ -104,10 +104,10 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
     }
   }
 
-  protected onGameStart(): void {
+  protected start(): void {
     this.showNextForm();
   }
-  protected onGameEnd(): void {
+  protected freeResources(): void {
     
   }
   protected prepare() {

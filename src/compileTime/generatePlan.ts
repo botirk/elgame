@@ -9,6 +9,7 @@ import { randomNInArray } from "../utils";
 const init = (words: string[]): Plan => {
   return {
     viewer: [{
+      openedInitialy: true,
       place: 1,
       openPlace: [2],
       label: "Все слова",

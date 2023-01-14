@@ -12,7 +12,7 @@ export const settings = {
   },
   recomendation: {
     minWords: 2,
-    maxWords: 12,
+    maxWords: 10,
   }
 }
 

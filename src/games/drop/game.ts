@@ -25,7 +25,7 @@ interface DropContent { words: WordWithImage[], dif: DropGameDifficulty };
 class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnType<typeof preparePos>, EndGameStats> {
   constructor(init: Init, content: DropContent) {
     super(init, content, true);
-    this.onGameStart();
+    this.start();
   }
 
   private stopMouse = this.init.addMoveRequest((x, y) => {
@@ -124,7 +124,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
           this._score.wonTime = this._lastTick;
           clearInterval(this._timer);
           this._timer = setInterval(this.onWinTick.bind(this), 1000 / dropGame.fps);
-          setTimeout(() => this.gameEnder({ isSuccess: true }), dropGame.winTime);
+          setTimeout(() => this.stop({ isSuccess: true }), dropGame.winTime);
         } else {
           this._quest = this.generateQuest();
         }
@@ -136,7 +136,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
           this._score.loseTime = this._lastTick;
           clearInterval(this._timer);
           this._timer = setInterval(this.onLoseTick.bind(this), 1000 / dropGame.fps);
-          setTimeout(() => this.gameEnder({ isSuccess: false }), dropGame.loseTime);
+          setTimeout(() => this.stop({ isSuccess: false }), dropGame.loseTime);
         }
       }
       if (isHit || isMiss) this._targets.a.splice(i, 1);
@@ -251,12 +251,12 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
     this.wonMotion();
     this.render();
   }
-  protected onGameStart(): void {
+  protected start(): void {
     this._quest = this.generateQuest();
     this.render();
     this._timer = setInterval(this.onTick.bind(this), 1000 / dropGame.fps)
   }
-  protected onGameEnd(): void {
+  protected freeResources(): void {
     clearInterval(this._timer);
     this.stopMouse();
     this.stopLeft();

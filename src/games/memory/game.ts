@@ -64,7 +64,7 @@ const calcMemoryPos = (init: Init, words: WordWithImage[], cardSize: ReturnType<
 class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>, ReturnType<typeof calcMemoryPos>, EndGameStats> {
   constructor(init: Init, words: WordWithImage[]) {
     super(init, words, true);
-    this.onGameStart();
+    this.start();
   }
   
   private _remainingCards: number = this.content.length * 2;
@@ -128,15 +128,15 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
         setTimeout(resolve, memoryGame.winTime / this._wonCards.length);
       });
     }
-    this.gameEnder({ isSuccess: true });
+    this.stop({ isSuccess: true });
   }
-  protected onGameStart(): void {
+  protected start(): void {
     drawBackground(this.init.ctx);
     const this2 = this;
     this._cards = this.shuffleWords().map((shuffled, i) => new Card(
       this.init, shuffled.word, shuffled.guessState, 
       () => this.preparedPos.cards[i].x,
-      () => -this.scroll.pos() + this.preparedPos.cards[i].y,
+      () => -this.scroll.pos + this.preparedPos.cards[i].y,
       this.prepared.card.width, this.prepared.card.height,
       function() {
         if (this2._remainingCards <= 0) return;
@@ -164,7 +164,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
       }
     ));
   }
-  protected onGameEnd(): void {
+  protected freeResources(): void {
     for (const card of this._cards) card.stop();
     clearTimeout(this._timer);
   }

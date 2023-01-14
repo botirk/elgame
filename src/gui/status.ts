@@ -48,21 +48,21 @@ interface PreparedHealths {
 };
 
 export const prepareHealths = (init: Init): PreparedHealths => ({
-  healthsY: (settings.gui.status.height - init.prepared.imgs.heart.height) / 2,
-  healthsX: (init.ctx.canvas.width - init.prepared.imgs.heart.width - settings.gui.margin),
-  healthsTextX: (init.ctx.canvas.width - init.prepared.imgs.heart.width / 2 - settings.gui.margin),
-  healthsTextY: settings.gui.status.height  - init.prepared.imgs.heart.height / 2 - settings.fonts.fontSize
+  healthsY: (settings.gui.status.height - init.prepared.assets.heart.height) / 2,
+  healthsX: (init.ctx.canvas.width - init.prepared.assets.heart.width - settings.gui.margin),
+  healthsTextX: (init.ctx.canvas.width - init.prepared.assets.heart.width / 2 - settings.gui.margin),
+  healthsTextY: settings.gui.status.height  - init.prepared.assets.heart.height / 2 - settings.fonts.fontSize
 });
 
 export const drawHealths = (init: Init, healths: number, prepared: PreparedHealths) => {
   if (healths > 3 || init.prepared.isMobile) {
-    init.ctx.drawImage(init.prepared.imgs.heart, prepared.healthsX, prepared.healthsY, init.prepared.imgs.heart.width, init.prepared.imgs.heart.height);
+    init.ctx.drawImage(init.prepared.assets.heart, prepared.healthsX, prepared.healthsY, init.prepared.assets.heart.width, init.prepared.assets.heart.height);
     const text = healths.toString();
     init.ctx.fillStyle = "black";
     init.ctx.fillText(text, prepared.healthsTextX - calcTextWidth(init.ctx, text)  / 2, prepared.healthsTextY);
   } else {
-    for (let x = prepared.healthsX; healths > 0; healths--, x-= (init.prepared.imgs.heart.width * 1.2)) {
-      init.ctx.drawImage(init.prepared.imgs.heart, x, prepared.healthsY, init.prepared.imgs.heart.width, init.prepared.imgs.heart.height);
+    for (let x = prepared.healthsX; healths > 0; healths--, x-= (init.prepared.assets.heart.width * 1.2)) {
+      init.ctx.drawImage(init.prepared.assets.heart, x, prepared.healthsY, init.prepared.assets.heart.width, init.prepared.assets.heart.height);
     }
   }
 };

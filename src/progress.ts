@@ -1,6 +1,6 @@
 import { Init } from "./init";
 
-interface Progress {
+export interface Progress {
   [number: number]: boolean
 }
 

@@ -1,4 +1,6 @@
 
+const name = "elgame";
+
 const colors = {
   questColorBG: "#cae58e",
   questColor1: "#b4e37d",
@@ -60,12 +62,15 @@ const calculate = {
   toCanvasCoords: (ctx: CanvasRenderingContext2D, x: number, y: number): [ number, number ] => [x * (ctx.canvas.width / ctx.canvas.clientWidth), y * (ctx.canvas.height / ctx.canvas.clientHeight)],
 }
 
+
+
 const localStorage = {
-  progress: "elgame",
+  progress: name,
   scroll: "elgame-scroll",
 }
 
 const settings = {
+  name,
   calculate,
   colors, 
   fonts,

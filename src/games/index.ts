@@ -9,7 +9,7 @@ export interface EndGameStats {
   isSuccess: boolean
 }
 
-export type Game = () => AbstractGame<any, any, any, any>;
+export type Game = () => AbstractGame<any, any, any, EndGameStats>;
 
 export interface UnloadedWord {
   toLearnText: string,
@@ -33,12 +33,14 @@ export interface WordWithTranslation extends Word {
 
 export interface Plan {
   viewer: {
+    openedInitialy?: boolean,
     place: number,
     openPlace: number[],
     label: string,
     words: string[],
   }[],
   form: {
+    openedInitaly?: boolean,
     place: number,
     openPlace: number[],
     label: string,
@@ -46,12 +48,14 @@ export interface Plan {
     difficulty: FormGameDifficulty,
   }[],
   memory: {
+    openedInitaly?: boolean,
     place: number,
     openPlace: number[],
     label: string,
     words: string[],
   }[],
   drop: {
+    openedInitaly?: boolean,
     place: number,
     openPlace: number[],
     label: string,
@@ -63,22 +67,14 @@ export interface Plan {
 export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePos extends Object, TEndGameStats extends EndGameStats> {
   protected abstract prepare(): TPrepare;
   protected abstract preparePos(): TPreparePos;
-  protected abstract onGameStart(): void;
-  protected abstract onGameEnd(): void;
+  protected abstract start(): void;
+  protected abstract freeResources(): void;
   protected abstract redraw(): void;
   protected abstract update(): void;
   protected abstract scrollOptions(): { oneStep: number, maxHeight: number };
   constructor(init: Init, initialContent: TContent, isLateGlue?: boolean) {
     this.init = init;
     this.content = initialContent;
-    const magic = promiseMagic<TEndGameStats>(() => {
-      this._fullScreenButton.stop();
-      this.scroll.stop();
-      this._stopResize();
-      this.onGameEnd();
-    });
-    this.promise = magic[0];
-    this.gameEnder = magic[1];
     this._prepared = this.prepare();
     this._preparedPos = this.preparePos();
     this._fullScreenButton = new FullscreenButton(init, () => this.redraw());
@@ -92,9 +88,9 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
       this.scroll.drawScroll();
     });
     this.scroll = new Scroll(init, () => ({ ...this.scrollOptions(), redraw: () => this.redraw(), update: () => this.update() }));
-    if (!isLateGlue) this.onGameStart();
+    if (!isLateGlue) this.start();
   }
-
+  
   private _prepared: TPrepare;
   protected get prepared() { return this._prepared; }
   private _preparedPos: TPreparePos;
@@ -105,6 +101,13 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
   protected readonly scroll: Scroll;
   protected readonly init: Init;
   protected readonly content: TContent;
-  readonly promise: Promise<TEndGameStats>;
-  protected readonly gameEnder: (result: TEndGameStats) => void;
+ 
+  onGameEnd: ((result?: TEndGameStats) => void)[] = [];
+  stop(result?: TEndGameStats) {
+    this._fullScreenButton.stop();
+    this.scroll.stop();
+    this._stopResize();
+    this.freeResources();
+    this?.onGameEnd.forEach((e) => e(result));
+  }
 }
