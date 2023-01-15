@@ -1,6 +1,6 @@
 import { Init } from "../../init";
 import settings from "../../settings";
-import { settings as formGame, FormGameDifficulty  } from "./settings";
+import { formSettings as formGame, FormGameDifficulty  } from "./settings";
 import { AbstractGame, WordWithImage } from "..";
 import { EndGameStats } from "..";
 import OneForm from "./oneForm";
@@ -29,10 +29,6 @@ const calcFormPos = (init: Init) => {
 }
 
 class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficulty }, ReturnType<typeof calcForm>, ReturnType<typeof calcFormPos>, EndGameStats> {
-  constructor(init: Init, content: Form["content"]) {
-    super(init, content, true);
-    this.start();
-  }
   private _curForm: OneForm;
   private _wonForms: OneForm[] = [];
   private _lostForms: OneForm[] = [];
@@ -103,12 +99,11 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
       drawStatusTextFail(this.init, this._curForm.answer.toLearnText, this.score.health, this.preparedPos);
     }
   }
-
-  protected start(): void {
+  protected start() {
     this.showNextForm();
   }
-  protected freeResources(): void {
-    
+  protected freeResources() {
+    this._curForm?.stop();
   }
   protected prepare() {
     return calcForm(this.init, this.content.words);

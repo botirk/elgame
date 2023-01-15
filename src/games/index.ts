@@ -88,7 +88,7 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
       this.scroll.drawScroll();
     });
     this.scroll = new Scroll(init, () => ({ ...this.scrollOptions(), redraw: () => this.redraw(), update: () => this.update() }));
-    if (!isLateGlue) this.start();
+    if (!isLateGlue) setTimeout(() => this.start(), 1);
   }
   
   private _prepared: TPrepare;

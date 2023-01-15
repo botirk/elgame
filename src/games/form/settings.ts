@@ -1,5 +1,5 @@
 
-export const settings = {
+export const formSettings = {
   endAnimationTime: 3000,
   pause: 900,
   difficulties: {
@@ -16,4 +16,4 @@ export const settings = {
   }
 }
 
-export type FormGameDifficulty = typeof settings.difficulties.learning;
+export type FormGameDifficulty = typeof formSettings.difficulties.learning;

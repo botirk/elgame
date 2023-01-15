@@ -125,14 +125,17 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> im
     this._startX = this._x - this._width / 2;
     this._endX = this._startX + this._width;
   }
-  public get width() {
+  get width() {
     return this._width;
+  }
+  static calcWidth(contentWidth: number, minWidth = 0) {
+    return Math.max(contentWidth + settings.gui.button.padding * 2, minWidth);
   }
 
   private _minWidth: number = 0;
   set minWidth(minWidth: number) {
     this._minWidth = minWidth;
-    this.width = Math.max(this.contentWidth + settings.gui.button.padding * 2, minWidth);
+    this.width = AbstractButton.calcWidth(this.contentWidth, minWidth);
   }
   get minWidth() {
     return this.minWidth;
@@ -145,14 +148,17 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> im
     this._startY = this._y - this._height / 2;
     this._endY = this._startY + this._height;
   }
-  public get height() {
+  get height() {
     return this._height;
+  }
+  static calcHeight(contentHeight: number, minHeight = 0) {
+    return Math.max(contentHeight + settings.gui.button.padding * 2, minHeight);
   }
 
   private _minHeight: number = 0;
   set minHeight(minHeight: number) {
     this._minHeight = minHeight;
-    this.height = Math.max(this.contentHeight + settings.gui.button.padding * 2, this._minHeight);
+    this.height = AbstractButton.calcHeight(this.contentHeight, minHeight);
   }
   get minHeight() {
     return this.minHeight;

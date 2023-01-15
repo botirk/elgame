@@ -26,18 +26,21 @@ export class Button extends AbstractButton<string | HTMLImageElement, number, nu
       return this.y - this.contentHeight / 2;
     }
   }
-  protected calcContentSize() {
-    if (typeof(this.content) == "string") {
+  static calcContentSize(ctx: CanvasRenderingContext2D, content: string | HTMLImageElement) {
+    if (typeof(content) == "string") {
       return {
-        width: calcTextWidth(this.init.ctx, this.content),
+        width: calcTextWidth(ctx, content),
         height: settings.fonts.fontSize,
       }
     } else {
       return {
-        width: this.content.width,
-        height: this.content.height,
+        width: content.width,
+        height: content.height,
       }
     }
+  }
+  protected calcContentSize() {
+    return Button.calcContentSize(this.init.ctx, this.content);
   }
 }
 

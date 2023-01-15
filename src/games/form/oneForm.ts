@@ -2,7 +2,7 @@ import { Word, WordWithImage } from "..";
 import drawBackground from "../../gui/background";
 import { Init } from "../../init";
 import settings from "../../settings";
-import { settings as formGame } from "./settings";
+import { formSettings as formGame } from "./settings";
 import Card from "./card";
 
 interface CardPlaced {
