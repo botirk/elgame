@@ -1,10 +1,10 @@
 import { AbstractGame, EndGameStats } from "..";
 import { Init } from "../../init";
-import drawBackground from "../../gui/background";
 import { calcTextWidth } from "../../gui/text";
 import settings from "../../settings";
 import { Word, WordWithImage } from "..";
 import { Button } from "../../gui/button";
+import { drawBackground } from "../../gui/background";
 
 const calcTable = (init: Init, words: Word[]) => {
   // width + height of rows
@@ -63,13 +63,8 @@ class Viewer extends AbstractGame<Word[], ReturnType<typeof calcTable>, ReturnTy
     zIndex: -1000,
     onReleased: (isInside) => { if (isInside) this.stop({ isSuccess: true }); },
   });;
-  constructor(init: Init, words: Word[]) {
-    super(init, words, true);
-    this.start();
-  }
+  
   protected start() {
-    // draw background
-    drawBackground(this.init.ctx);
     // text
     this._buttons.push(...this.content.map((word, i) => new Button(
       this.init, word.toLearnText, () => this.preparedPos.wordX, () => -this.scroll.pos + this.preparedPos.columnY + ((this.prepared.rowHeight + settings.gui.button.distance) * i),

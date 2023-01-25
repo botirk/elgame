@@ -1,9 +1,9 @@
 import { Word, WordWithImage } from "..";
-import drawBackground from "../../gui/background";
 import { Init } from "../../init";
 import settings from "../../settings";
 import { formSettings as formGame } from "./settings";
 import Card from "./card";
+import { drawBackground } from "../../gui/background";
 
 interface CardPlaced {
   word: WordWithImage,

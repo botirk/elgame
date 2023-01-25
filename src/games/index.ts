@@ -72,7 +72,7 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
   protected abstract redraw(): void;
   protected abstract update(): void;
   protected abstract scrollOptions(): { oneStep: number, maxHeight: number };
-  constructor(init: Init, initialContent: TContent, isLateGlue?: boolean) {
+  constructor(init: Init, initialContent: TContent) {
     this.init = init;
     this.content = initialContent;
     this._prepared = this.prepare();
@@ -88,7 +88,7 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
       this.scroll.drawScroll();
     });
     this.scroll = new Scroll(init, () => ({ ...this.scrollOptions(), redraw: () => this.redraw(), update: () => this.update() }));
-    if (!isLateGlue) setTimeout(() => this.start(), 1);
+    setTimeout(() => { this.start(); this.redraw(); }, 1);
   }
   
   private _prepared: TPrepare;

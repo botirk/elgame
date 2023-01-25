@@ -15,7 +15,8 @@
   <canvas id="elgame" style="height:100%; width:100%; float: left;"></canvas>
   <script type="module">
     import index from '../index';
-    index('elgame', true).then((error) => {
+    import words from '../compileTime/generated/words.json';
+    index('elgame', words, true).then((error) => {
       //if (error) alert(error);
     });
   </script>

@@ -10,7 +10,7 @@ const getImgNames = (dirPath) => readdirSync(`${__dirname}/../data/img/${dirPath
 
 const generateAssets = (dirPath) => getImgNames(dirPath).reduce((a, name) => { a[name] = imgToB64(`${dirPath}/${name}.png`); return a; }, {});
 
-const generateWords = (dirPath) => getImgNames(dirPath).reduce((a, name) => { a[name] = { toLearnImgB64: imgToB64(`${dirPath}/${name}.png`), toLearnText: name }; return a; }, {});
+const generateWords = (dirPath) => getImgNames(dirPath).map((name) => ({ toLearnImgB64: imgToB64(`${dirPath}/${name}.png`), toLearnText: name }));
 
 const convertAssets = () => writeFileSync(`${__dirname}/generated/assets.json`, JSON.stringify(generateAssets('assets')));
 

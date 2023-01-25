@@ -3,22 +3,11 @@ import settings from "../settings";
 import AbstractButton from "./abstractButton";
 import { calcTextWidth } from "./text";
 
-export const calcButtonWithDescription = (init: Init, text: string, description: string) => {
-  const firstWidth = calcTextWidth(init.ctx, text);
-  const secondWidth = calcTextWidth(init.ctx, description);
-  const oneHeight = settings.fonts.fontSize;
-  return {
-    firstWidth, secondWidth, oneHeight,
-    width: Math.max(firstWidth, secondWidth),
-    height: oneHeight * 2 + 1,
-  };
-}
-
 export class ButtonWithDescription extends AbstractButton<
   { text: string, description: string }, 
   { text: number, desc: number }, 
   { text: number, desc: number },
-  ReturnType<typeof calcButtonWithDescription>
+  ReturnType<typeof ButtonWithDescription.calcContentSize>
 > {
 
   protected drawer(): void {
@@ -31,8 +20,18 @@ export class ButtonWithDescription extends AbstractButton<
     this.init.ctx.stroke();
     this.init.ctx.fillText(this.content.description, this.contentCacheX.desc, this.contentCacheY.desc);
   }
+  static calcContentSize(ctx: CanvasRenderingContext2D, text: string, description: string) {
+    const firstWidth = calcTextWidth(ctx, text);
+    const secondWidth = calcTextWidth(ctx, description);
+    const oneHeight = settings.fonts.fontSize;
+    return {
+      firstWidth, secondWidth, oneHeight,
+      width: Math.max(firstWidth, secondWidth),
+      height: oneHeight * 2 + 1,
+    };
+  }
   protected calcContentSize() {
-    return calcButtonWithDescription(this.init, this.content.text, this.content.description);
+    return ButtonWithDescription.calcContentSize(this.init.ctx, this.content.text, this.content.description);
   }
   protected calcContentCacheX() {
     return {

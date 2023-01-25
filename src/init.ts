@@ -1,4 +1,4 @@
-import { loadAssets, loadWords } from "./asset";
+import { loadAssets } from "./asset";
 import button from "./gui/events/button";
 import click from "./gui/events/click";
 import hover from "./gui/events/hover";

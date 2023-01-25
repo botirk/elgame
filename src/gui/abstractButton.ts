@@ -22,13 +22,13 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> im
   protected abstract calcContentCacheX(): TCacheX;
   protected abstract calcContentCacheY(): TCacheY;
   protected abstract drawer(): void;
-  constructor(init: Init, content: TContent, x: number | (() => number), y: number | (() => number), optional?: ButtonOptional, isLateGlue?: boolean) {    
+  constructor(init: Init, content: TContent, x: number | (() => number), y: number | (() => number), optional?: ButtonOptional) {    
     this.init = init;
     this.content = content;
     this.x = x;
     this.y = y;
     Object.entries(optional || {}).forEach(([k, v]) => this[k] = v);
-    if (!isLateGlue) this.glue();
+    this.updateManagers();
   }
 
   protected readonly init: Init;
@@ -309,10 +309,6 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> im
     if (this._dynamicX) this.x = this._dynamicX();
     if (this._dynamicY) this.y = this._dynamicY();
     if (this._dynamicX || this._dynamicY) this.hoverManager?.update();
-  }
-  glue() {
-    this.updateManagers();
-    this.redraw();
   }
 }
 
