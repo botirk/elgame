@@ -1,7 +1,7 @@
-import { AbstractGame, UnloadedWord } from "./games";
+import { AbstractGame, EndGameStats, UnloadedWord } from "./games";
 import Menu from "./games/menu";
 import { Init } from "./init";
-import { suggestGame } from "./learner";
+import { suggestGame, saveProgress } from "./learner";
 
 class Nav {
   constructor(init: Init, words: UnloadedWord[]) {
@@ -19,30 +19,40 @@ class Nav {
   private _init: Init;
   private _words: UnloadedWord[];
   private _suggestion: ReturnType<typeof suggestGame>;
-  private _curGame?: AbstractGame<any, any, any, any>;
+  private _curGame?: AbstractGame<any, any, any, EndGameStats>;
 
   private refreshSuggestion() {
     this._suggestion = suggestGame(this._init, this._words);
   }
 
-  private showMenu(noRefresh?: boolean) {
+  private async showMenu(noRefresh?: boolean) {
     if (!noRefresh) this.refreshSuggestion();
     const menu = new Menu(this._init, this._suggestion);
-    menu.onGameEnd.push((result) => {
-      if (result?.isViewer) this.showWords();
-      else this.playGame();
-    });
+    const result = await menu.onGameEnd;
+    history.pushState(`elgame${Math.floor(Math.random() * 1000)}`, "");
+    if (result?.isViewer) await this.showWords();
+    else if (result?.isInfinity) await this.playInfinity();
+    else await this.playGame();
+    this.showMenu(result?.isViewer);
   }
 
   private async showWords() {
-    const viewer = await this._suggestion.viewer();
-    viewer.onGameEnd.push(() => this.showMenu(true));
+    this._curGame = await this._suggestion.viewer();
+    await this._curGame.onGameEnd;
   }
 
   private async playGame() {
-    this._curGame = await this._suggestion.game()
-    history.pushState(`elgame${Math.floor(Math.random() * 1000)}`, "");
-    this._curGame.onGameEnd.push(() => this.showMenu());
+    this._curGame = await this._suggestion.game();
+    saveProgress(this._curGame);
+    return await this._curGame.onGameEnd;
+  }
+
+  private async playInfinity() {
+    while (true) {
+      const result = await this.playGame();
+      if (!result) break;
+      this._suggestion = suggestGame(this._init, this._words);
+    }
   }
 }
 

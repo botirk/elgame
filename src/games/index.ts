@@ -1,6 +1,7 @@
 import Scroll, { ScrollOptions } from "../gui/events/scroll";
 import FullscreenButton from "../gui/fullscreenButton";
 import { Init, reprepareInit } from "../init";
+import { saveProgressFail, saveProgressSuccess } from "../learner";
 import { promiseMagic } from "../utils";
 import { DropGameDifficulty } from "./drop/settings";
 import { FormGameDifficulty } from "./form/settings";
@@ -81,13 +82,21 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
     this._stopResize = init.addResizeRequest(() => {
       init.prepared = reprepareInit(init);
       this._preparedPos = this.preparePos();
-      this._fullScreenButton.dynamicPos();
+      this._fullScreenButton.dynamic();
       this.scroll.update();
       this.update();
       this.redraw();
       this.scroll.drawScroll();
     });
     this.scroll = new Scroll(init, () => ({ ...this.scrollOptions(), redraw: () => this.redraw(), update: () => this.update() }));
+
+    [this.onGameEnd, this.stop] = promiseMagic<TEndGameStats | undefined>(() => {
+      this._fullScreenButton.stop();
+      this.scroll.stop();
+      this._stopResize();
+      this.freeResources();
+    });
+    
     setTimeout(() => { this.start(); this.redraw(); }, 1);
   }
   
@@ -102,12 +111,8 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
   protected readonly init: Init;
   protected readonly content: TContent;
  
-  onGameEnd: ((result?: TEndGameStats) => void)[] = [];
-  stop(result?: TEndGameStats) {
-    this._fullScreenButton.stop();
-    this.scroll.stop();
-    this._stopResize();
-    this.freeResources();
-    this?.onGameEnd.forEach((e) => e(result));
-  }
+  onGameEnd: Promise<TEndGameStats | undefined>;
+  onProgressSuccess?: typeof saveProgressSuccess;
+  onProgressFail?: typeof saveProgressFail;
+  stop: (result?: TEndGameStats) => void;
 }

@@ -4,7 +4,7 @@ import { Init } from "../../init";
 
 class Card extends Button {
   constructor(init: Init, word: WordWithImage, minWidth: number, minHeight: number, onClick: (this: Card) => boolean | void) {
-    super(init, word.toLearnImg, 0, 0, { onClick, minWidth, minHeight }, true);
+    super(init, word.toLearnImg, 0, 0, { onClick, minWidth, minHeight });
     this._word = word;
   }
 

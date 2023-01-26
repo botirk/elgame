@@ -50,8 +50,8 @@ class FullscreenButton extends Button {
     this.moreClick.stop();
     super.stop(shouldRedrawToDefault);
   }
-  dynamicPos(): void {
-    super.dynamicPos();
+  dynamic(): void {
+    super.dynamic();
     this.moreHover.update();
   }
 }

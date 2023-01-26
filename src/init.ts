@@ -24,7 +24,7 @@ const reprepareLocal = (ctx: CanvasRenderingContext2D) => {
   // set font
   ctx.font = settings.fonts.ctxFont;
   // calc
-  const isMobile = settings.calculate.isMobile(currentWidthToHeightRatio);
+  const isMobile = settings.calculate.isMobile(ctx);
   const gameWidth = settings.calculate.gameWidth(isMobile);
   // settings
   return {

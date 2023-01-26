@@ -85,7 +85,7 @@ class Viewer extends AbstractGame<Word[], ReturnType<typeof calcTable>, ReturnTy
     for (const button of this._buttons) button.redraw();
   }
   protected update() {
-    for (const button of this._buttons) button.dynamicPos();
+    for (const button of this._buttons) button.dynamic();
   }
   protected scrollOptions(): { oneStep: number; maxHeight: number; } {
     return {

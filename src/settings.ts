@@ -1,3 +1,4 @@
+import { Init } from "./init";
 
 const name = "elgame";
 
@@ -55,7 +56,7 @@ const dimensions = {
 }
 
 const calculate = {
-  isMobile: (widthToHeightRatio: number) => widthToHeightRatio < 1,
+  isMobile: (ctx: CanvasRenderingContext2D) => ctx.canvas.width / ctx.canvas.height < 1,
   gameWidth: (isMobile: boolean) => isMobile ? 900 * 1080/2400 : 900,
   gameX: (ctx: CanvasRenderingContext2D, gameWidth: number) => (ctx.canvas.width - gameWidth) / 2,
   gameXMax: (ctx: CanvasRenderingContext2D, gameWidth: number) => (ctx.canvas.width + gameWidth) / 2,

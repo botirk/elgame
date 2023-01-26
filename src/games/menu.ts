@@ -18,13 +18,27 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
     const gameBtnHeight = AbstractButton.calcHeight(descSize.height);
     const gameBtnWidth = AbstractButton.calcWidth(descSize.width);
 
+    // words button
     const wordsSize = Button.calcContentSize(init.ctx, ru.Words);
     const wordsHeight = AbstractButton.calcHeight(wordsSize.height);
     const wordsWidth = AbstractButton.calcWidth(wordsSize.width);
+    const wordsMinWidth = () => init.prepared.isMobile ? gameBtnWidth : wordsWidth;
 
-    const wordsBeta = -(gameBtnWidth / 2 + settings.gui.button.distance + wordsWidth / 2);
+    const wordsBetaX = () =>  init.prepared.isMobile ? 0 : -(gameBtnWidth / 2 + settings.gui.button.distance + wordsWidth / 2);
+    const wordsBetaY = () =>  init.prepared.isMobile ? -(gameBtnHeight / 2 + settings.gui.button.distance + height / 2) : 0;
 
-    return { height: Math.max(gameBtnHeight, wordsHeight), wordsBeta };
+    // infinity play button
+    const infSize = Button.calcContentSize(init.ctx, "∞");
+    const infHeight = AbstractButton.calcHeight(infSize.height);
+    const infWidth = AbstractButton.calcWidth(infSize.width);
+    const infMinWidth = () => init.prepared.isMobile ? gameBtnWidth : infWidth;
+
+    const infBetaX = () =>  init.prepared.isMobile ? 0 : gameBtnWidth / 2 + settings.gui.button.distance + infWidth / 2;
+    const infBetaY = () =>  init.prepared.isMobile ? gameBtnHeight / 2 + settings.gui.button.distance + height / 2 : 0;
+
+    const height = Math.max(gameBtnHeight, wordsHeight, infHeight);
+
+    return { height, wordsBetaX, wordsBetaY, wordsMinWidth, infBetaX, infBetaY, infMinWidth };
   }
   protected prepare() {
     return Menu.prepare(this.init, this.content);
@@ -34,10 +48,13 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
     const gameX = init.ctx.canvas.width / 2;
     const gameY = init.ctx.canvas.height / 2;
 
-    const wordsX = gameX + prepared.wordsBeta;
-    const wordsY = gameY;
+    const wordsX = gameX + prepared.wordsBetaX();
+    const wordsY = gameY + prepared.wordsBetaY();
 
-    return { gameX, gameY, wordsX, wordsY };
+    const infX = gameX + prepared.infBetaX();
+    const infY = gameY + prepared.infBetaY();
+
+    return { gameX, gameY, wordsX, wordsY, infX, infY };
   }
   protected preparePos() {
     return Menu.preparePos(this.init, this.prepared);
@@ -53,7 +70,7 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
     }
   }
   protected update() {
-    for (const btn of this._buttons) btn.dynamicPos();
+    for (const btn of this._buttons) btn.dynamic();
   }
   protected start() {
     this._buttons.push(
@@ -71,9 +88,26 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
         ru.Words, 
         () => this.preparedPos.wordsX,
         () => this.preparedPos.wordsY,
-        { onClick: () => this.stop({ isSuccess: true, isViewer: true }), minHeight: this.prepared.height }
+        { 
+          onClick: () => this.stop({ isSuccess: true, isViewer: true }), 
+          minHeight: this.prepared.height, 
+          minWidth: this.prepared.wordsMinWidth 
+        }
       )
     );
+    this._buttons.push(
+      new Button(
+        this.init,
+        "∞",
+        () => this.preparedPos.infX,
+        () => this.preparedPos.infY,
+        { 
+          onClick: () => this.stop({ isSuccess: true, isInfinity: true }), 
+          minHeight: this.prepared.height, 
+          minWidth: this.prepared.infMinWidth 
+        }
+      )
+    )
   }
   protected freeResources() {
     for (const btn of this._buttons) btn.stop();

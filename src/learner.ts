@@ -1,5 +1,5 @@
 import { loadWords } from "./asset";
-import { UnloadedWord, WordWithImage } from "./games";
+import { AbstractGame, UnloadedWord, Word, WordWithImage } from "./games";
 import Form from "./games/form/game";
 import { formSettings } from "./games/form/settings";
 import Viewer from "./games/viewer/game";
@@ -18,5 +18,18 @@ export const suggestGame = (init: Init, words: UnloadedWord[]) => {
     return new Viewer(init, await loadWords(wordsSelected, settings.gui.icon.width, "width"));
   };
   return { name, label, game, viewer };
+}
+
+export const saveProgressSuccess = (successWord: Word, partnerWords: Word[]) => {
+
+}
+
+export const saveProgressFail = (successWord: Word, failWord: Word, partnerWords: Word[]) => {
+
+}
+
+export const saveProgress = (game: AbstractGame<any, any, any, any>) => {
+  game.onProgressSuccess = saveProgressSuccess;
+  game.onProgressFail = saveProgressFail;
 }
 
