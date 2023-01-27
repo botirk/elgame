@@ -14,9 +14,13 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
   private _buttons: AbstractButton<any, any, any, any>[] = [];
   
   private static prepare(init: Init, game: ReturnType<typeof suggestGame>) {
+    // game button
     const descSize = ButtonWithDescription.calcContentSize(init.ctx, game.name, game.label);
     const gameBtnHeight = AbstractButton.calcHeight(descSize.height);
     const gameBtnWidth = AbstractButton.calcWidth(descSize.width);
+
+    const gameX = () => init.ctx.canvas.width / 2;
+    const gameY = () => init.ctx.canvas.height / 2;
 
     // words button
     const wordsSize = Button.calcContentSize(init.ctx, ru.Words);
@@ -24,8 +28,8 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
     const wordsWidth = AbstractButton.calcWidth(wordsSize.width);
     const wordsMinWidth = () => init.prepared.isMobile ? gameBtnWidth : wordsWidth;
 
-    const wordsBetaX = () =>  init.prepared.isMobile ? 0 : -(gameBtnWidth / 2 + settings.gui.button.distance + wordsWidth / 2);
-    const wordsBetaY = () =>  init.prepared.isMobile ? -(gameBtnHeight / 2 + settings.gui.button.distance + height / 2) : 0;
+    const wordsX = () =>  init.prepared.isMobile ? gameX() : gameX() - (gameBtnWidth / 2 + settings.gui.button.distance + wordsWidth / 2);
+    const wordsY = () =>  init.prepared.isMobile ? gameY() - (gameBtnHeight / 2 + settings.gui.button.distance + height / 2) : gameY();
 
     // infinity play button
     const infSize = Button.calcContentSize(init.ctx, "∞");
@@ -33,31 +37,25 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
     const infWidth = AbstractButton.calcWidth(infSize.width);
     const infMinWidth = () => init.prepared.isMobile ? gameBtnWidth : infWidth;
 
-    const infBetaX = () =>  init.prepared.isMobile ? 0 : gameBtnWidth / 2 + settings.gui.button.distance + infWidth / 2;
-    const infBetaY = () =>  init.prepared.isMobile ? gameBtnHeight / 2 + settings.gui.button.distance + height / 2 : 0;
+    const infX = () =>  init.prepared.isMobile ? gameX() : gameX() + (gameBtnWidth / 2 + settings.gui.button.distance + infWidth / 2);
+    const infY = () =>  init.prepared.isMobile ? gameY() + (gameBtnHeight / 2 + settings.gui.button.distance + height / 2) : gameY();
+
+    // total height
+    const totalHeight = () => init.prepared.isMobile ? infY() - wordsY() + height : height;
 
     const height = Math.max(gameBtnHeight, wordsHeight, infHeight);
 
-    return { height, wordsBetaX, wordsBetaY, wordsMinWidth, infBetaX, infBetaY, infMinWidth };
+    return { height, gameX, gameY, wordsX, wordsY, wordsMinWidth, infX, infY, infMinWidth, totalHeight };
   }
   protected prepare() {
     return Menu.prepare(this.init, this.content);
   }
 
-  private static preparePos(init: Init, prepared: any) {
-    const gameX = init.ctx.canvas.width / 2;
-    const gameY = init.ctx.canvas.height / 2;
-
-    const wordsX = gameX + prepared.wordsBetaX();
-    const wordsY = gameY + prepared.wordsBetaY();
-
-    const infX = gameX + prepared.infBetaX();
-    const infY = gameY + prepared.infBetaY();
-
-    return { gameX, gameY, wordsX, wordsY, infX, infY };
+  private static preparePos() {
+    return { };
   }
   protected preparePos() {
-    return Menu.preparePos(this.init, this.prepared);
+    return Menu.preparePos();
   }
   protected redraw() {
     drawBackground(this.init.ctx);
@@ -65,9 +63,9 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
   }
   protected scrollOptions() {
     return {
-      oneStep: 0,
-      maxHeight: 0,
-    }
+      oneStep: this.prepared.height,
+      maxHeight: this.prepared.totalHeight(),
+    };
   }
   protected update() {
     for (const btn of this._buttons) btn.dynamic();
@@ -77,8 +75,8 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
       new ButtonWithDescription(
         this.init, 
         { text: this.content.name, description: this.content.label }, 
-        () => this.preparedPos.gameX,
-        () => this.preparedPos.gameY,
+        this.prepared.gameX,
+        this.prepared.gameY,
         { onClick: () => this.stop({ isSuccess: true }), minHeight: this.prepared.height }
       )
     );
@@ -86,8 +84,8 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
       new Button(
         this.init, 
         ru.Words, 
-        () => this.preparedPos.wordsX,
-        () => this.preparedPos.wordsY,
+        this.prepared.wordsX,
+        this.prepared.wordsY,
         { 
           onClick: () => this.stop({ isSuccess: true, isViewer: true }), 
           minHeight: this.prepared.height, 
@@ -99,8 +97,8 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
       new Button(
         this.init,
         "∞",
-        () => this.preparedPos.infX,
-        () => this.preparedPos.infY,
+        this.prepared.infX,
+        this.prepared.infY,
         { 
           onClick: () => this.stop({ isSuccess: true, isInfinity: true }), 
           minHeight: this.prepared.height, 
