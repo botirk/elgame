@@ -137,7 +137,7 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> im
   private _minWidth: number = 0;
   set minWidth(minWidth: number | (() => number)) {
     if (typeof(minWidth) === "function") {
-      this._dynamicMinHeight = minWidth;
+      this._dynamicMinWidth = minWidth;
       minWidth = minWidth();
     }
     if (this._minWidth === minWidth) return;

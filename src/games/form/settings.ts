@@ -12,6 +12,7 @@ export const formSettings = {
   },
   recomendation: {
     minWords: 2,
+    goodWords: 6,
     maxWords: 10,
   }
 }

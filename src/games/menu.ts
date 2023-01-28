@@ -77,7 +77,10 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
         { text: this.content.name, description: this.content.label }, 
         this.prepared.gameX,
         this.prepared.gameY,
-        { onClick: () => this.stop({ isSuccess: true }), minHeight: this.prepared.height }
+        { 
+          onClick: () => this.stop({ isSuccess: true }), 
+          minHeight: this.prepared.height 
+        }
       )
     );
     this._buttons.push(
@@ -88,7 +91,7 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, ReturnType<typeo
         this.prepared.wordsY,
         { 
           onClick: () => this.stop({ isSuccess: true, isViewer: true }), 
-          minHeight: this.prepared.height, 
+          minHeight: this.prepared.height,
           minWidth: this.prepared.wordsMinWidth 
         }
       )
