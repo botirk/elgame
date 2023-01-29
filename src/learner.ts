@@ -8,7 +8,7 @@ import settings from "./settings";
 import { ru } from "./translation";
 import { randomNInArray } from "./utils";
 
-interface WordProgress {
+export interface WordProgress {
   // length <= 10
   prevGames: ("form" | "drop" | "memory")[],
   words: {
@@ -33,7 +33,7 @@ export const loadProgress = () => {
   progressCache = { 
     prevGames: [], 
     words: new Proxy<WordProgress["words"]>({}, {
-      get: (target, p) => target[p.toString()] || { stage: 0, substage: 0, bonusstage: 0, timestamp: new Date(), mistakes: [] },
+      get: (target, p) => target[p.toString()] ||= { stage: 0, substage: 0, bonusstage: 0, timestamp: new Date(), mistakes: [] },
     }),
   };
   const str = localStorage.getItem("elgame");
@@ -41,8 +41,9 @@ export const loadProgress = () => {
   try {
     const parsed = JSON.parse(str);
     if (typeof(parsed) !== "object") return progressCache;
-    for (const key in parsed) {
-      const candidate = parsed[key];
+    if (typeof(parsed.words) !== "object") return progressCache;
+    for (const key in parsed.words) {
+      const candidate = parsed.words[key];
       if (typeof(candidate) !== "object") continue;
       if (typeof(candidate.stage) === "number" && candidate.stage >= 0) progressCache.words[key].stage = candidate.stage;
       if (typeof(candidate.substage) === "number" && candidate.substage >= 0) progressCache.words[key].substage = candidate.substage;
@@ -60,8 +61,10 @@ export const loadProgress = () => {
           }
         }
       }
+      console.log(candidate, progressCache.words[key])
     }
   } finally {
+    console.log(progressCache);
     return progressCache;
   }
 }
@@ -73,7 +76,7 @@ export const writeProgress = (progress: WordProgress) => {
     localStorage.setItem("elgame", parsed);
     return true;
   } catch {
-    console.error("FAILED TO writePRogress");
+    console.error("FAILED TO writeProgress");
     return false;
   }
 }
@@ -83,9 +86,18 @@ export const isLearnedForNow = (word: UnloadedWord, progress: WordProgress = loa
   return (wordProgress.stage > 0 && now.getTime() - wordProgress.timestamp.getTime() < (5 ** (wordProgress.stage - 1)));
 }
 
+export const nextLearnDate = (word: UnloadedWord, progress: WordProgress = loadProgress(), now: Date = new Date()) => {
+  const wordProgress = progress.words[word.toLearnText];
+  if (wordProgress.stage === 0) return new Date(0);
+  else return new Date(wordProgress.timestamp.getTime() + (5 ** (wordProgress.stage - 1)));
+}
+
 export const suggestGame = (init: Init, words: UnloadedWord[]) => {
   const progress = loadProgress();
   const now = new Date();
+  const allViewer = async () => {
+    return new Viewer(init, { words: await loadWords(words, settings.gui.icon.width, "width"), progress });
+  }
   words.sort((a, b) => {
     if (progress.words[a.toLearnText].stage === progress.words[b.toLearnText].stage) {
       const aLearned = isLearnedForNow(a, progress, now);
@@ -108,9 +120,9 @@ export const suggestGame = (init: Init, words: UnloadedWord[]) => {
       return new Form(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], dif: formSettings.difficulties.learning });
     };
     const viewer = async () => {
-      return new Viewer(init, await loadWords(wordsSelected, settings.gui.icon.width, "width"));
+      return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
     };
-    return { name, label, game, viewer };
+    return { name, label, game, viewer, allViewer };
   }
   // TODO
   const name = "Анкета";
@@ -120,9 +132,9 @@ export const suggestGame = (init: Init, words: UnloadedWord[]) => {
     return new Form(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], dif: formSettings.difficulties.learning });
   };
   const viewer = async () => {
-    return new Viewer(init, await loadWords(wordsSelected, settings.gui.icon.width, "width"));
+    return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
   };
-  return { name, label, game, viewer };  
+  return { name, label, game, viewer, allViewer };  
 }
 
 export const saveProgressSuccess = (successWord: Word, partnerWords: Word[]) => {
@@ -130,9 +142,10 @@ export const saveProgressSuccess = (successWord: Word, partnerWords: Word[]) => 
   const now = new Date();
   // main word
   let wordProgress = progress.words[successWord.toLearnText];
-  if (!isLearnedForNow(successWord, progress, now)) {
+  if (!isLearnedForNow(successWord, progress, now) && partnerWords.length > 0) {
     wordProgress.substage += 1;
     if (wordProgress.substage >= 4) {
+      wordProgress.bonusstage = 0;
       wordProgress.substage = 0;
       wordProgress.stage += 1;
       wordProgress.timestamp = now;
@@ -148,6 +161,7 @@ export const saveProgressSuccess = (successWord: Word, partnerWords: Word[]) => 
       wordProgress.substage += 0.1;
       if (wordProgress.substage >= 4) {
         wordProgress.substage = 0;
+        wordProgress.bonusstage = 0;
         wordProgress.stage += 1;
         wordProgress.timestamp = now;
       }
