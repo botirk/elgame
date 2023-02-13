@@ -12,7 +12,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@rbf/parcel-optimizer-javascript-obfuscator": "^0.2.2",
     "parcel": "^2.7.0",
     "ts-node": "^10.9.1"
   }
