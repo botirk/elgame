@@ -5,14 +5,20 @@ import settings from "../../settings";
 import { Word, WordWithImage } from "..";
 import { Button } from "../../gui/button";
 import { drawBackground } from "../../gui/background";
-import { isLearnedForNow, WordProgress } from "../../learner";
+import { isLearnedForNow, untilNextLearnDate, WordProgress } from "../../learner";
 import { ru } from "../../translation";
 
 const wordLearning = (word: Word, progress: WordProgress) => {
   if (isLearnedForNow(word, progress)) {
-    return `${ru.BonusLearning}: ${progress.words[word.toLearnText].bonusstage}`;
+    return {
+      text: `${ru.BonusLearning} ${progress.words[word.toLearnText].stage}: ${untilNextLearnDate(word, progress)}`,
+      updateRequired: true,
+    };
   } else {
-    return `${ru.Learning}: ${Math.floor(progress.words[word.toLearnText].substage / 4 * 100)}%`
+    return {
+      text: `${ru.Learning} ${progress.words[word.toLearnText].stage}: ${Math.floor(progress.words[word.toLearnText].substage / 4 * 100)}%`,
+      updateRequired: false,
+    };
   }
 }
 
@@ -26,7 +32,7 @@ const calcTable = (init: Init, words: Word[], progress: WordProgress) => {
   words.forEach((word) => {
     wordColumnWidth = Math.max(wordColumnWidth, calcTextWidth(init.ctx, word.toLearnText) + settings.gui.button.padding * 2);
     rowHeight = Math.max(rowHeight, settings.fonts.fontSize + settings.gui.button.padding * 2);
-    progressColumnWidth = Math.max(progressColumnWidth, calcTextWidth(init.ctx, wordLearning(word, progress)) + settings.gui.button.padding * 2);
+    progressColumnWidth = Math.max(progressColumnWidth, calcTextWidth(init.ctx, wordLearning(word, progress).text) + settings.gui.button.padding * 2);
     if (word.toLearnImg) {
       rowHeight = Math.max(rowHeight, word.toLearnImg.height + settings.gui.button.padding * 2);
       imgColumnWidth = Math.max(imgColumnWidth, word.toLearnImg.width + settings.gui.button.padding * 2);
@@ -74,6 +80,8 @@ const calcTablePos = (init: Init, prepared: ReturnType<typeof calcTable>) => {
 
 class Viewer extends AbstractGame<{ words: Word[], progress: WordProgress }, ReturnType<typeof calcTable>, ReturnType<typeof calcTablePos>, EndGameStats> {
   private _buttons: Button[] = [];
+  private _buttonUpdaters: (() => void)[] = [];
+  private _timer: NodeJS.Timer;
   private _click = this.init.addClickRequest({
     isInArea: () => true,
     zIndex: -1000,
@@ -92,16 +100,27 @@ class Viewer extends AbstractGame<{ words: Word[], progress: WordProgress }, Ret
       { likeLabel: true, minHeight: this.prepared.rowHeight, minWidth: this.prepared.imgColumnWidth }
     )));
     // progress state
-    this._buttons.push(...this.content.words.map((word, i) => new Button(
-      this.init, wordLearning(word, this.content.progress), () => this.preparedPos.progressX, () => -this.scroll.pos + this.preparedPos.columnY + ((this.prepared.rowHeight + settings.gui.button.distance) * i), 
-      { likeLabel: true, minHeight: this.prepared.rowHeight, minWidth: this.prepared.progressColumnWidth }
-    )));
+    this._buttons.push(...this.content.words.map((word, i) => {
+      let learning = wordLearning(word, this.content.progress);
+      const btn = new Button(
+        this.init, learning.text, () => this.preparedPos.progressX, () => -this.scroll.pos + this.preparedPos.columnY + ((this.prepared.rowHeight + settings.gui.button.distance) * i), 
+        { likeLabel: true, minHeight: this.prepared.rowHeight, minWidth: this.prepared.progressColumnWidth }
+      );
+      if (learning.updateRequired) this._buttonUpdaters.push(() => {
+        learning = wordLearning(word, this.content.progress);
+        btn.content = learning.text;
+        btn.redraw();
+      });
+      return btn;
+    }));
+    this._timer = setInterval(this.updateButton.bind(this), 1050);
     // bonus date
     this.content.words.filter((word) => isLearnedForNow(word, this.content.progress))
   }
   protected freeResources() {
     this._click.stop();
     for (const button of this._buttons) button.stop();
+    clearInterval(this._timer);
   }
   protected redraw() {
     drawBackground(this.init.ctx);
@@ -109,6 +128,9 @@ class Viewer extends AbstractGame<{ words: Word[], progress: WordProgress }, Ret
   }
   protected update() {
     for (const button of this._buttons) button.dynamic();
+  }
+  private updateButton() {
+    for (const update of this._buttonUpdaters) update();
   }
   protected scrollOptions(): { oneStep: number; maxHeight: number; } {
     return {

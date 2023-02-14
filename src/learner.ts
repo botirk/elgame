@@ -1,16 +1,19 @@
 import { loadWords } from "./asset";
-import { AbstractGame, UnloadedWord, Word, WordWithImage } from "./games";
+import { AbstractGame, EndGameStats, GameName, UnloadedWord, Word, WordWithImage } from "./games";
+import Drop from "./games/drop/game";
+import { dropSettings } from "./games/drop/settings";
 import Form from "./games/form/game";
 import { formSettings } from "./games/form/settings";
+import Memory from "./games/memory/game";
+import { memorySettings } from "./games/memory/settings";
 import Viewer from "./games/viewer/game";
 import { Init } from "./init";
 import settings from "./settings";
 import { ru } from "./translation";
-import { randomNInArray } from "./utils";
 
 export interface WordProgress {
   // length <= 10
-  prevGames: ("form" | "drop" | "memory")[],
+  prevGames: GameName[],
   words: {
     [word: string]: {
       // zero > second > five seconds > 25 seconds > 125 seconds > 625 seconds > ...
@@ -30,7 +33,7 @@ export interface WordProgress {
 let progressCache: WordProgress | undefined;
 export const loadProgress = () => {
   if (progressCache) return progressCache;
-  progressCache = { 
+  progressCache = {
     prevGames: [], 
     words: new Proxy<WordProgress["words"]>({}, {
       get: (target, p) => target[p.toString()] ||= { stage: 0, substage: 0, bonusstage: 0, timestamp: new Date(), mistakes: [] },
@@ -41,6 +44,10 @@ export const loadProgress = () => {
   try {
     const parsed = JSON.parse(str);
     if (typeof(parsed) !== "object") return progressCache;
+    if (!(parsed.prevGames instanceof Array)) return progressCache;
+    for (const name of parsed.prevGames) {
+      if (typeof(name) === "string") progressCache.prevGames.push(name as GameName);
+    }
     if (typeof(parsed.words) !== "object") return progressCache;
     for (const key in parsed.words) {
       const candidate = parsed.words[key];
@@ -61,10 +68,8 @@ export const loadProgress = () => {
           }
         }
       }
-      console.log(candidate, progressCache.words[key])
     }
   } finally {
-    console.log(progressCache);
     return progressCache;
   }
 }
@@ -76,20 +81,36 @@ export const writeProgress = (progress: WordProgress) => {
     localStorage.setItem("elgame", parsed);
     return true;
   } catch {
-    console.error("FAILED TO writeProgress");
     return false;
   }
 }
 
+export const stageTime = (stage: number) => {
+ return 1000 * (5 ** Math.min(stage, 15));
+}
+
 export const isLearnedForNow = (word: UnloadedWord, progress: WordProgress = loadProgress(), now: Date = new Date()) => {
   const wordProgress = progress.words[word.toLearnText];
-  return (wordProgress.stage > 0 && now.getTime() - wordProgress.timestamp.getTime() < (5 ** (wordProgress.stage - 1)));
+  return (now.getTime() - wordProgress.timestamp.getTime() < stageTime(wordProgress.stage));
 }
 
 export const nextLearnDate = (word: UnloadedWord, progress: WordProgress = loadProgress(), now: Date = new Date()) => {
   const wordProgress = progress.words[word.toLearnText];
-  if (wordProgress.stage === 0) return new Date(0);
-  else return new Date(wordProgress.timestamp.getTime() + (5 ** (wordProgress.stage - 1)));
+  return new Date(wordProgress.timestamp.getTime() + stageTime(wordProgress.stage));
+}
+
+export const untilNextLearnDate = (word: UnloadedWord, progress: WordProgress = loadProgress(), now: Date = new Date()) => {
+  const nextDate = nextLearnDate(word, progress, now);
+  const diffMS = Math.abs(nextDate.getTime() - now.getTime());
+  const diffDays = Math.floor(diffMS / (1000 * 60 * 60 * 24));
+  const diffTime = new Date(diffMS % (1000 * 60 * 60 * 24));
+
+  let result = "";
+  if (diffDays > 0) result += `${diffDays}${ru.Day}`;
+  result += `${diffTime.getHours()}:${diffTime.getMinutes()}:`;
+  if (diffTime.getSeconds() < 10) result += '0';
+  result += `${diffTime.getSeconds()}`
+  return result;
 }
 
 export const suggestGame = (init: Init, words: UnloadedWord[]) => {
@@ -105,7 +126,7 @@ export const suggestGame = (init: Init, words: UnloadedWord[]) => {
       if (bLearned && !aLearned) return -1;
       else if (!bLearned && aLearned) return 1;
       else if (aLearned && bLearned) return progress.words[a.toLearnText].bonusstage - progress.words[b.toLearnText].bonusstage;
-      else return progress.words[a.toLearnText].substage - progress.words[b.toLearnText].substage;
+      else return progress.words[b.toLearnText].substage - progress.words[a.toLearnText].substage;
     } else {
       return progress.words[a.toLearnText].stage - progress.words[b.toLearnText].stage;
     }
@@ -124,17 +145,52 @@ export const suggestGame = (init: Init, words: UnloadedWord[]) => {
     };
     return { name, label, game, viewer, allViewer };
   }
-  // TODO
-  const name = "Анкета";
-  const label = "Изучение пяти слов";
-  const wordsSelected = randomNInArray(words, 5);
-  const game = async () => {
-    return new Form(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], dif: formSettings.difficulties.learning });
-  };
-  const viewer = async () => {
-    return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
-  };
-  return { name, label, game, viewer, allViewer };  
+
+  const formCount = progress.prevGames.filter((name) => name === "form").length;
+  const dropCount = progress.prevGames.filter((name) => name === "drop").length;
+  const memoryCount = progress.prevGames.filter((name) => name === "memory").length;
+  const shouldForm = (formCount <= dropCount && formCount <= memoryCount);
+  if (shouldForm) {
+    const wordsSelected = words.slice(0, formSettings.recomendation.goodWords);
+    const name = ru.FormGame;
+    const isBonus = !wordsSelected.some((word) => !isLearnedForNow(word, progress, now));
+    const label = isBonus ? ru.Bonus :  ru.Repeat;
+    const game = async () => {
+      return new Form(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], dif: formSettings.difficulties.medium });
+    };
+    const viewer = async () => {
+      return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
+    };
+    return { name, label, game, viewer, allViewer };
+  }
+  const shouldDrop = (dropCount <= formCount && dropCount <= memoryCount);
+  if (shouldDrop) {
+    const wordsSelected = words.slice(0, dropSettings.recomendation.goodWords);
+    const name = ru.DropGame;
+    const isBonus = !wordsSelected.some((word) => !isLearnedForNow(word, progress, now));
+    const label = isBonus ? ru.Bonus :  ru.Repeat;
+    const game = async () => {
+      return new Drop(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], dif: dropSettings.difficulties.normal });
+    };
+    const viewer = async () => {
+      return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
+    };
+    return { name, label, game, viewer, allViewer };
+  }
+  const shouldMemory = true;
+  if (shouldMemory) {
+    const wordsSelected = words.slice(0,memorySettings.recomendation.goodWords);
+    const name = ru.MemoryGame;
+    const isBonus = !wordsSelected.some((word) => !isLearnedForNow(word, progress, now));
+    const label = isBonus ? ru.Bonus :  ru.Repeat;
+    const game = async () => {
+      return new Memory(init, await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[]);
+    };
+    const viewer = async () => {
+      return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
+    };
+    return { name, label, game, viewer, allViewer };
+  } 
 }
 
 export const saveProgressSuccess = (successWord: Word, partnerWords: Word[]) => {
@@ -200,8 +256,17 @@ export const saveProgressFail = (successWord: Word, failWord: Word, partnerWords
   return writeProgress(progress);
 }
 
-export const saveProgress = (game: AbstractGame<any, any, any, any>) => {
+export const saveProgressEnd = (stats: EndGameStats) => {
+  if (!stats.name) return;
+  const progress = loadProgress();
+  while (progress.prevGames.length >= 10) progress.prevGames.shift();
+  progress.prevGames.push(stats.name);
+  return writeProgress(progress);
+}
+
+export const saveProgress = (game: AbstractGame<any, any, any, EndGameStats>) => {
   game.onProgressSuccess = saveProgressSuccess;
   game.onProgressFail = saveProgressFail;
+  game.onGameEnd.then((stats) => { if (stats) saveProgressEnd(stats) });
 }
 

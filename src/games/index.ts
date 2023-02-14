@@ -1,13 +1,15 @@
-import Scroll, { ScrollOptions } from "../gui/events/scroll";
+import Scroll from "../gui/events/scroll";
 import FullscreenButton from "../gui/fullscreenButton";
 import { Init, reprepareInit } from "../init";
 import { saveProgressFail, saveProgressSuccess } from "../learner";
 import { promiseMagic } from "../utils";
-import { DropGameDifficulty } from "./drop/settings";
-import { FormGameDifficulty } from "./form/settings";
+
+
+export type GameName = "form" | "drop" | "memory";
 
 export interface EndGameStats {
-  isSuccess: boolean
+  isSuccess: boolean,
+  name?: GameName,
 }
 
 export type Game = () => AbstractGame<any, any, any, EndGameStats>;
@@ -30,39 +32,6 @@ export interface WordWithImage extends Word {
 
 export interface WordWithTranslation extends Word {
   translation: string,
-}
-
-export interface Plan {
-  viewer: {
-    openedInitialy?: boolean,
-    place: number,
-    openPlace: number[],
-    label: string,
-    words: string[],
-  }[],
-  form: {
-    openedInitaly?: boolean,
-    place: number,
-    openPlace: number[],
-    label: string,
-    words: string[],
-    difficulty: FormGameDifficulty,
-  }[],
-  memory: {
-    openedInitaly?: boolean,
-    place: number,
-    openPlace: number[],
-    label: string,
-    words: string[],
-  }[],
-  drop: {
-    openedInitaly?: boolean,
-    place: number,
-    openPlace: number[],
-    label: string,
-    words: string[],
-    difficulty: DropGameDifficulty,
-  }[]
 }
 
 export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePos extends Object, TEndGameStats extends EndGameStats> {

@@ -56,7 +56,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
         setTimeout(resolve, formGame.endAnimationTime / this._lostForms.length);
       });
     }
-    this.stop({ isSuccess: false });
+    this.stop({ isSuccess: false, name: "form" });
   }
   private async winAnimation() {
     await new Promise((resolve) => setTimeout(resolve, formGame.endAnimationTime / this._wonForms.length));
@@ -65,7 +65,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
       form.redraw();
       await new Promise((resolve) => setTimeout(resolve, formGame.endAnimationTime / this._wonForms.length));
     }
-    this.stop({ isSuccess: true });
+    this.stop({ isSuccess: true, name: "form" });
   }
   private showNextForm() {
     const wordsStats = this.wordsStats().sort((a, b) => a.asAnswer - b.asAnswer);

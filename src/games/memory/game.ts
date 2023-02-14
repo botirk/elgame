@@ -2,11 +2,11 @@ import { AbstractGame, EndGameStats } from "..";
 import { Init } from "../../init";
 import { removeRandomInArray } from "../../utils";
 import settings from "../../settings";
-import { settings as memoryGame } from "./settings";
+import { memorySettings } from "./settings";
 import { WordWithImage } from "..";
 import Card, { GuessState } from "./card";
 import { calcTextWidth } from "../../gui/text";
-import drawBackground from "../../gui/background";
+import { drawBackground } from "../../gui/background";
 
 const calcCardSize = (init: Init, words: WordWithImage[]) => {
   let height = settings.fonts.fontSize + settings.gui.button.padding * 2;
@@ -25,19 +25,19 @@ const calcMemory = (init: Init, words: WordWithImage[]) => {
 }
 
 const calcTable = (init: Init, words: WordWithImage[], cardSize: ReturnType<typeof calcCardSize>) => {
-  const gameWidth = init.prepared.gameWidth - memoryGame.margin * 2;
-  let columns = Math.max(1, Math.floor(gameWidth / (cardSize.width + memoryGame.margin)));
+  const gameWidth = init.prepared.gameWidth - memorySettings.margin * 2;
+  let columns = Math.max(1, Math.floor(gameWidth / (cardSize.width + memorySettings.margin)));
   const rows = Math.max(1, Math.ceil((words.length * 2) / columns));
   const lastRowColumns = (words.length * 2) - (columns * (rows - 1));
   if (rows == 1) columns = lastRowColumns;
   // x 
-  const totalWidth = memoryGame.margin * 2 + columns * (cardSize.width + memoryGame.margin) - memoryGame.margin;
+  const totalWidth = memorySettings.margin * 2 + columns * (cardSize.width + memorySettings.margin) - memorySettings.margin;
   const widthRemaining = Math.max(0, init.prepared.gameWidth - totalWidth);
-  const x = memoryGame.margin + cardSize.width / 2 + widthRemaining / 2;
+  const x = memorySettings.margin + cardSize.width / 2 + widthRemaining / 2;
   // y
-  const totalHeight = memoryGame.margin * 2 + rows * (cardSize.height + memoryGame.margin) - memoryGame.margin;
+  const totalHeight = memorySettings.margin * 2 + rows * (cardSize.height + memorySettings.margin) - memorySettings.margin;
   const heightRemaining = Math.max(0, init.ctx.canvas.height - totalHeight);
-  const y = memoryGame.margin + cardSize.height / 2 + heightRemaining / 2;
+  const y = memorySettings.margin + cardSize.height / 2 + heightRemaining / 2;
 
   return { columns, rows, lastRowColumns, start: { x, y }, totalHeight, totalWidth };
 }
@@ -47,8 +47,8 @@ const calcCards = (init: Init, cardSize: ReturnType<typeof calcCardSize>, table:
   for (let row = 0; row < table.rows; row++) {
     for (let column = 0; column < table.columns; column++) {
       result.push({
-        x: init.prepared.gameX + table.start.x + column * (cardSize.width + memoryGame.margin),
-        y: table.start.y + row * (cardSize.height + memoryGame.margin),
+        x: init.prepared.gameX + table.start.x + column * (cardSize.width + memorySettings.margin),
+        y: table.start.y + row * (cardSize.height + memorySettings.margin),
       })
     }
   }
@@ -62,11 +62,6 @@ const calcMemoryPos = (init: Init, words: WordWithImage[], cardSize: ReturnType<
 }
 
 class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>, ReturnType<typeof calcMemoryPos>, EndGameStats> {
-  constructor(init: Init, words: WordWithImage[]) {
-    super(init, words, true);
-    this.start();
-  }
-  
   private _remainingCards: number = this.content.length * 2;
   private _cards: Card[];
   private _timer?: NodeJS.Timer;
@@ -119,16 +114,16 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
   }
   private async winAnimation() {
     await new Promise((resolve) => {
-      setTimeout(resolve, memoryGame.winTime / this._wonCards.length);
+      setTimeout(resolve, memorySettings.winTime / this._wonCards.length);
     });
     for (const card of this._wonCards) {
       card.gameState = "solved&open";
       card.redraw();
       await new Promise((resolve) => {
-        setTimeout(resolve, memoryGame.winTime / this._wonCards.length);
+        setTimeout(resolve, memorySettings.winTime / this._wonCards.length);
       });
     }
-    this.stop({ isSuccess: true });
+    this.stop({ isSuccess: true, name: "memory" });
   }
   protected start(): void {
     drawBackground(this.init.ctx);
@@ -154,6 +149,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
             open[0].gameState = "solved&open";
             this2._wonCards.unshift(open[0]);
             this2._wonCards.unshift(this);
+            this2.onProgressSuccess?.(this.word, []);
           } else {
             this.gameState = "failed";
             open[0].gameState = "failed";
@@ -182,7 +178,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
     return { oneStep: this.prepared.card.height, maxHeight: this.preparedPos.table.totalHeight };
   }
   protected update(): void {
-    for (const card of this._cards) card.dynamicPos();
+    for (const card of this._cards) card.dynamic();
   }
 }
 

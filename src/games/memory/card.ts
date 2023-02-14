@@ -15,7 +15,7 @@ class Card extends Button {
       minHeight: height,
       minWidth: width,
       onClick,
-    }, isLateGlue);
+    });
     this.word = word;
     this.guessState = guessState;
   }

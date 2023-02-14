@@ -1,12 +1,12 @@
 import settings from "../../settings";
-import { settings as dropGame, DropGameDifficulty } from "./settings";
+import { dropSettings, DropGameDifficulty } from "./settings";
 import { Init } from "../../init";
 import { randomInArray } from "../../utils";
 import { AbstractGame, WordWithImage } from "..";
 import { EndGameStats } from "..";
 import { drawStatusText, prepareStatusText } from "../../gui/status";
 import { randomNInArray } from "../../utils";
-import drawBackground from "../../gui/background";
+import { drawBackground } from "../../gui/background";
 
 const preparePos = (init: Init) => ({
   maxXHero: init.prepared.gameXMax - settings.gui.icon.width, 
@@ -23,11 +23,6 @@ const prepare =  (init: Init) => ({
 interface DropContent { words: WordWithImage[], dif: DropGameDifficulty };
 
 class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnType<typeof preparePos>, EndGameStats> {
-  constructor(init: Init, content: DropContent) {
-    super(init, content, true);
-    this.start();
-  }
-
   private stopMouse = this.init.addMoveRequest((x, y) => {
     this._mouse.x = x, this._mouse.y = y;
     this._mouse.acceleration = (y <= settings.gui.status.height);
@@ -58,11 +53,12 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
   private _quest: WordWithImage;
   private _hero = {
     x: this.init.prepared.gameX + this.init.prepared.gameWidth / 2, 
-    y: dropGame.heroY, 
-    speed: dropGame.mouseSpeed * this.init.prepared.verticalSpeedMultiplier 
+    y: dropSettings.heroY, 
+    speed: dropSettings.mouseSpeed * this.init.prepared.verticalSpeedMultiplier 
   }
   private _targets = {
     a: [] as { word: WordWithImage, x: number, y: number, timeGenerated: number }[],
+    partners: [] as WordWithImage[],
     candidates: [] as WordWithImage[],
     nextGeneration: 0,
     speed: this.content.dif.targets.speed,
@@ -94,7 +90,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
   private generateTarget() {
     if (this._score.loseTime || this._score.wonTime) {
       if (this._targets.candidates.length === 0) {
-        this._targets.candidates = randomNInArray(this.content.words, dropGame.difficulties.movie.maxWordsTillQuest + 1);
+        this._targets.candidates = randomNInArray(this.content.words, dropSettings.difficulties.movie.maxWordsTillQuest + 1);
       }
     } else {
       if (this._targets.candidates.length === 0 || !this._targets.candidates.includes(this._quest)) {
@@ -118,28 +114,35 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
           this._score.perWord[this._quest.toLearnText] += 1;
           this._score.total += 1;
           this._score.lastScoreIncreasedTime = this._lastTick;
+          this.onProgressSuccess?.(target.word, this._targets.partners);
+          this._targets.partners = [];
         }
         if (this._score.total == this._score.required) {
-          this._targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
+          this._targets.nextGeneration = dropSettings.difficulties.movie.targets.cd;
           this._score.wonTime = this._lastTick;
           clearInterval(this._timer);
-          this._timer = setInterval(this.onWinTick.bind(this), 1000 / dropGame.fps);
-          setTimeout(() => this.stop({ isSuccess: true }), dropGame.winTime);
+          this._timer = setInterval(this.onWinTick.bind(this), 1000 / dropSettings.fps);
+          setTimeout(() => this.stop({ isSuccess: true, name: "drop" }), dropSettings.winTime);
         } else {
           this._quest = this.generateQuest();
         }
       } else if ((isMiss && isQuest) || (isHit && !isQuest)) {
         this._score.health = this._score.health - 1;
         this._score.lastHealthLostTime = this._lastTick;
+        this.onProgressFail?.(this._quest, target.word, this._targets.partners);
+        this._targets.partners = [];
         if (this._score.health == 0) {
-          this._targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
+          this._targets.nextGeneration = dropSettings.difficulties.movie.targets.cd;
           this._score.loseTime = this._lastTick;
           clearInterval(this._timer);
-          this._timer = setInterval(this.onLoseTick.bind(this), 1000 / dropGame.fps);
-          setTimeout(() => this.stop({ isSuccess: false }), dropGame.loseTime);
+          this._timer = setInterval(this.onLoseTick.bind(this), 1000 / dropSettings.fps);
+          setTimeout(() => this.stop({ isSuccess: false, name: "drop" }), dropSettings.loseTime);
         }
       }
-      if (isHit || isMiss) this._targets.a.splice(i, 1);
+      if (isHit || isMiss) {
+        const word = this._targets.a.splice(i, 1)[0].word;
+        if (isMiss && !isQuest) this._targets.partners.push(word);
+      } 
     });
     // generate new
     if (this._targets.nextGeneration <= 0) {
@@ -149,7 +152,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
   }
   private lostMotion() {
     // move & remove
-    let speed = dropGame.difficulties.movie.targets.speed;
+    let speed = dropSettings.difficulties.movie.targets.speed;
     this._targets.a.forEach((target, i) => {
       if (target.y < settings.gui.status.height - target.word.toLearnImg.height) {
         this._targets.a.splice(i, 1);
@@ -163,9 +166,9 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
       for (let i = 0; i < 10 && Math.abs(target.x - this._hero.x) < settings.gui.icon.width * 2; i++)
         target.x = this.init.prepared.gameX + Math.random() * this.preparedPos.clickableGameWidth;
       this._targets.a.push(target);
-      this._targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
+      this._targets.nextGeneration = dropSettings.difficulties.movie.targets.cd;
     } else {
-      this._targets.nextGeneration -= 1000 / dropGame.fps;
+      this._targets.nextGeneration -= 1000 / dropSettings.fps;
     }
   }
   private wonMotion() {
@@ -181,23 +184,23 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
         // x move
         if (target.y < this._hero.y + settings.gui.icon.height * 4) {
           if (target.x > this._hero.x) {
-            target.x = Math.max(this._hero.x, target.x - dropGame.difficulties.movie.targets.speed);
+            target.x = Math.max(this._hero.x, target.x - dropSettings.difficulties.movie.targets.speed);
           } else {
-            target.x = Math.min(this._hero.x, target.x + dropGame.difficulties.movie.targets.speed);
+            target.x = Math.min(this._hero.x, target.x + dropSettings.difficulties.movie.targets.speed);
           }
         }
         // y move
         if (target.y > this._hero.y) {
-          target.y = Math.max(this._hero.y, target.y - dropGame.difficulties.movie.targets.speed);
+          target.y = Math.max(this._hero.y, target.y - dropSettings.difficulties.movie.targets.speed);
         }
       }
     });
     // generate new
     if (this._targets.nextGeneration <= 0) {
       this._targets.a.push(this.generateTarget());
-      this._targets.nextGeneration = dropGame.difficulties.movie.targets.cd;
+      this._targets.nextGeneration = dropSettings.difficulties.movie.targets.cd;
     } else {
-      this._targets.nextGeneration -= 1000 / dropGame.fps;
+      this._targets.nextGeneration -= 1000 / dropSettings.fps;
     }
   }
   private motion() {
@@ -210,10 +213,10 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
       this._hero.x = Math.max(this.init.prepared.gameX, Math.min(this.preparedPos.clickableGameXMax, this._hero.x));
     }
     let speed = this._targets.speed;
-    let betaTime = 1000 / dropGame.fps;
+    let betaTime = 1000 / dropSettings.fps;
     if (this._mouse.accelerationKB || this._mouse.acceleration) {
-      speed *= dropGame.acceleration;
-      betaTime *= dropGame.acceleration;
+      speed *= dropSettings.acceleration;
+      betaTime *= dropSettings.acceleration;
     } 
     this._targets.a.forEach((target) => target.y -= speed);
     this._targets.nextGeneration -= betaTime;
@@ -254,7 +257,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
   protected start(): void {
     this._quest = this.generateQuest();
     this.render();
-    this._timer = setInterval(this.onTick.bind(this), 1000 / dropGame.fps)
+    this._timer = setInterval(this.onTick.bind(this), 1000 / dropSettings.fps)
   }
   protected freeResources(): void {
     clearInterval(this._timer);
@@ -272,7 +275,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
     return preparePos(this.init);
   }
   protected redraw() {
-    
+    this.render();
   }
   protected scrollOptions() {
     return {

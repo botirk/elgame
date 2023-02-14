@@ -1,5 +1,5 @@
 
-export const settings = {
+export const dropSettings = {
   acceleration: 1.85,
   mouseSpeed: 5.5,
   fps: 100,
@@ -47,7 +47,8 @@ export const settings = {
   recomendation: {
     minWords: 3,
     maxWords: 10,
+    goodWords: 5,
   }
 }
 
-export type DropGameDifficulty = typeof settings.difficulties.easy;
+export type DropGameDifficulty = typeof dropSettings.difficulties.easy;

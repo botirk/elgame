@@ -8,6 +8,12 @@ export const formSettings = {
       endCount: 2,
       stepCount: 1,
       maxHealth: 3,
+    },
+    medium: {
+      startCount: 2,
+      endCount: 3,
+      stepCount: 1,
+      maxHealth: 3,
     }
   },
   recomendation: {
