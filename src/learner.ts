@@ -26,6 +26,10 @@ export interface WordProgress {
       timestamp: Date;
       // words mistaken [word, number of times mistaken].length <= 10
       mistakes: [string, number][];
+      // success times
+      success: number;
+      // fail times
+      fail: number;
     }
   }
 }
@@ -36,7 +40,7 @@ export const loadProgress = () => {
   progressCache = {
     prevGames: [], 
     words: new Proxy<WordProgress["words"]>({}, {
-      get: (target, p) => target[p.toString()] ||= { stage: 0, substage: 0, bonusstage: 0, timestamp: new Date(), mistakes: [] },
+      get: (target, p) => target[p.toString()] ||= { stage: 0, substage: 0, bonusstage: 0, timestamp: new Date(), mistakes: [], success: 0, fail: 0 },
     }),
   };
   const str = localStorage.getItem("elgame");
@@ -55,6 +59,8 @@ export const loadProgress = () => {
       if (typeof(candidate.stage) === "number" && candidate.stage >= 0) progressCache.words[key].stage = candidate.stage;
       if (typeof(candidate.substage) === "number" && candidate.substage >= 0) progressCache.words[key].substage = candidate.substage;
       if (typeof(candidate.bonusstage) === "number" && candidate.bonusstage >= 0) progressCache.words[key].bonusstage = candidate.bonusstage;
+      if (typeof(candidate.success) === "number" && candidate.success >= 0) progressCache.words[key].success = candidate.success;
+      if (typeof(candidate.fail) === "number" && candidate.fail >= 0) progressCache.words[key].fail = candidate.fail;
       if (typeof(candidate.timestamp) === "string") {
         const date = new Date(candidate.timestamp);
         if (isFinite(+date)) progressCache.words[key].timestamp = date;
@@ -198,7 +204,8 @@ export const saveProgressSuccess = (successWord: Word, partnerWords: Word[]) => 
   const now = new Date();
   // main word
   let wordProgress = progress.words[successWord.toLearnText];
-  if (!isLearnedForNow(successWord, progress, now) && partnerWords.length > 0) {
+  wordProgress.success += 1;
+  if (!isLearnedForNow(successWord, progress, now)) {
     wordProgress.substage += 1;
     if (wordProgress.substage >= 4) {
       wordProgress.bonusstage = 0;
@@ -235,9 +242,9 @@ export const saveProgressFail = (successWord: Word, failWord: Word, partnerWords
   // success word
   let wordProgress = progress.words[successWord.toLearnText];
   wordProgress.substage = Math.max(0, wordProgress.substage - 1);
-  // +mistake
+  // find mistake
   const mistake = wordProgress.mistakes.find((mistake) => mistake[0] === failWord.toLearnText);
-  // inrement
+  // increment
   if (mistake) mistake[1] += 1;
   // push new mistake
   else if (wordProgress.mistakes.length < 10) wordProgress.mistakes.push([failWord.toLearnText, 1]);
@@ -250,6 +257,7 @@ export const saveProgressFail = (successWord: Word, failWord: Word, partnerWords
   progress.words[successWord.toLearnText] = wordProgress;
   // fail word
   wordProgress = progress.words[failWord.toLearnText];
+  wordProgress.fail += 1;
   wordProgress.substage = Math.max(0, wordProgress.substage - 1);
   progress.words[failWord.toLearnText] = wordProgress;
   // write

@@ -83,7 +83,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
       } else {
         this2.score.total += 1;
         this2._wonForms.unshift(this);
-        this2.onProgressSuccess?.(nextAnswer, nextFalseAnswers);
+        if (nextFalseAnswers.length > 0) this2.onProgressSuccess?.(nextAnswer, nextFalseAnswers);
       }
     }, function() {
       if (this2.score.health <= 0) this2.loseAnimation();

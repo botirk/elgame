@@ -10,6 +10,8 @@ interface Translation {
   BonusLearning: string,
   Learning: string,
   Repeat: string,
+  OfSuccesses: string,
+  OfFails: string,
 }
 
 export const ru: Translation = {
@@ -23,5 +25,7 @@ export const ru: Translation = {
   Bonus: "Бонус",
   BonusLearning: "Бонусное изучение",
   Learning: "Изучение",
-  Repeat: "Повторение"
+  Repeat: "Повторение",
+  OfSuccesses: "Успехов",
+  OfFails: "Неудач",
 }
