@@ -4,6 +4,7 @@ import settings from "../../settings";
 import { formSettings as formGame } from "./settings";
 import Card from "./card";
 import { drawBackground } from "../../gui/background";
+import ButtonGroup from "../../gui/buttonGroup";
 
 interface CardPlaced {
   word: WordWithImage,
@@ -112,6 +113,52 @@ class OneForm {
   glue() {
     this.reposition();
     this.redraw();
+  }
+}
+
+class OneForm2 {
+  readonly answer: WordWithImage;
+  readonly falseAnswers: WordWithImage[];
+  readonly answers: WordWithImage[];
+
+  constructor(init: Init, answer: WordWithImage, falseAnswers: WordWithImage[], onClick: (this: OneForm, card: WordWithImage) => void, onFinish: (this, card: WordWithImage) => void, redrawStatus: () => void, isLateGlue?: boolean) {
+    this._init = init;
+    this.answer = answer;
+    this.falseAnswers = falseAnswers;
+    this.answers = [ answer, ...falseAnswers ];
+    this._redrawStatus = redrawStatus;
+    const this2 = this;
+    this._btns = new ButtonGroup(this._init, this.answers.map((word) => new Card(init, word, function() {
+      if (this2._finishMe) {
+        this2._finishMe();
+        return false;
+      } else {
+        this2._finishMe = () => {
+          this2._finishMe = () => {};
+          clearTimeout(finishTimeout);
+          this2.stop();
+          onFinish.apply(this2, [word]);
+        }
+        const finishTimeout = setTimeout(this2._finishMe, formGame.pause);
+        this2._clickedWord = word;
+        this.bgColor = (answer === word) ? settings.colors.success : settings.colors.fail;
+        onClick.apply(this2, [word]);
+        this2._redrawStatus();
+      }
+    })), "grid", { x: 0, y: 0 });
+  }
+
+  private readonly _init: Init;
+  private readonly _btns: ButtonGroup;
+  private readonly _redrawStatus: () => void;
+  private _finishMe?: () => void;
+  
+  private _clickedWord?: Word;
+  get clickedWord() {
+    return this._clickedWord;
+  }
+  public stop() {
+    return this._btns.stop();
   }
 }
 

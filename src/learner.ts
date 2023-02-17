@@ -156,7 +156,7 @@ export const suggestGame = (init: Init, words: UnloadedWord[]) => {
   const dropCount = progress.prevGames.filter((name) => name === "drop").length;
   const memoryCount = progress.prevGames.filter((name) => name === "memory").length;
   const shouldForm = (formCount <= dropCount && formCount <= memoryCount);
-  if (shouldForm) {
+  if (true) { //shouldForm) {
     const wordsSelected = words.slice(0, formSettings.recomendation.goodWords);
     const name = ru.FormGame;
     const isBonus = !wordsSelected.some((word) => !isLearnedForNow(word, progress, now));

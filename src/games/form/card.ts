@@ -3,8 +3,8 @@ import { Button } from "../../gui/button"
 import { Init } from "../../init";
 
 class Card extends Button {
-  constructor(init: Init, word: WordWithImage, minWidth: number, minHeight: number, onClick: (this: Card) => boolean | void) {
-    super(init, word.toLearnImg, 0, 0, { onClick, minWidth, minHeight });
+  constructor(init: Init, word: WordWithImage, onClick: (this: Card) => boolean | void) {
+    super(init, word.toLearnImg, 0, 0, { onClick });
     this._word = word;
   }
 
