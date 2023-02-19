@@ -14,6 +14,12 @@ export const formSettings = {
       endCount: 3,
       stepCount: 1,
       maxHealth: 3,
+    },
+    hard: {
+      startCount: 3,
+      endCount: 4,
+      stepCount: 1,
+      maxHealth: 3,
     }
   },
   recomendation: {

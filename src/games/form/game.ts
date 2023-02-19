@@ -75,6 +75,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
     const nextFalseAnswersCount = nextAnswerStat.asSuccessfullAnswer < this.content.dif.stepCount ? this.content.dif.startCount - 1 : this.content.dif.endCount - 1;
     const nextFalseAnswers = wordsStats.filter((wordStat) => wordStat.word !== nextAnswer).sort((a, b) => a.asAnswers - b.asAnswers).slice(0, nextFalseAnswersCount).map((stat) => stat.word);
     const this2 = this;
+    const isFirst = !this._curForm;
     this._curForm = new OneForm(this.init, nextAnswer, nextFalseAnswers, function(word) {
       if (word !== nextAnswer) {
         this2.score.health -= 1;
@@ -89,8 +90,8 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
       if (this2.score.health <= 0) this2.loseAnimation();
       else if (this2.score.total >= this2.score.required) this2.winAnimation();
       else this2.showNextForm();
-    }, this.prepared.card.minWidth, this.prepared.card.minHeight, () => this.drawStatus(), true);
-    this._curForm.glue();
+    }, () => this.drawStatus(), true);
+    if (!isFirst) this.redraw();
   }
   private drawStatus() {
     if (!this._curForm.clickedWord) {
@@ -120,9 +121,9 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
     return { maxHeight: 0, oneStep: 0 };
   }
   protected update(): void {
-    this._curForm.reposition();
-    for (const form of this._wonForms) form.reposition();
-    for (const form of this._lostForms) form.reposition();
+    this._curForm.repos();
+    for (const form of this._wonForms) form.repos();
+    for (const form of this._lostForms) form.repos();
   }
 }
 

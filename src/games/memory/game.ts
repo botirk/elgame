@@ -7,6 +7,7 @@ import { WordWithImage } from "..";
 import Card, { GuessState } from "./card";
 import { calcTextWidth } from "../../gui/text";
 import { drawBackground } from "../../gui/background";
+import ButtonGroup from "../../gui/buttonGroup";
 
 const calcCardSize = (init: Init, words: WordWithImage[]) => {
   let height = settings.fonts.fontSize + settings.gui.button.padding * 2;
@@ -18,61 +19,18 @@ const calcCardSize = (init: Init, words: WordWithImage[]) => {
   return { height, width };
 }
 
-const calcMemory = (init: Init, words: WordWithImage[]) => {
-  return {
-    card: calcCardSize(init, words),
-  }
-}
-
-const calcTable = (init: Init, words: WordWithImage[], cardSize: ReturnType<typeof calcCardSize>) => {
-  const gameWidth = init.prepared.gameWidth - memorySettings.margin * 2;
-  let columns = Math.max(1, Math.floor(gameWidth / (cardSize.width + memorySettings.margin)));
-  const rows = Math.max(1, Math.ceil((words.length * 2) / columns));
-  const lastRowColumns = (words.length * 2) - (columns * (rows - 1));
-  if (rows == 1) columns = lastRowColumns;
-  // x 
-  const totalWidth = memorySettings.margin * 2 + columns * (cardSize.width + memorySettings.margin) - memorySettings.margin;
-  const widthRemaining = Math.max(0, init.prepared.gameWidth - totalWidth);
-  const x = memorySettings.margin + cardSize.width / 2 + widthRemaining / 2;
-  // y
-  const totalHeight = memorySettings.margin * 2 + rows * (cardSize.height + memorySettings.margin) - memorySettings.margin;
-  const heightRemaining = Math.max(0, init.ctx.canvas.height - totalHeight);
-  const y = memorySettings.margin + cardSize.height / 2 + heightRemaining / 2;
-
-  return { columns, rows, lastRowColumns, start: { x, y }, totalHeight, totalWidth };
-}
-
-const calcCards = (init: Init, cardSize: ReturnType<typeof calcCardSize>, table: ReturnType<typeof calcTable>) => {
-  const result: { x, y }[] = [];
-  for (let row = 0; row < table.rows; row++) {
-    for (let column = 0; column < table.columns; column++) {
-      result.push({
-        x: init.prepared.gameX + table.start.x + column * (cardSize.width + memorySettings.margin),
-        y: table.start.y + row * (cardSize.height + memorySettings.margin),
-      })
-    }
-  }
-  return result;
-}
-
-const calcMemoryPos = (init: Init, words: WordWithImage[], cardSize: ReturnType<typeof calcCardSize>) => {
-  const table = calcTable(init, words, cardSize);
-  const cards = calcCards(init, cardSize, table);
-  return { table, cards };
-}
-
-class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>, ReturnType<typeof calcMemoryPos>, EndGameStats> {
+class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSize>, {}, EndGameStats> {
   private _remainingCards: number = this.content.length * 2;
-  private _cards: Card[];
+  private _cards: ButtonGroup<Card>;
   private _timer?: NodeJS.Timer;
   private _wonCards: Card[] = [];
   
   private finishCardAction() {
-    for (const failed of this._cards.filter((card) => card.gameState == "failed")) {
+    for (const failed of this._cards.buttons.filter((card) => card.gameState == "failed")) {
       failed.gameState = "closed";
       failed.redraw();
     }
-    for (const solvedOpen of this._cards.filter((card) => card.gameState == "solved&open")) {
+    for (const solvedOpen of this._cards.buttons.filter((card) => card.gameState == "solved&open")) {
       solvedOpen.gameState = "solved&closed";
       solvedOpen.redraw();
       if ((this._remainingCards -= 1) <= 0) {
@@ -80,7 +38,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
         break;
       }
     }
-  };
+  }
   private shuffleWords() {
     const result: { word: WordWithImage, guessState: GuessState }[] = [];
     const freePos: number[] = [];
@@ -128,57 +86,58 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcMemory>
   protected start(): void {
     drawBackground(this.init.ctx);
     const this2 = this;
-    this._cards = this.shuffleWords().map((shuffled, i) => new Card(
-      this.init, shuffled.word, shuffled.guessState, 
-      () => this.preparedPos.cards[i].x,
-      () => -this.scroll.pos + this.preparedPos.cards[i].y,
-      this.prepared.card.width, this.prepared.card.height,
-      function() {
-        if (this2._remainingCards <= 0) return;
-        // finish previous card animations
-        clearTimeout(this2._timer);
-        this2.finishCardAction();
-        // register click only for closed cards
-        if (this.gameState !== "closed") return;
-        const open = this2._cards.filter((card) => card.gameState === "open");
-        if (open.length === 0) {
-          this.gameState = "open";
-        } else if (open.length === 1) {
-          if (open[0].word === this.word) {
-            this.gameState = "solved&open";
-            open[0].gameState = "solved&open";
-            this2._wonCards.unshift(open[0]);
-            this2._wonCards.unshift(this);
-            this2.onProgressSuccess?.(this.word, []);
-          } else {
-            this.gameState = "failed";
-            open[0].gameState = "failed";
+    this._cards = new ButtonGroup(
+      this.init, this.shuffleWords().map((shuffled, i) => new Card(
+        this.init, shuffled.word, shuffled.guessState, 
+        function() {
+          if (this2._remainingCards <= 0) return;
+          // finish previous card animations
+          clearTimeout(this2._timer);
+          this2.finishCardAction();
+          // register click only for closed cards
+          if (this.gameState !== "closed") return;
+          const open = this2._cards.buttons.filter((card) => card.gameState === "open");
+          if (open.length === 0) {
+            this.gameState = "open";
+          } else if (open.length === 1) {
+            if (open[0].word === this.word) {
+              this.gameState = "solved&open";
+              open[0].gameState = "solved&open";
+              this2._wonCards.unshift(open[0]);
+              this2._wonCards.unshift(this);
+              this2.onProgressSuccess?.(this.word, []);
+            } else {
+              this.gameState = "failed";
+              open[0].gameState = "failed";
+            }
+            open[0].redraw();
+            this2._timer = setTimeout(() => this2.finishCardAction(), 2000);
           }
-          open[0].redraw();
-          this2._timer = setTimeout(() => this2.finishCardAction(), 2000);
-        }
-      }
-    ));
+        })), 
+      "grid", 
+      { x: () => this.init.ctx.canvas.width / 2, y: () => settings.gui.status.height + (this.init.ctx.canvas.height - settings.gui.status.height) / 2 },
+      { minWidth: this.prepared.width, minHeight: this.prepared.height }
+    );
   }
   protected freeResources(): void {
-    for (const card of this._cards) card.stop();
+    this._cards.stop();
     clearTimeout(this._timer);
   }
   protected prepare() {
-    return calcMemory(this.init, this.content);
+    return calcCardSize(this.init, this.content);
   }
   protected preparePos() {
-    return calcMemoryPos(this.init, this.content, this.prepared.card);
+    return {};
   }
   protected redraw(): void {
     drawBackground(this.init.ctx);
-    for (const card of this._cards) card.redraw();
+    this._cards.redraw();
   }
   protected scrollOptions(): { oneStep: number; maxHeight: number; } {
-    return { oneStep: this.prepared.card.height, maxHeight: this.preparedPos.table.totalHeight };
+    return { oneStep: this.prepared.height, maxHeight: 0 };
   }
   protected update(): void {
-    for (const card of this._cards) card.dynamic();
+    this._cards.repos();
   }
 }
 

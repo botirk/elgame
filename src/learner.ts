@@ -156,7 +156,7 @@ export const suggestGame = (init: Init, words: UnloadedWord[]) => {
   const dropCount = progress.prevGames.filter((name) => name === "drop").length;
   const memoryCount = progress.prevGames.filter((name) => name === "memory").length;
   const shouldForm = (formCount <= dropCount && formCount <= memoryCount);
-  if (true) { //shouldForm) {
+  if (false) { //shouldForm) {
     const wordsSelected = words.slice(0, formSettings.recomendation.goodWords);
     const name = ru.FormGame;
     const isBonus = !wordsSelected.some((word) => !isLearnedForNow(word, progress, now));
@@ -170,7 +170,7 @@ export const suggestGame = (init: Init, words: UnloadedWord[]) => {
     return { name, label, game, viewer, allViewer };
   }
   const shouldDrop = (dropCount <= formCount && dropCount <= memoryCount);
-  if (shouldDrop) {
+  if (false) { //shouldDrop) {
     const wordsSelected = words.slice(0, dropSettings.recomendation.goodWords);
     const name = ru.DropGame;
     const isBonus = !wordsSelected.some((word) => !isLearnedForNow(word, progress, now));
