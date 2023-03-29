@@ -17,7 +17,19 @@ export interface ButtonOptional {
 
 export interface Size { width: number, height: number }
 
-abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> implements ButtonOptional {
+export interface ButtonLike {
+  get width(): number;
+  get height(): number;
+  get startX(): number;
+  get startY(): number;
+  get endX(): number;
+  get endY(): number;
+  isInArea(x: number, y: number): boolean;
+  redraw(): void;
+  stop(shouldRedrawToDefault?: boolean): void;
+}
+
+abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> implements ButtonOptional, ButtonLike {
   protected abstract calcContentSize(): TSize;
   protected abstract calcContentCacheX(): TCacheX;
   protected abstract calcContentCacheY(): TCacheY;

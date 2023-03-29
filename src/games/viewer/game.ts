@@ -117,7 +117,7 @@ class Viewer extends AbstractGame<{ words: Word[], progress: WordProgress }, Ret
     zIndex: -1000,
     onReleased: (isInside) => { if (isInside) this.stop({ isSuccess: true }); },
   });;
-  
+
   protected start() {
     // text
     this._buttons.push(...this.content.words.map((word, i) => new Button(

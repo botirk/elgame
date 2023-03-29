@@ -1,6 +1,6 @@
 import { Init } from "../init";
 import settings from "../settings";
-import AbstractButton from "./abstractButton";
+import AbstractButton, { ButtonLike } from "./abstractButton";
 
 interface ButtonGroupOptional1 {
     prevButtonsDirection: "top";
@@ -31,7 +31,7 @@ type Direction = "row" | "column" | "grid";
 
 type ButtonGroupOptional = ButtonGroupOptional1 | ButtonGroupOptional2;
 
-class ButtonGroup<TButton extends AbstractButton<any, any, any, any>> {
+class ButtonGroup<TButton extends AbstractButton<any, any, any, any>> implements ButtonLike {
     constructor(init: Init, buttons: TButton[], direction: Direction, optional: ButtonGroupOptional, optional2: ButtonGroupOptional3 = {}) {
         this._init = init;
         this.buttons = buttons;
@@ -46,6 +46,32 @@ class ButtonGroup<TButton extends AbstractButton<any, any, any, any>> {
     private _optional: ButtonGroupOptional;
     private _optional2: ButtonGroupOptional4;
     buttons: TButton[];
+
+    private _width = 0;
+    get width() {
+        return this._width;
+    }
+    private _height = 0;
+    get height() {
+        return this._height;
+    }
+
+    private _startX = 0;
+    get startX() {
+        return this._startX;
+    }
+    private _startY = 0;
+    get startY() {
+        return this._startY;
+    }
+    private _endX = 0;
+    get endX() {
+        return this._endX;
+    }
+    private _endY = 0;
+    get endY() {
+        return this._endY;
+    }
 
     private equalizeGrid() {
         let width = 0, height = 0;
@@ -121,17 +147,49 @@ class ButtonGroup<TButton extends AbstractButton<any, any, any, any>> {
                 btn.y = startY + (row - 1) * (size.height + this._optional2.gap);
             }
         }
+        // show size to class user
+        this._width = rowWidth;
+        this._height = columnHeight;
+        this._endY = y + columnHeight / 2;
     }
     private place2row(x: number, y: number, size: ReturnType<typeof this.equalizeRow>) {
-        let results: { btn: TButton, newX: number, newY: number }[] = [];
-        let currentRow = { width: 0, nextY: y, nextX: x, buttons: [] as { btn: TButton, newX: number, newY: number }[] };
+        let result = { width: 0, height: size.height, nextY: y, nextX: x, btns: [] as { btn: TButton, newX: number, newY: number }[] };
+        let currentRow = { width: 0, height: size.height, btns: [] as { btn: TButton, newX: number, newY: number }[] };
         for (const btn of this.buttons) {
-            const newX = 0;
-            const newY = 0;
-            results.push({ btn, newX, newY });
+            // calc new width
+            const prevWidth = currentRow.width;
+            let addedWidth = 0;
+            if (currentRow.btns.length > 0) addedWidth += this._optional2.gap;
+            addedWidth += btn.width;
+            const newWidth = currentRow.width + addedWidth;
+            // overflow - new line
+            if (prevWidth > 0 && newWidth > this._init.ctx.canvas.width) {
+                alert("OVERFLOW!");
+            }
+            // add width
+            else {
+                // width
+                currentRow.width = newWidth;
+                result.width = Math.max(result.width, newWidth);
+                // push
+                const newX = result.nextX;
+                const newY = result.nextY;
+                const placedBtn = { newX, newY, btn };
+                result.btns.push(placedBtn);
+                currentRow.btns.push(placedBtn);
+                // repos row
+                if (prevWidth > 0) {
+                    const reposX = addedWidth / 2;
+                    for (const btn of currentRow.btns) btn.newX - reposX;
+                }
+            }
         }
+        // show size to user
+        this._width = result.width;
+        this._height = result.height;
+        this._endY = y - size.height / 2 + result.height;
     }
-    public repos() {
+    repos() {
         const optional = this._optional as any;
         if (this._direction === "grid" && optional.x) {
             this.place2grid(optional.x(), optional.y(), this.equalizeGrid());
@@ -144,11 +202,14 @@ class ButtonGroup<TButton extends AbstractButton<any, any, any, any>> {
             }
         }
     }
-    public stop() {
+    stop() {
         for (const btn of this.buttons) btn.stop();
     }
-    public redraw() {
+    redraw() {
         for (const btn of this.buttons) btn.redraw();
+    }
+    isInArea(x: number, y: number) {
+        return x >= this._startX && x <= this._endX && y >= this._startY && y <= this._endY;
     }
 }
 

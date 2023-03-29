@@ -184,7 +184,7 @@ export const suggestGame = (init: Init, words: UnloadedWord[]) => {
     return { name, label, game, viewer, allViewer };
   }
   const shouldMemory = true;
-  if (shouldMemory) {
+  if (true) {
     const wordsSelected = words.slice(0,memorySettings.recomendation.goodWords);
     const name = ru.MemoryGame;
     const isBonus = !wordsSelected.some((word) => !isLearnedForNow(word, progress, now));
