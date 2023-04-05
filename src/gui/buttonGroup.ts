@@ -4,7 +4,7 @@ import AbstractButton, { ButtonLike } from "./abstractButton";
 
 interface ButtonGroupOptional1 {
     prevButtonsDirection: "top";
-    prevButtons: AbstractButton<any, any, any, any> | ButtonGroup<AbstractButton<any, any, any, any>>;
+    
     prevButtonsDist?: number;
 }
 
@@ -31,7 +31,7 @@ type Direction = "row" | "column" | "grid";
 
 type ButtonGroupOptional = ButtonGroupOptional1 | ButtonGroupOptional2;
 
-class ButtonGroup<TButton extends AbstractButton<any, any, any, any>> implements ButtonLike {
+/*class ButtonGroup<TButton extends AbstractButton<any, any, any, any>> implements ButtonLike {
     constructor(init: Init, buttons: TButton[], direction: Direction, optional: ButtonGroupOptional, optional2: ButtonGroupOptional3 = {}) {
         this._init = init;
         this.buttons = buttons;
@@ -211,6 +211,330 @@ class ButtonGroup<TButton extends AbstractButton<any, any, any, any>> implements
     isInArea(x: number, y: number) {
         return x >= this._startX && x <= this._endX && y >= this._startY && y <= this._endY;
     }
+}*/
+
+const calcDir = (buttons: ButtonLike<any>[], dir: "width" | "height", includeStartEnd: boolean, gap: number) => {
+    let result = 0;
+    for (let i = 0; i < buttons.length; i++) {
+        result += buttons[i][dir];
+        if (i + 1 < buttons.length) result += gap; 
+    }
+    if (includeStartEnd) result += gap * 2;
+    return result;
 }
 
-export default ButtonGroup;
+interface ButtonGroupGridOptional {
+    btnMinWidth?: number,
+    btnMinHeight?: number,
+    gap?: number,
+}
+
+export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> implements ButtonLike<TBLike> {
+    private _btnMinWidth: number;
+    private _btnMinHeight: number;
+    private _btnWidth: number;
+    private _btnHeight: number;
+    private _gap: number;
+    private _width: number;
+    get width() { return this._width; }
+    private _height: number;
+    get height() { return this._height; }
+    private _startX: number;
+    get startX() { return this._startX; }
+    private _startY: number;
+    get startY() { return this._startY; }
+    private _endX: number;
+    get endX() { return this._endX; }
+    private _endY: number;
+    get endY() { return this._endY; }
+    private _minWidth: number;
+    get minWidth() { return this._minWidth; }
+    private _minHeigth: number;
+    get minHeight() { return this._minHeigth; }
+
+    private _dynamicX?: (() => number);
+    private _x: number;
+    get x(): number { return this._x; }
+    set x(x: number | (() => number)) {
+        if (typeof(x) === "function") {
+            this._dynamicX = x;
+            x = x();
+        }
+        if (this._x === x) return;
+        this._x = x; 
+        this.place(); 
+    }
+
+    private _dynamicY?: (() => number);
+    private _y: number;
+    get y(): number { return this._y; }
+    set y(y: number | (() => number)) { 
+        if (typeof(y) === "function") {
+            this._dynamicY = y;
+            y = y();
+        }
+        if (this._y === y) return;
+        this._y = y; 
+        this.place();  
+    }
+
+    xy(x: number | (() => number), y: number | (() => number)) {
+        if (typeof(x) === "function") {
+            this._dynamicX = x;
+            x = x();
+        }
+        if (typeof(y) === "function") {
+            this._dynamicY = y;
+            y = y();
+        }
+        let changed = false;
+        if (this._x !== x) {
+            changed = true;
+            this._x = x; 
+        }
+        if (this._y !== y) {
+            changed = true;
+            this._y = y; 
+        }
+        if (changed) this.place();
+         
+    }
+
+    constructor(private _init: Init, readonly content: TBLike, _x: number | (() => number), _y: number | (() => number), optional?: ButtonGroupGridOptional) {
+        this._btnMinWidth = optional?.btnMinWidth || 0;
+        this._btnMinHeight = optional?.btnMinHeight || 0;
+        this._gap = optional?.gap || settings.gui.button.distance;
+        this.equalize();
+        this.xy(_x, _y);
+    }
+    private equalize() {
+        this._btnWidth = 0;
+        this._btnHeight = 0;
+        for (const btn of this.content) {
+            this._btnWidth = Math.max(this._btnWidth, btn.width, this._btnMinWidth);
+            this._btnHeight = Math.max(this._btnHeight, btn.height, this._btnMinHeight);
+        }
+        for (const btn of this.content) {
+            btn.minWidth = this._btnWidth;
+            btn.minHeight = this._btnHeight;
+        }
+    }
+    private place() {
+        let columns = this.content.length;
+        let lastRowColumns = columns;
+        let rows = 1;
+        let rowWidth = calcDir(this.content, "width", false, this._gap);
+        // reduce amount of columns
+        while ((rowWidth + this._gap > this._init.ctx.canvas.width || columns > rows + 1) && columns > 1) {
+            // count amount moved down
+            let gettingReduced = rows - 1;
+            if (columns === lastRowColumns) gettingReduced += 1;
+            // reduce columns
+            if (columns === lastRowColumns) lastRowColumns -= 1;
+            columns -= 1;
+            // move them to lastRowColumns
+            if (columns > lastRowColumns) {
+                const toLastRowColumns = Math.min(gettingReduced, columns - lastRowColumns);
+                lastRowColumns += toLastRowColumns;
+                gettingReduced -= toLastRowColumns;
+            }
+            // move them to new row
+            if (gettingReduced > 0) {
+                rows += 1;
+                lastRowColumns = gettingReduced;
+            }
+            // recalc
+            rowWidth = calcDir(this.content.slice(0, columns), "width", false, this._gap);
+        }
+        // calc column width
+        const columnHeight = calcDir(this.content.slice(0, rows), "height", false, this._gap);
+        // calc start
+        this._startX = this._x - rowWidth / 2 + this._btnWidth / 2;
+        if (this._startX < this._gap) this._startX = this._gap;
+        this._startY = this._y - columnHeight / 2 + this._btnHeight / 2;
+        if (this._startY < this._gap) this._startY = this._gap;
+        // show size to class user
+        this._width = rowWidth;
+        this._height = columnHeight;
+        this._endX = this._startX + rowWidth;
+        this._endY = this._startY + columnHeight;
+        // place
+        let i = 0;
+        for (let row = 1; row <= rows; row++) {
+            for (let column = 1; column <= columns && (row !== rows || column <= lastRowColumns); column++) {
+                this.content[i++].xy(
+                    this._startX + (column - 1) * (this._btnWidth + this._gap), 
+                    this._startY + (row - 1) * (this._btnHeight + this._gap)
+                );
+            }
+        }
+    }
+    redraw() {
+        for (const btn of this.content) btn.redraw();
+    }
+    isInArea(x: number, y: number) {
+        return x >= this._startX && x <= this._endX && y >= this._startY && y <= this._endY;
+    }
+    stop() {
+        for (const btn of this.content) btn.stop();
+    }
+    dynamic() {
+        if (this._dynamicX) this.x = this._dynamicX();
+        if (this._dynamicY) this.y = this._dynamicY();
+    }
+}
+
+export class ButtonGroupTable<TBLike extends ButtonLike<any>[]> implements ButtonLike<TBLike> {
+    private _btnMinWidth: number;
+    private _btnMinHeight: number;
+    private _btnWidth: number;
+    private _btnHeight: number;
+    private _gap: number;
+    private _width: number;
+    get width() { return this._width; }
+    private _height: number;
+    get height() { return this._height; }
+    private _startX: number;
+    get startX() { return this._startX; }
+    private _startY: number;
+    get startY() { return this._startY; }
+    private _endX: number;
+    get endX() { return this._endX; }
+    private _endY: number;
+    get endY() { return this._endY; }
+    private _minWidth: number;
+    get minWidth() { return this._minWidth; }
+    private _minHeigth: number;
+    get minHeight() { return this._minHeigth; }
+
+    private _dynamicX?: (() => number);
+    private _x: number;
+    get x(): number { return this._x; }
+    set x(x: number | (() => number)) {
+        if (typeof(x) === "function") {
+            this._dynamicX = x;
+            x = x();
+        }
+        if (this._x === x) return;
+        this._x = x; 
+        this.place(); 
+    }
+
+    private _dynamicY?: (() => number);
+    private _y: number;
+    get y(): number { return this._y; }
+    set y(y: number | (() => number)) { 
+        if (typeof(y) === "function") {
+            this._dynamicY = y;
+            y = y();
+        }
+        if (this._y === y) return;
+        this._y = y; 
+        this.place();  
+    }
+
+    xy(x: number | (() => number), y: number | (() => number)) {
+        if (typeof(x) === "function") {
+            this._dynamicX = x;
+            x = x();
+        }
+        if (typeof(y) === "function") {
+            this._dynamicY = y;
+            y = y();
+        }
+        let changed = false;
+        if (this._x !== x) {
+            changed = true;
+            this._x = x; 
+        }
+        if (this._y !== y) {
+            changed = true;
+            this._y = y; 
+        }
+        if (changed) this.place();
+         
+    }
+
+    constructor(private _init: Init, readonly content: TBLike, _x: number | (() => number), _y: number | (() => number), optional?: ButtonGroupGridOptional) {
+        this._btnMinWidth = optional?.btnMinWidth || 0;
+        this._btnMinHeight = optional?.btnMinHeight || 0;
+        this._gap = optional?.gap || settings.gui.button.distance;
+        this.equalize();
+        this.xy(_x, _y);
+    }
+    private equalize() {
+        this._btnWidth = 0;
+        this._btnHeight = 0;
+        for (const btn of this.content) {
+            this._btnWidth = Math.max(this._btnWidth, btn.width, this._btnMinWidth);
+            this._btnHeight = Math.max(this._btnHeight, btn.height, this._btnMinHeight);
+        }
+        for (const btn of this.content) {
+            btn.minWidth = this._btnWidth;
+            btn.minHeight = this._btnHeight;
+        }
+    }
+    private place() {
+        let columns = this.content.length;
+        let lastRowColumns = columns;
+        let rows = 1;
+        let rowWidth = calcDir(this.content, "width", false, this._gap);
+        // reduce amount of columns
+        while ((rowWidth + this._gap > this._init.ctx.canvas.width || columns > rows + 1) && columns > 1) {
+            // count amount moved down
+            let gettingReduced = rows - 1;
+            if (columns === lastRowColumns) gettingReduced += 1;
+            // reduce columns
+            if (columns === lastRowColumns) lastRowColumns -= 1;
+            columns -= 1;
+            // move them to lastRowColumns
+            if (columns > lastRowColumns) {
+                const toLastRowColumns = Math.min(gettingReduced, columns - lastRowColumns);
+                lastRowColumns += toLastRowColumns;
+                gettingReduced -= toLastRowColumns;
+            }
+            // move them to new row
+            if (gettingReduced > 0) {
+                rows += 1;
+                lastRowColumns = gettingReduced;
+            }
+            // recalc
+            rowWidth = calcDir(this.content.slice(0, columns), "width", false, this._gap);
+        }
+        // calc column width
+        const columnHeight = calcDir(this.content.slice(0, rows), "height", false, this._gap);
+        // calc start
+        this._startX = this._x - rowWidth / 2 + this._btnWidth / 2;
+        if (this._startX < this._gap) this._startX = this._gap;
+        this._startY = this._y - columnHeight / 2 + this._btnHeight / 2;
+        if (this._startY < this._gap) this._startY = this._gap;
+        // show size to class user
+        this._width = rowWidth;
+        this._height = columnHeight;
+        this._endX = this._startX + rowWidth;
+        this._endY = this._startY + columnHeight;
+        // place
+        let i = 0;
+        for (let row = 1; row <= rows; row++) {
+            for (let column = 1; column <= columns && (row !== rows || column <= lastRowColumns); column++) {
+                this.content[i++].xy(
+                    this._startX + (column - 1) * (this._btnWidth + this._gap), 
+                    this._startY + (row - 1) * (this._btnHeight + this._gap)
+                );
+            }
+        }
+    }
+    redraw() {
+        for (const btn of this.content) btn.redraw();
+    }
+    isInArea(x: number, y: number) {
+        return x >= this._startX && x <= this._endX && y >= this._startY && y <= this._endY;
+    }
+    stop() {
+        for (const btn of this.content) btn.stop();
+    }
+    dynamic() {
+        if (this._dynamicX) this.x = this._dynamicX();
+        if (this._dynamicY) this.y = this._dynamicY();
+    }
+}

@@ -17,19 +17,30 @@ export interface ButtonOptional {
 
 export interface Size { width: number, height: number }
 
-export interface ButtonLike {
+export interface ButtonLike<T> {
   get width(): number;
   get height(): number;
   get startX(): number;
   get startY(): number;
   get endX(): number;
   get endY(): number;
+  get x(): number;
+  set x(x: number | (() => number));
+  get y(): number;
+  set y(y: number | (() => number));
+  xy(x: number | (() => number), y: number | (() => number)): void;
+  get minWidth(): number;
+  set minWidth(minWidth: number);
+  get minHeight(): number;
+  set minHeight(minHeight: number);
   isInArea(x: number, y: number): boolean;
   redraw(): void;
   stop(shouldRedrawToDefault?: boolean): void;
+  dynamic(): void;
+  content: T;
 }
 
-abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> implements ButtonOptional, ButtonLike {
+abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> implements ButtonOptional, ButtonLike<TContent> {
   protected abstract calcContentSize(): TSize;
   protected abstract calcContentCacheX(): TCacheX;
   protected abstract calcContentCacheY(): TCacheY;
@@ -37,8 +48,7 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> im
   constructor(init: Init, content: TContent, x: number | (() => number), y: number | (() => number), optional?: ButtonOptional) {    
     this.init = init;
     this.content = content;
-    this.x = x;
-    this.y = y;
+    this.xy(x, y);
     Object.entries(optional || {}).forEach(([k, v]) => this[k] = v);
     this.updateManagers();
   }
@@ -202,16 +212,7 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> im
   private _dynamicX?: () => number;
   private _x: number;
   set x(x: number | (() => number)) {
-    if (typeof(x) == "function") {
-      this._dynamicX = x;
-      x = x();
-    }
-    if (this._x === x) return;
-    this._x = x;
-    this._startX = this._x - this._width / 2;
-    this._endX = this._startX + this._width;
-    this._contentCacheX = this.calcContentCacheX();
-    this.hoverManager?.update();
+    this.xy(x, this._y);
   }
   get x(): number {
     return this._x;
@@ -229,19 +230,39 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> im
   private _dynamicY?: () => number;
   private _y: number;
   set y(y: number | (() => number)) {
+    this.xy(this._x, y);
+  }
+  get y(): number {
+    return this._y;
+  }
+
+  xy(x: number | (() => number), y: number | (() => number)) {
+    if (typeof(x) == "function") {
+      this._dynamicX = x;
+      x = x();
+    }
     if (typeof(y) == "function") {
       this._dynamicY = y;
       y = y();
     }
-    if (this._y === y) return;
-    this._y = y;
-    this._startY = this._y - this._height / 2;
-    this._endY = this._startY + this._height;
-    this._contentCacheY = this.calcContentCacheY();
-    this.hoverManager?.update();
-  }
-  get y(): number {
-    return this._y;
+    let changed = false;
+    if (this._x !== x) {
+      changed = true;
+      this._x = x;
+      this._startX = this._x - this._width / 2;
+      this._endX = this._startX + this._width;
+      this._contentCacheX = this.calcContentCacheX();
+      this.hoverManager?.update();
+    }
+    if (this._y !== y) {
+      changed = true;
+      this._y = y;
+      this._startY = this._y - this._height / 2;
+      this._endY = this._startY + this._height;
+      this._contentCacheY = this.calcContentCacheY();
+      this.hoverManager?.update();
+    }
+    if (changed) this.hoverManager?.update();
   }
 
   private _content: TContent;

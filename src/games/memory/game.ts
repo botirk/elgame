@@ -7,7 +7,7 @@ import { WordWithImage } from "..";
 import Card, { GuessState } from "./card";
 import { calcTextWidth } from "../../gui/text";
 import { drawBackground } from "../../gui/background";
-import ButtonGroup from "../../gui/buttonGroup";
+import { ButtonGroupGrid } from "../../gui/buttonGroup";
 
 const calcCardSize = (init: Init, words: WordWithImage[]) => {
   let height = settings.fonts.fontSize + settings.gui.button.padding * 2;
@@ -21,16 +21,16 @@ const calcCardSize = (init: Init, words: WordWithImage[]) => {
 
 class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSize>, {}, EndGameStats> {
   private _remainingCards: number = this.content.length * 2;
-  private _cards: ButtonGroup<Card>;
+  private _cards: ButtonGroupGrid<Card[]>;
   private _timer?: NodeJS.Timer;
   private _wonCards: Card[] = [];
   
   private finishCardAction() {
-    for (const failed of this._cards.buttons.filter((card) => card.gameState == "failed")) {
+    for (const failed of this._cards.content.filter((card) => card.gameState == "failed")) {
       failed.gameState = "closed";
       failed.redraw();
     }
-    for (const solvedOpen of this._cards.buttons.filter((card) => card.gameState == "solved&open")) {
+    for (const solvedOpen of this._cards.content.filter((card) => card.gameState == "solved&open")) {
       solvedOpen.gameState = "solved&closed";
       solvedOpen.redraw();
       if ((this._remainingCards -= 1) <= 0) {
@@ -86,7 +86,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
   protected start(): void {
     drawBackground(this.init.ctx);
     const this2 = this;
-    this._cards = new ButtonGroup(
+    this._cards = new ButtonGroupGrid(
       this.init, this.shuffleWords().map((shuffled, i) => new Card(
         this.init, shuffled.word, shuffled.guessState, 
         function() {
@@ -96,7 +96,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
           this2.finishCardAction();
           // register click only for closed cards
           if (this.gameState !== "closed") return;
-          const open = this2._cards.buttons.filter((card) => card.gameState === "open");
+          const open = this2._cards.content.filter((card) => card.gameState === "open");
           if (open.length === 0) {
             this.gameState = "open";
           } else if (open.length === 1) {
@@ -114,9 +114,8 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
             this2._timer = setTimeout(() => this2.finishCardAction(), 2000);
           }
         })), 
-      "grid", 
-      { x: () => this.init.ctx.canvas.width / 2, y: () => settings.gui.status.height + (this.init.ctx.canvas.height - settings.gui.status.height) / 2 },
-      { minWidth: this.prepared.width, minHeight: this.prepared.height }
+      () => this.init.ctx.canvas.width / 2, () => settings.gui.status.height + (this.init.ctx.canvas.height - settings.gui.status.height) / 2,
+      { btnMinWidth: this.prepared.width, btnMinHeight: this.prepared.height }
     );
   }
   protected freeResources(): void {
@@ -137,7 +136,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
     return { oneStep: this.prepared.height, maxHeight: 0 };
   }
   protected update(): void {
-    this._cards.repos();
+    this._cards.dynamic();
   }
 }
 

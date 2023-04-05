@@ -4,9 +4,9 @@ import settings from "../../settings";
 import { formSettings as formGame } from "./settings";
 import Card from "./card";
 import { drawBackground } from "../../gui/background";
-import ButtonGroup from "../../gui/buttonGroup";
+import { ButtonGroupGrid } from "../../gui/buttonGroup";
 import { randomiseArray } from "../../utils";
-import AbstractButton from "../../gui/abstractButton";
+import { ButtonLike } from "../../gui/abstractButton";
 
 class OneForm {
   readonly answer: WordWithImage;
@@ -20,7 +20,7 @@ class OneForm {
     this.answers = randomiseArray([ answer, ...falseAnswers ]);
     this._redrawStatus = redrawStatus;
     const this2 = this;
-    this._btns = new ButtonGroup(this._init, this.answers.map((word) => new Card(init, word, function() {
+    /*this._btns = new ButtonGroupGrid(this._init, this.answers.map((word) => new Card(init, word, function() {
       if (this2._finishMe) {
         this2._finishMe();
         return false;
@@ -37,11 +37,11 @@ class OneForm {
         onClick.apply(this2, [word]);
         this2._redrawStatus();
       }
-    })), "grid", { x: () => this2._init.ctx.canvas.width / 2, y: () => settings.gui.status.height + (this2._init.ctx.canvas.height - settings.gui.status.height) / 2 });
+    })), () => init.ctx.canvas.width / 2, () => settings.gui.status.height + (init.ctx.canvas.height - settings.gui.status.height) / 2);*/
   }
 
   private readonly _init: Init;
-  private readonly _btns: ButtonGroup<AbstractButton<any,any,any,any>>;
+  private readonly _btns: ButtonLike<Card[]>;
   private readonly _redrawStatus: () => void;
   private _finishMe?: () => void;
   
@@ -58,7 +58,7 @@ class OneForm {
     this._btns.redraw();
   }
   repos() {
-    this._btns.repos();
+    this._btns.dynamic();
   }
 }
 
