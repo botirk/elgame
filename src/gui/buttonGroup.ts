@@ -223,60 +223,10 @@ const calcDir = (buttons: ButtonLike<any>[], dir: "width" | "height", includeSta
     return result;
 }
 
-interface ButtonGroupGridOptional {
-    btnMinWidth?: number,
-    btnMinHeight?: number,
-    gap?: number,
-}
-
-export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> implements ButtonLike<TBLike> {
-    private _btnMinWidth: number;
-    private _btnMinHeight: number;
+export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLike<TBLike> {
     private _btnWidth: number;
     private _btnHeight: number;
     private _gap: number;
-    private _width: number;
-    get width() { return this._width; }
-    private _height: number;
-    get height() { return this._height; }
-    private _startX: number;
-    get startX() { return this._startX; }
-    private _startY: number;
-    get startY() { return this._startY; }
-    private _endX: number;
-    get endX() { return this._endX; }
-    private _endY: number;
-    get endY() { return this._endY; }
-    private _minWidth: number;
-    get minWidth() { return this._minWidth; }
-    private _minHeigth: number;
-    get minHeight() { return this._minHeigth; }
-
-    private _dynamicX?: (() => number);
-    private _x: number;
-    get x(): number { return this._x; }
-    set x(x: number | (() => number)) {
-        if (typeof(x) === "function") {
-            this._dynamicX = x;
-            x = x();
-        }
-        if (this._x === x) return;
-        this._x = x; 
-        this.place(); 
-    }
-
-    private _dynamicY?: (() => number);
-    private _y: number;
-    get y(): number { return this._y; }
-    set y(y: number | (() => number)) { 
-        if (typeof(y) === "function") {
-            this._dynamicY = y;
-            y = y();
-        }
-        if (this._y === y) return;
-        this._y = y; 
-        this.place();  
-    }
 
     xy(x: number | (() => number), y: number | (() => number)) {
         if (typeof(x) === "function") {
@@ -296,14 +246,19 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> implements Button
             changed = true;
             this._y = y; 
         }
-        if (changed) this.place();
-         
+        if (changed) this.place(); 
     }
 
-    constructor(private _init: Init, readonly content: TBLike, _x: number | (() => number), _y: number | (() => number), optional?: ButtonGroupGridOptional) {
-        this._btnMinWidth = optional?.btnMinWidth || 0;
-        this._btnMinHeight = optional?.btnMinHeight || 0;
-        this._gap = optional?.gap || settings.gui.button.distance;
+    get minHeight() { return this._minHeight; }
+    set minHeight(minHeight: number) { this._minHeight = minHeight; }
+
+    get minWidth() { return this._minWidth; }
+    set minWidth(minWidth: number) { this._minWidth = minWidth; }
+
+    constructor(private _init: Init, content: TBLike, _x: number | (() => number), _y: number | (() => number), gap?: number) {
+        super();
+        this._content = content;
+        this._gap = gap || settings.gui.button.distance;
         this.equalize();
         this.xy(_x, _y);
     }
@@ -311,8 +266,8 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> implements Button
         this._btnWidth = 0;
         this._btnHeight = 0;
         for (const btn of this.content) {
-            this._btnWidth = Math.max(this._btnWidth, btn.width, this._btnMinWidth);
-            this._btnHeight = Math.max(this._btnHeight, btn.height, this._btnMinHeight);
+            this._btnWidth = Math.max(this._btnWidth, btn.width);
+            this._btnHeight = Math.max(this._btnHeight, btn.height);
         }
         for (const btn of this.content) {
             btn.minWidth = this._btnWidth;
@@ -372,67 +327,25 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> implements Button
     redraw() {
         for (const btn of this.content) btn.redraw();
     }
-    isInArea(x: number, y: number) {
-        return x >= this._startX && x <= this._endX && y >= this._startY && y <= this._endY;
-    }
     stop() {
         for (const btn of this.content) btn.stop();
     }
-    dynamic() {
-        if (this._dynamicX) this.x = this._dynamicX();
-        if (this._dynamicY) this.y = this._dynamicY();
-    }
 }
 
-export class ButtonGroupTable<TBLike extends ButtonLike<any>[]> implements ButtonLike<TBLike> {
-    private _btnMinWidth: number;
-    private _btnMinHeight: number;
-    private _btnWidth: number;
+
+type Table = (ButtonLike<any> | undefined)[][];
+
+export class ButtonGroupTable extends ButtonLike<Table> {
+    private _btnWidthPerColumn: number[];
     private _btnHeight: number;
     private _gap: number;
-    private _width: number;
-    get width() { return this._width; }
-    private _height: number;
-    get height() { return this._height; }
-    private _startX: number;
-    get startX() { return this._startX; }
-    private _startY: number;
-    get startY() { return this._startY; }
-    private _endX: number;
-    get endX() { return this._endX; }
-    private _endY: number;
-    get endY() { return this._endY; }
-    private _minWidth: number;
+
+    get minHeight() { return this._minHeight; }
+    set minHeight(minHeight: number) { this._minHeight = minHeight; }
+
     get minWidth() { return this._minWidth; }
-    private _minHeigth: number;
-    get minHeight() { return this._minHeigth; }
-
-    private _dynamicX?: (() => number);
-    private _x: number;
-    get x(): number { return this._x; }
-    set x(x: number | (() => number)) {
-        if (typeof(x) === "function") {
-            this._dynamicX = x;
-            x = x();
-        }
-        if (this._x === x) return;
-        this._x = x; 
-        this.place(); 
-    }
-
-    private _dynamicY?: (() => number);
-    private _y: number;
-    get y(): number { return this._y; }
-    set y(y: number | (() => number)) { 
-        if (typeof(y) === "function") {
-            this._dynamicY = y;
-            y = y();
-        }
-        if (this._y === y) return;
-        this._y = y; 
-        this.place();  
-    }
-
+    set minWidth(minWidth: number) { this._minWidth = minWidth; }
+    
     xy(x: number | (() => number), y: number | (() => number)) {
         if (typeof(x) === "function") {
             this._dynamicX = x;
@@ -451,90 +364,47 @@ export class ButtonGroupTable<TBLike extends ButtonLike<any>[]> implements Butto
             changed = true;
             this._y = y; 
         }
-        if (changed) this.place();
-         
+        if (changed) this.place(); 
     }
-
-    constructor(private _init: Init, readonly content: TBLike, _x: number | (() => number), _y: number | (() => number), optional?: ButtonGroupGridOptional) {
-        this._btnMinWidth = optional?.btnMinWidth || 0;
-        this._btnMinHeight = optional?.btnMinHeight || 0;
-        this._gap = optional?.gap || settings.gui.button.distance;
-        this.equalize();
-        this.xy(_x, _y);
-    }
+    
     private equalize() {
-        this._btnWidth = 0;
+        this._btnWidthPerColumn = [];
         this._btnHeight = 0;
-        for (const btn of this.content) {
-            this._btnWidth = Math.max(this._btnWidth, btn.width, this._btnMinWidth);
-            this._btnHeight = Math.max(this._btnHeight, btn.height, this._btnMinHeight);
+
+        for (const row of this.content) {
+            for (let column = 0; column < row.length; column++) {
+                this._btnWidthPerColumn[column] = Math.max(this._btnWidthPerColumn[column] || 0, row[column]?.width || 0);
+                this._btnHeight = Math.max(this._btnHeight, row[column]?.height || 0);
+            }
         }
-        for (const btn of this.content) {
-            btn.minWidth = this._btnWidth;
-            btn.minHeight = this._btnHeight;
+        for (const row of this.content) {
+            for (let column = 0; column < row.length; column++) {
+                if (row[column] === undefined) continue;
+                (row[column] as ButtonLike<any>).minWidth = (this._btnWidthPerColumn[column] || 0);
+                (row[column] as ButtonLike<any>).minHeight = this._btnHeight;
+            }
         }
     }
     private place() {
-        let columns = this.content.length;
-        let lastRowColumns = columns;
-        let rows = 1;
-        let rowWidth = calcDir(this.content, "width", false, this._gap);
-        // reduce amount of columns
-        while ((rowWidth + this._gap > this._init.ctx.canvas.width || columns > rows + 1) && columns > 1) {
-            // count amount moved down
-            let gettingReduced = rows - 1;
-            if (columns === lastRowColumns) gettingReduced += 1;
-            // reduce columns
-            if (columns === lastRowColumns) lastRowColumns -= 1;
-            columns -= 1;
-            // move them to lastRowColumns
-            if (columns > lastRowColumns) {
-                const toLastRowColumns = Math.min(gettingReduced, columns - lastRowColumns);
-                lastRowColumns += toLastRowColumns;
-                gettingReduced -= toLastRowColumns;
-            }
-            // move them to new row
-            if (gettingReduced > 0) {
-                rows += 1;
-                lastRowColumns = gettingReduced;
-            }
-            // recalc
-            rowWidth = calcDir(this.content.slice(0, columns), "width", false, this._gap);
-        }
-        // calc column width
-        const columnHeight = calcDir(this.content.slice(0, rows), "height", false, this._gap);
-        // calc start
-        this._startX = this._x - rowWidth / 2 + this._btnWidth / 2;
-        if (this._startX < this._gap) this._startX = this._gap;
-        this._startY = this._y - columnHeight / 2 + this._btnHeight / 2;
-        if (this._startY < this._gap) this._startY = this._gap;
-        // show size to class user
-        this._width = rowWidth;
-        this._height = columnHeight;
-        this._endX = this._startX + rowWidth;
-        this._endY = this._startY + columnHeight;
-        // place
-        let i = 0;
-        for (let row = 1; row <= rows; row++) {
-            for (let column = 1; column <= columns && (row !== rows || column <= lastRowColumns); column++) {
-                this.content[i++].xy(
-                    this._startX + (column - 1) * (this._btnWidth + this._gap), 
-                    this._startY + (row - 1) * (this._btnHeight + this._gap)
-                );
+        for (const row of this.content) {
+            for (let column = 0; column < row.length; column++) {
+                this._btnWidthPerColumn[column] = Math.max(this._btnWidthPerColumn[column] || 0, row[column]?.width || 0);
+                this._btnHeight = Math.max(this._btnHeight, row[column]?.height || 0);
             }
         }
     }
     redraw() {
-        for (const btn of this.content) btn.redraw();
-    }
-    isInArea(x: number, y: number) {
-        return x >= this._startX && x <= this._endX && y >= this._startY && y <= this._endY;
+        for (const row of this.content) {
+            for (const btn of row) {
+                btn?.redraw();
+            }
+        }
     }
     stop() {
-        for (const btn of this.content) btn.stop();
-    }
-    dynamic() {
-        if (this._dynamicX) this.x = this._dynamicX();
-        if (this._dynamicY) this.y = this._dynamicY();
+        for (const row of this.content) {
+            for (const btn of row) {
+                btn?.stop();
+            }
+        }
     }
 }
