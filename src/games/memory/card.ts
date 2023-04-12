@@ -10,8 +10,8 @@ class Card extends Button {
   readonly guessState: GuessState;
   readonly word: WordWithImage;
   
-  constructor(init: Init, word: WordWithImage, guessState: GuessState, onClick: (this: Card) => void) {
-    super(init, "", 0, 0, { onClick });
+  constructor(init: Init, word: WordWithImage, guessState: GuessState, minWidth: number, minHeight: number, onClick: (this: Card) => void) {
+    super(init, "", 0, 0, { onClick, minWidth, minHeight });
     this.word = word;
     this.guessState = guessState;
   }

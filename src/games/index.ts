@@ -57,7 +57,7 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
       this.redraw();
       this.scroll.drawScroll();
     });
-    this.scroll = new Scroll(init, () => ({ ...this.scrollOptions(), redraw: () => this.redraw(), update: () => this.update() }));
+    this.scroll = new Scroll(init, () => this.redraw(), () => this.update(), () => this.scrollOptions());
 
     [this.onGameEnd, this.stop] = promiseMagic<TEndGameStats | undefined>(() => {
       this._fullScreenButton.stop();
@@ -65,8 +65,12 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
       this._stopResize();
       this.freeResources();
     });
-    
-    setTimeout(() => { this.start(); this.redraw(); }, 1);
+
+    setTimeout(() => { 
+      this.start(); 
+      this.scroll.update();
+      this.redraw(); 
+    }, 1);
   }
   
   private _prepared: TPrepare;

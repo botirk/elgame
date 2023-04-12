@@ -1,16 +1,11 @@
 import { Init } from "../../init";
 import settings from "../../settings";
 
-export interface ScrollOptions {
-  maxHeight: number,
-  oneStep: number,
-  redraw: () => void,
-  update: () => void,
-  saveId?: string,
-}
-
 class Scroll {
-  constructor(init: Init, options: () => ScrollOptions) {
+  maxHeight = 0;
+  oneStep = 0;
+
+  constructor(init: Init, private redrawCB: () => void, private updateCB: () => void, private optsCB: () => ({ maxHeight: number, oneStep: number }), private saveId?: string) {
     this.beforeUnloadListener = this.beforeUnloadListener.bind(this);
     this.wheelListener = this.wheelListener.bind(this);
     this.touchStartListener = this.touchStartListener.bind(this);
@@ -22,26 +17,22 @@ class Scroll {
     init.ctx.canvas.addEventListener("touchmove", this.touchMoveListener);
     init.ctx.canvas.addEventListener("touchend", this.touchEndListener);
     this.init = init;
-    this.options = options;
-    this.update();
   }
 
   private atTop: boolean;
   private atBot: boolean;
   private init: Init;
-  private options: () => ScrollOptions;
-  private optionsSaved: ScrollOptions;
   
   private botTouch?: number;
   private topTouch?: number;
   private hideTimeout?: NodeJS.Timeout;
 
-  private _pos: number;
+  private _pos = 0;
   private set pos(curPos: number) {
     if (this._pos === curPos) return;
     this._pos = curPos;
-    this.optionsSaved.update();
-    this.optionsSaved.redraw();
+    this.updateCB();
+    this.redrawCB();
     this.drawScroll();
     if (this._pos === this.maxPos()) {
       this.atBot = true;
@@ -71,13 +62,13 @@ class Scroll {
     return {};
   }
   private loadPos() {
-    if (!this.optionsSaved.saveId) this._pos = 0;
-    else this._pos = this.loadPoses()[this.optionsSaved.saveId] || 0;
+    if (!this.saveId) this._pos = 0;
+    else this._pos = this.loadPoses()[this.saveId] || 0;
   }
   private savePos(): boolean {
-    if (!this.optionsSaved.saveId) return true;
+    if (!this.saveId) return true;
     const loaded = this.loadPoses();
-    loaded[this.optionsSaved.saveId] = this.pos;
+    loaded[this.saveId] = this.pos;
     try {
       localStorage.setItem(settings.localStorage.scroll, JSON.stringify(loaded));
       return true;
@@ -94,14 +85,14 @@ class Scroll {
     
   }
   private maxPos() {
-    return Math.max(0, this.optionsSaved.maxHeight - this.init.ctx.canvas.height);
+    return Math.max(0, this.maxHeight - this.init.ctx.canvas.height);
   }
   private wheelListener(e: WheelEvent) {
     const oldPos = this.pos;
     // to top
-    if (e.deltaY < 0) this.pos = Math.max(0, this.pos - this.optionsSaved.oneStep);
+    if (e.deltaY < 0) this.pos = Math.max(0, this.pos - this.oneStep);
     // to bot
-    else if (e.deltaY > 0) this.pos = Math.min(this.maxPos(), this.pos + this.optionsSaved.oneStep);
+    else if (e.deltaY > 0) this.pos = Math.min(this.maxPos(), this.pos + this.oneStep);
     // prevent
     if (!this.atTop && !this.atBot) e.preventDefault();
   }
@@ -144,12 +135,14 @@ class Scroll {
   }
 
   update() {
-    this.optionsSaved = this.options();
+    const opts = this.optsCB();
+    this.maxHeight = opts.maxHeight;
+    this.oneStep = opts.oneStep;
     if (!this._pos) this.loadPos();
     this._pos = Math.min(this.maxPos(), this._pos);
   }
   drawScroll() {
-    const pagePercent = this.init.ctx.canvas.height / this.optionsSaved.maxHeight;
+    const pagePercent = this.init.ctx.canvas.height / this.maxHeight;
     if (pagePercent >= 1) return;
     const heightPercent = this.pos / this.maxPos();
     const scrollHeight = this.init.ctx.canvas.height * pagePercent;
@@ -157,7 +150,7 @@ class Scroll {
     this.init.ctx.fillStyle = settings.colors.button.bg;
     this.init.ctx.fillRect(this.init.ctx.canvas.width - settings.gui.scroll.width - settings.gui.scroll.padding, scrollPos, settings.gui.scroll.width, scrollHeight);
     clearTimeout(this.hideTimeout);
-    this.hideTimeout = setTimeout(() => { this.optionsSaved.redraw(); this.hideTimeout = undefined; }, settings.gui.scroll.timeout);
+    this.hideTimeout = setTimeout(() => { this.redrawCB(); this.hideTimeout = undefined; }, settings.gui.scroll.timeout);
   }
   stop() {
     window.removeEventListener("beforeunload", this.beforeUnloadListener);

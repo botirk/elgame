@@ -89,6 +89,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
     this._cards = new ButtonGroupGrid(
       this.init, this.shuffleWords().map((shuffled, i) => new Card(
         this.init, shuffled.word, shuffled.guessState, 
+        this.prepared.width, this.prepared.height,
         function() {
           if (this2._remainingCards <= 0) return;
           // finish previous card animations
@@ -115,7 +116,6 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
           }
         })), 
       () => this.init.ctx.canvas.width / 2, () => settings.gui.status.height + (this.init.ctx.canvas.height - settings.gui.status.height) / 2,
-      { btnMinWidth: this.prepared.width, btnMinHeight: this.prepared.height }
     );
   }
   protected freeResources(): void {

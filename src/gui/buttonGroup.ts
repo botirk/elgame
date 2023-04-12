@@ -332,19 +332,32 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
     }
 }
 
-
-type Table = (ButtonLike<any> | undefined)[][];
+type TableItem = (ButtonLike<any> | undefined);
+type Table = TableItem[][];
 
 export class ButtonGroupTable extends ButtonLike<Table> {
-    private _btnWidthPerColumn: number[];
-    private _btnHeight: number;
+    private _itemWidthPerColumn: number[];
+    private _itemHeight: number;
+    get itemHeight() { return this._itemHeight; }
+
     private _gap: number;
+    get gap() { return this._gap; }
+
+    private _displayContent: Table;
 
     get minHeight() { return this._minHeight; }
     set minHeight(minHeight: number) { this._minHeight = minHeight; }
 
     get minWidth() { return this._minWidth; }
     set minWidth(minWidth: number) { this._minWidth = minWidth; }
+
+    constructor(private _init: Init, content: Table, _x: number | (() => number), _y: number | (() => number), gap?: number) {
+        super();
+        this._content = content;
+        this._gap = gap || settings.gui.button.distance;
+        this.equalize();
+        this.xy(_x, _y);
+    }
     
     xy(x: number | (() => number), y: number | (() => number)) {
         if (typeof(x) === "function") {
@@ -367,29 +380,125 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         if (changed) this.place(); 
     }
     
+    private calcWidth() {
+        let width = 0;
+        const columns = this._displayContent.reduce((prev, cur) => Math.max(prev, cur.length), 0);
+        for (let i = 0; i < columns; i++) {
+            if (i > 0) width += this._gap;
+            width += (this._itemWidthPerColumn[i] || 0);
+        }
+        this._width = width;
+    }
+    private calcHeight() {
+        let height = 0
+        const rows = this._displayContent.length;
+        for (let i = 0; i < rows; i++) {
+            if (i > 0) height += this._gap;
+            height += this._itemHeight;
+        }
+        this._height = height;
+    }
+    private calcStartEnds() {
+        this._startX = this.x - this.width / 2;
+        this._startY = this.y - this.height / 2;
+        this._endX = this._startX + this.width;
+        this._endY = this._startY + this.height;
+    }
+    private calcDisplayItemX(column: number) {
+        let x = this.startX;
+        let prevWidth = 0;
+        for (let i = 0; i <= column; i++) {
+            const curWidth = (this._itemWidthPerColumn[i] || 0);
+            if (i > 0) x += this._gap;
+            x += prevWidth / 2 + curWidth / 2;
+            prevWidth = curWidth;
+        }
+        return x;
+    }
+    private calcDisplayItemY(row: number) {
+        let y = this.startY;
+        let prevHeight = 0;
+        for (let i = 0; i <= row; i++) {
+            const curHeight = this._itemHeight;
+            if (i > 0) y += this._gap;
+            y += prevHeight / 2 + this._itemHeight / 2;
+            prevHeight = curHeight;
+        }
+        return y;
+    }
+    private doesItemOverflows(column: number) {
+        let width = 0;
+        for (let i = 0; i <= column; i++) {
+            if (i > 0) width += this._gap;
+            width += (this._itemWidthPerColumn[i] || 0);
+            if (this.x + width / 2 > this._init.ctx.canvas.width) return true;
+        }
+        return false;
+    }
     private equalize() {
-        this._btnWidthPerColumn = [];
-        this._btnHeight = 0;
+        this._itemWidthPerColumn = [];
+        this._itemHeight = 0;
 
         for (const row of this.content) {
             for (let column = 0; column < row.length; column++) {
-                this._btnWidthPerColumn[column] = Math.max(this._btnWidthPerColumn[column] || 0, row[column]?.width || 0);
-                this._btnHeight = Math.max(this._btnHeight, row[column]?.height || 0);
+                this._itemWidthPerColumn[column] = Math.max(this._itemWidthPerColumn[column] || 0, row[column]?.width || 0);
+                this._itemHeight = Math.max(this._itemHeight, row[column]?.height || 0);
             }
         }
         for (const row of this.content) {
             for (let column = 0; column < row.length; column++) {
                 if (row[column] === undefined) continue;
-                (row[column] as ButtonLike<any>).minWidth = (this._btnWidthPerColumn[column] || 0);
-                (row[column] as ButtonLike<any>).minHeight = this._btnHeight;
+                (row[column] as ButtonLike<any>).minWidth = (this._itemWidthPerColumn[column] || 0);
+                (row[column] as ButtonLike<any>).minHeight = this._itemHeight;
             }
         }
     }
     private place() {
-        for (const row of this.content) {
-            for (let column = 0; column < row.length; column++) {
-                this._btnWidthPerColumn[column] = Math.max(this._btnWidthPerColumn[column] || 0, row[column]?.width || 0);
-                this._btnHeight = Math.max(this._btnHeight, row[column]?.height || 0);
+        this._displayContent = [];
+        // calc display content
+        for (let row = 0; row < this.content.length; row++) {
+            let displayColumn = 0;
+            let pushToEnd = false;
+            let displayRowResult: TableItem[] = [];
+            for (let column = 0; column < this.content[row].length; column++) {
+                const cur = this.content[row][column];
+                if (!pushToEnd) {
+                    // empty push OR empty row OR it fits screen
+                    if (!cur || !displayRowResult.some((item) => item) || !this.doesItemOverflows(displayColumn)) {
+                        displayRowResult.push(cur);
+                        displayColumn += 1;
+                    // does not fit on screen
+                    } else {
+                        this._displayContent.push(displayRowResult);
+                        displayRowResult = [];
+                        // push it to end in next iteration on the column bellow last one
+                        pushToEnd = true;
+                        column -= 1;
+                    }
+                } else {
+                    // shift
+                    if (!displayRowResult[0]) {
+                        displayRowResult.shift();
+                        displayRowResult[displayColumn] = cur;
+                    // no more to shift
+                    } else {
+                        this._displayContent.push(displayRowResult);
+                        displayRowResult = [];
+                    }
+                }
+            }
+            this._displayContent.push(displayRowResult);
+        }
+        // x/y display content
+        this.calcWidth();
+        this.calcHeight();
+        this.calcStartEnds();
+        for (let row = 0; row < this._displayContent.length; row++) {
+            for (let column = 0; column < this._displayContent[row].length; column++) {
+                const cur = this._displayContent[row][column];
+                if (!cur) continue;
+                cur.x = () => this.calcDisplayItemX(column);
+                cur.y = () => this.calcDisplayItemY(row);
             }
         }
     }
