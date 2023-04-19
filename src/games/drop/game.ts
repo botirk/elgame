@@ -283,7 +283,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
       maxHeight: 0,
     }
   }
-  protected update() {
+  protected resize() {
     
   }
 }

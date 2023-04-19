@@ -120,7 +120,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
   protected scrollOptions(): { oneStep: number; maxHeight: number; } {
     return { maxHeight: 0, oneStep: 0 };
   }
-  protected update(): void {
+  protected resize(): void {
     this._curForm.repos();
     for (const form of this._wonForms) form.repos();
     for (const form of this._lostForms) form.repos();

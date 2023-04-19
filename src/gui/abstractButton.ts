@@ -68,10 +68,8 @@ export abstract class ButtonLike<T> {
     return x >= this._startX && x <= this._endX && y >= this._startY && y <= this._endY;
   }
   dynamic() {
-    if (this._dynamicX) this.x = this._dynamicX();
-    if (this._dynamicY) this.y = this._dynamicY();
+    this.xy(this._dynamicX?.() || this.x, this._dynamicY?.() || this.y);
   }
-  
 }
 
 abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> extends ButtonLike<TContent> implements ButtonOptional {
@@ -337,6 +335,7 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
     if (this._dynamicMinWidth) this.minWidth = this._dynamicMinWidth();
     if (this._dynamicMinHeight) this.minHeight = this._dynamicMinHeight();
   }
+  resize() {}
 }
 
 export default AbstractButton;

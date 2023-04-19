@@ -340,10 +340,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
     private _itemHeight: number;
     get itemHeight() { return this._itemHeight; }
 
-    private _gap: number;
-    get gap() { return this._gap; }
-
-    private _displayContent: Table;
+    public scroll: number = 0;
 
     get minHeight() { return this._minHeight; }
     set minHeight(minHeight: number) { this._minHeight = minHeight; }
@@ -351,10 +348,14 @@ export class ButtonGroupTable extends ButtonLike<Table> {
     get minWidth() { return this._minWidth; }
     set minWidth(minWidth: number) { this._minWidth = minWidth; }
 
-    constructor(private _init: Init, content: Table, _x: number | (() => number), _y: number | (() => number), gap?: number) {
+    constructor(
+        private _init: Init, content: Table, 
+        _x: number | (() => number), _y: number | (() => number), 
+        readonly gap = settings.gui.button.distance, 
+        readonly limitRect?: { startX: number, startY: number }) 
+    {
         super();
         this._content = content;
-        this._gap = gap || settings.gui.button.distance;
         this.equalize();
         this.xy(_x, _y);
     }
@@ -377,30 +378,32 @@ export class ButtonGroupTable extends ButtonLike<Table> {
             changed = true;
             this._y = y; 
         }
-        if (changed) this.place(); 
+        if (changed) this.resize(); 
     }
     
-    private calcWidth() {
+    private calcWidth(t: Table) {
         let width = 0;
-        const columns = this._displayContent.reduce((prev, cur) => Math.max(prev, cur.length), 0);
+        const columns = t.reduce((prev, cur) => Math.max(prev, cur.length), 0);
         for (let i = 0; i < columns; i++) {
-            if (i > 0) width += this._gap;
+            if (i > 0) width += this.gap;
             width += (this._itemWidthPerColumn[i] || 0);
         }
         this._width = width;
     }
-    private calcHeight() {
+    private calcHeight(t: Table) {
         let height = 0
-        const rows = this._displayContent.length;
+        const rows = t.length;
         for (let i = 0; i < rows; i++) {
-            if (i > 0) height += this._gap;
+            if (i > 0) height += this.gap;
             height += this._itemHeight;
         }
         this._height = height;
     }
-    private calcStartEnds() {
+    private calcStartEnd() {
         this._startX = this.x - this.width / 2;
-        this._startY = this.y - this.height / 2;
+        if (this.limitRect?.startX) this._startX = Math.max(this.limitRect.startX - this.scroll, this.startX);
+        this._startY = Math.max(0 - this.scroll, this.y - this.height / 2);
+        if (this.limitRect?.startY) this._startY = Math.max(this.limitRect.startY - this.scroll, this.startY);
         this._endX = this._startX + this.width;
         this._endY = this._startY + this.height;
     }
@@ -409,18 +412,18 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         let prevWidth = 0;
         for (let i = 0; i <= column; i++) {
             const curWidth = (this._itemWidthPerColumn[i] || 0);
-            if (i > 0) x += this._gap;
+            if (i > 0) x += this.gap;
             x += prevWidth / 2 + curWidth / 2;
             prevWidth = curWidth;
         }
         return x;
     }
     private calcDisplayItemY(row: number) {
-        let y = this.startY;
+        let y = this.startY - this.scroll;
         let prevHeight = 0;
         for (let i = 0; i <= row; i++) {
             const curHeight = this._itemHeight;
-            if (i > 0) y += this._gap;
+            if (i > 0) y += this.gap;
             y += prevHeight / 2 + this._itemHeight / 2;
             prevHeight = curHeight;
         }
@@ -429,7 +432,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
     private doesItemOverflows(column: number) {
         let width = 0;
         for (let i = 0; i <= column; i++) {
-            if (i > 0) width += this._gap;
+            if (i > 0) width += this.gap;
             width += (this._itemWidthPerColumn[i] || 0);
             if (this.x + width / 2 > this._init.ctx.canvas.width) return true;
         }
@@ -453,8 +456,8 @@ export class ButtonGroupTable extends ButtonLike<Table> {
             }
         }
     }
-    private place() {
-        this._displayContent = [];
+    private calc() {
+        const t: Table = [];
         // calc display content
         for (let row = 0; row < this.content.length; row++) {
             let displayColumn = 0;
@@ -469,7 +472,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
                         displayColumn += 1;
                     // does not fit on screen
                     } else {
-                        this._displayContent.push(displayRowResult);
+                        t.push(displayRowResult);
                         displayRowResult = [];
                         // push it to end in next iteration on the column bellow last one
                         pushToEnd = true;
@@ -482,25 +485,32 @@ export class ButtonGroupTable extends ButtonLike<Table> {
                         displayRowResult[displayColumn] = cur;
                     // no more to shift
                     } else {
-                        this._displayContent.push(displayRowResult);
+                        t.push(displayRowResult);
                         displayRowResult = [];
                     }
                 }
             }
-            this._displayContent.push(displayRowResult);
+            t.push(displayRowResult);
         }
         // x/y display content
-        this.calcWidth();
-        this.calcHeight();
-        this.calcStartEnds();
-        for (let row = 0; row < this._displayContent.length; row++) {
-            for (let column = 0; column < this._displayContent[row].length; column++) {
-                const cur = this._displayContent[row][column];
+        this.calcWidth(t);
+        this.calcHeight(t);
+        
+        return t;
+    }
+    private place(t: Table) {
+        this.calcStartEnd();
+        for (let row = 0; row < t.length; row++) {
+            for (let column = 0; column < t[row].length; column++) {
+                const cur = t[row][column];
                 if (!cur) continue;
                 cur.x = () => this.calcDisplayItemX(column);
                 cur.y = () => this.calcDisplayItemY(row);
             }
         }
+    }
+    resize() {
+        this.place(this.calc());
     }
     redraw() {
         for (const row of this.content) {
@@ -513,6 +523,14 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         for (const row of this.content) {
             for (const btn of row) {
                 btn?.stop();
+            }
+        }
+    }
+    dynamic() {
+        super.dynamic();
+        for (const row of this.content) {
+            for (const btn of row) {
+                btn?.dynamic();
             }
         }
     }

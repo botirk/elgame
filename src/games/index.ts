@@ -40,7 +40,8 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
   protected abstract start(): void;
   protected abstract freeResources(): void;
   protected abstract redraw(): void;
-  protected abstract update(): void;
+  protected abstract resize(): void;
+  protected scroll() {};
   protected abstract scrollOptions(): { oneStep: number, maxHeight: number };
   constructor(init: Init, initialContent: TContent) {
     this.init = init;
@@ -52,23 +53,23 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
       init.prepared = reprepareInit(init);
       this._preparedPos = this.preparePos();
       this._fullScreenButton.dynamic();
-      this.scroll.update();
-      this.update();
+      this.scrollEvent.update();
+      this.resize();
       this.redraw();
-      this.scroll.drawScroll();
+      this.scrollEvent.drawScroll();
     });
-    this.scroll = new Scroll(init, () => this.redraw(), () => this.update(), () => this.scrollOptions());
+    this.scrollEvent = new Scroll(init, () => this.redraw(), () => this.scroll(), () => this.scrollOptions());
 
     [this.onGameEnd, this.stop] = promiseMagic<TEndGameStats | undefined>(() => {
       this._fullScreenButton.stop();
-      this.scroll.stop();
+      this.scrollEvent.stop();
       this._stopResize();
       this.freeResources();
     });
 
     setTimeout(() => { 
       this.start(); 
-      this.scroll.update();
+      this.scrollEvent.update();
       this.redraw(); 
     }, 1);
   }
@@ -80,7 +81,7 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
   private _fullScreenButton: FullscreenButton;
   private _stopResize: ReturnType<Init["addResizeRequest"]>;
   
-  protected readonly scroll: Scroll;
+  protected readonly scrollEvent: Scroll;
   protected readonly init: Init;
   protected readonly content: TContent;
  

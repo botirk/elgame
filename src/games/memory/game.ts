@@ -135,7 +135,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
   protected scrollOptions(): { oneStep: number; maxHeight: number; } {
     return { oneStep: this.prepared.height, maxHeight: 0 };
   }
-  protected update(): void {
+  protected resize(): void {
     this._cards.dynamic();
   }
 }
