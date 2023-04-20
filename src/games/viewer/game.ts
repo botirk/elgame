@@ -60,7 +60,8 @@ class Viewer extends AbstractGame<{ words: Word[], progress: WordProgress }, {},
     this._table = new ButtonGroupTable(
       this.init, table, 
       () => this.init.ctx.canvas.width / 2, () => this.init.ctx.canvas.height / 2, 
-      undefined, { startX: 0, startY: settings.gui.button.distance });
+      { startX: 0, startY: settings.gui.button.distance }
+    );
     this._timer = setInterval(this.updateButton.bind(this), 1050);
   }
   protected freeResources() {

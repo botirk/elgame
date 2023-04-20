@@ -7,13 +7,8 @@ export type GuessState = "image" | "word";
 type GameState = "open" | "closed" | "failed" | "solved&open" | "solved&closed";
 
 class Card extends Button {
-  readonly guessState: GuessState;
-  readonly word: WordWithImage;
-  
-  constructor(init: Init, word: WordWithImage, guessState: GuessState, minWidth: number, minHeight: number, onClick: (this: Card) => void) {
-    super(init, "", 0, 0, { onClick, minWidth, minHeight });
-    this.word = word;
-    this.guessState = guessState;
+  constructor(init: Init, readonly word: WordWithImage, readonly guessState: GuessState, cardWidth: number, cardHeight: number, onClick: (this: Card) => void) {
+    super(init, "", 0, 0, { onClick, minWidth: cardWidth, minHeight: cardHeight });
   }
 
   private _gameState: GameState = "closed";

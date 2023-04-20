@@ -51,6 +51,9 @@ export abstract class ButtonLike<T> {
   }
   abstract xy(x: number | (() => number), y: number | (() => number));
 
+  abstract get innerWidth(): number;
+  abstract get innerHeight(): number;
+
   protected _minWidth: number = 0;
   abstract get minWidth(): number;
   abstract set minWidth(minWidth: number);
@@ -151,11 +154,17 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
       this._contentCacheY = this.calcContentCacheY();
     }
   }
-  public get contentWidth() {
+  get contentWidth() {
     return this._contentSize.width;
   }
-  public get contentHeight() {
+  get contentHeight() {
     return this.contentSize.height;
+  }
+  get innerWidth() {
+    return this.contentWidth + settings.gui.button.padding * 2;
+  }
+  get innerHeight() {
+    return this.contentHeight + settings.gui.button.padding * 2;
   }
 
   private _contentCacheX: TCacheX;

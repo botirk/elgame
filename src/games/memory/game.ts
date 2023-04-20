@@ -21,16 +21,16 @@ const calcCardSize = (init: Init, words: WordWithImage[]) => {
 
 class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSize>, {}, EndGameStats> {
   private _remainingCards: number = this.content.length * 2;
-  private _cards: ButtonGroupGrid<Card[]>;
+  private _grid: ButtonGroupGrid<Card[]>;
   private _timer?: NodeJS.Timer;
   private _wonCards: Card[] = [];
   
   private finishCardAction() {
-    for (const failed of this._cards.content.filter((card) => card.gameState == "failed")) {
+    for (const failed of this._grid.content.filter((card) => card.gameState == "failed")) {
       failed.gameState = "closed";
       failed.redraw();
     }
-    for (const solvedOpen of this._cards.content.filter((card) => card.gameState == "solved&open")) {
+    for (const solvedOpen of this._grid.content.filter((card) => card.gameState == "solved&open")) {
       solvedOpen.gameState = "solved&closed";
       solvedOpen.redraw();
       if ((this._remainingCards -= 1) <= 0) {
@@ -86,9 +86,9 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
   protected start(): void {
     drawBackground(this.init.ctx);
     const this2 = this;
-    this._cards = new ButtonGroupGrid(
+    this._grid = new ButtonGroupGrid(
       this.init, this.shuffleWords().map((shuffled, i) => new Card(
-        this.init, shuffled.word, shuffled.guessState, 
+        this.init, shuffled.word, shuffled.guessState,
         this.prepared.width, this.prepared.height,
         function() {
           if (this2._remainingCards <= 0) return;
@@ -97,7 +97,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
           this2.finishCardAction();
           // register click only for closed cards
           if (this.gameState !== "closed") return;
-          const open = this2._cards.content.filter((card) => card.gameState === "open");
+          const open = this2._grid.content.filter((card) => card.gameState === "open");
           if (open.length === 0) {
             this.gameState = "open";
           } else if (open.length === 1) {
@@ -119,7 +119,7 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
     );
   }
   protected freeResources(): void {
-    this._cards.stop();
+    this._grid.stop();
     clearTimeout(this._timer);
   }
   protected prepare() {
@@ -128,15 +128,18 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
   protected preparePos() {
     return {};
   }
-  protected redraw(): void {
+  protected redraw() {
     drawBackground(this.init.ctx);
-    this._cards.redraw();
+    this._grid.redraw();
   }
-  protected scrollOptions(): { oneStep: number; maxHeight: number; } {
-    return { oneStep: this.prepared.height, maxHeight: 0 };
+  protected scrollOptions() {
+    return { 
+      oneStep: this._grid.itemHeight + settings.gui.button.padding, 
+      maxHeight: this._grid.height + settings.gui.button.padding * 2 
+    };
   }
-  protected resize(): void {
-    this._cards.dynamic();
+  protected resize() {
+    this._grid.dynamic();
   }
 }
 

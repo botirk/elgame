@@ -23,7 +23,7 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, {}, {}, MenuEnd>
   protected scrollOptions() {
     return {
       oneStep: this.table.itemHeight,
-      maxHeight: this.table.height + this.table.gap * 2,
+      maxHeight: this.table.height,
     };
   }
   protected update() {
@@ -70,6 +70,9 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, {}, {}, MenuEnd>
   }
   protected freeResources() {
     this.table.stop();
+  }
+  protected resize() {
+    this.table.resize();
   }
 }
 
