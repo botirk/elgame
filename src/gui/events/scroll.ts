@@ -12,9 +12,9 @@ class Scroll {
     this.touchMoveListener = this.touchMoveListener.bind(this);
     this.touchEndListener = this.touchEndListener.bind(this);
     window.addEventListener("beforeunload", this.beforeUnloadListener);
-    init.ctx.canvas.addEventListener("wheel", this.wheelListener);
-    init.ctx.canvas.addEventListener("touchstart", this.touchStartListener);
-    init.ctx.canvas.addEventListener("touchmove", this.touchMoveListener);
+    init.ctx.canvas.addEventListener("wheel", this.wheelListener, { passive: false });
+    init.ctx.canvas.addEventListener("touchstart", this.touchStartListener, { passive: true });
+    init.ctx.canvas.addEventListener("touchmove", this.touchMoveListener, { passive: false });
     init.ctx.canvas.addEventListener("touchend", this.touchEndListener);
     this.init = init;
   }
@@ -88,7 +88,6 @@ class Scroll {
     return Math.max(0, this.maxHeight - this.init.ctx.canvas.height);
   }
   private wheelListener(e: WheelEvent) {
-    const oldPos = this.pos;
     // to top
     if (e.deltaY < 0) this.pos = Math.max(0, this.pos - this.oneStep);
     // to bot

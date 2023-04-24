@@ -12,7 +12,7 @@ const move = (ctx: CanvasRenderingContext2D) => {
   ctx.canvas.addEventListener("touchmove", (e) => {
     const [x, y] = settings.calculate.toCanvasCoords(ctx, e.touches[0].pageX, e.touches[0].pageY);
     requesters.forEach((req) => req(x, y)); 
-  });
+  }, { passive: true });
 
   const addRequest = (cb: MoveRequest) => {
     requesters.push(cb);

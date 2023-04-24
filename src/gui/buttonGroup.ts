@@ -5,8 +5,8 @@ import { ButtonLike } from "./abstractButton";
 const calcDir = (buttons: ButtonLike<any>[], dir: "width" | "height", includeStartEnd: boolean, gap: number) => {
     let result = 0;
     for (let i = 0; i < buttons.length; i++) {
+        if (i > 0) result += gap;
         result += buttons[i][dir];
-        if (i + 1 < buttons.length) result += gap; 
     }
     if (includeStartEnd) result += gap * 2;
     return result;
@@ -46,7 +46,9 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
     get innerWidth() { return this._innerWidth; }
 
     get minHeight() { return this._minHeight; }
-    set minHeight(minHeight: number) { this._minHeight = minHeight; }
+    set minHeight(minHeight: number) {
+        this._minHeight = minHeight; 
+    }
 
     get minWidth() { return this._minWidth; }
     set minWidth(minWidth: number) { this._minWidth = minWidth; }
@@ -56,6 +58,7 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
         this._content = content;
         this.equalize();
         this.xy(_x, _y);
+        
     }
     private equalize() {
         this._itemWidth = 0;
@@ -136,8 +139,8 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
     }
 }
 
-type TableItem = (ButtonLike<any> | undefined);
-type Table = TableItem[][];
+export type TableItem = (ButtonLike<any> | undefined);
+export type Table = TableItem[][];
 
 export class ButtonGroupTable extends ButtonLike<Table> {
     private _itemWidthPerColumn: number[];
@@ -252,7 +255,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         this._itemHeight = 0;
 
         for (const row of this.content) {
-            for (let column = 0; column < row.length; column++) {
+            for (let column = 0; column < row.length; column += 1) {
                 this._itemWidthPerColumn[column] = Math.max(this._itemWidthPerColumn[column] || 0, row[column]?.innerWidth || 0);
                 this._itemHeight = Math.max(this._itemHeight, row[column]?.innerHeight || 0);
             }

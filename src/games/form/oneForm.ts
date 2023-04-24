@@ -9,18 +9,11 @@ import { randomiseArray } from "../../utils";
 import { ButtonLike } from "../../gui/abstractButton";
 
 class OneForm {
-  readonly answer: WordWithImage;
-  readonly falseAnswers: WordWithImage[];
-  readonly answers: WordWithImage[];
+  readonly answers: WordWithImage[] = randomiseArray([ this.answer, ...this.falseAnswers ]);
 
-  constructor(init: Init, answer: WordWithImage, falseAnswers: WordWithImage[], onClick: (this: OneForm, card: WordWithImage) => void, onFinish: (this, card: WordWithImage) => void, redrawStatus: () => void) {
-    this._init = init;
-    this.answer = answer;
-    this.falseAnswers = falseAnswers;
-    this.answers = randomiseArray([ answer, ...falseAnswers ]);
-    this._redrawStatus = redrawStatus;
+  constructor(private readonly  _init: Init, readonly answer: WordWithImage, readonly falseAnswers: WordWithImage[], onClick: (this: OneForm, card: WordWithImage) => void, onFinish: (this, card: WordWithImage) => void, private _redrawStatus: () => void) {
     const this2 = this;
-    /*this._btns = new ButtonGroupGrid(this._init, this.answers.map((word) => new Card(init, word, function() {
+    this._btns = new ButtonGroupGrid(this._init, this.answers.map((word) => new Card(this._init, word, function() {
       if (this2._finishMe) {
         this2._finishMe();
         return false;
@@ -37,12 +30,10 @@ class OneForm {
         onClick.apply(this2, [word]);
         this2._redrawStatus();
       }
-    })), () => init.ctx.canvas.width / 2, () => settings.gui.status.height + (init.ctx.canvas.height - settings.gui.status.height) / 2);*/
+    })), () => this._init.ctx.canvas.width / 2, () => settings.gui.status.height + (this._init.ctx.canvas.height - settings.gui.status.height) / 2);
   }
 
-  private readonly _init: Init;
   private readonly _btns: ButtonLike<Card[]>;
-  private readonly _redrawStatus: () => void;
   private _finishMe?: () => void;
   
   private _clickedWord?: Word;

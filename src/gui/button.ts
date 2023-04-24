@@ -14,16 +14,16 @@ export class Button extends AbstractButton<string | HTMLImageElement, number, nu
   }
   protected calcContentCacheX() {
     if (typeof(this.content) == "string") {
-      return this.x - this.contentWidth / 2;
+      return this.x - this.contentSize.width / 2;
     } else {
-      return this.x - this.contentWidth / 2;
+      return this.x - this.contentSize.width / 2;
     }
   }
   protected calcContentCacheY() {
     if (typeof(this.content) == "string") {
       return this.y + settings.fonts.fontSize / 3;
     } else {
-      return this.y - this.contentHeight / 2;
+      return this.y - this.contentSize.height / 2;
     }
   }
   static calcContentSize(ctx: CanvasRenderingContext2D, content: string | HTMLImageElement) {

@@ -12,6 +12,7 @@ interface Translation {
   Repeat: string,
   OfSuccesses: string,
   OfFails: string,
+  Difficulty: string,
 }
 
 export const ru: Translation = {
@@ -28,4 +29,5 @@ export const ru: Translation = {
   Repeat: "Повторение",
   OfSuccesses: "Успехов",
   OfFails: "Неудач",
+  Difficulty: "Сложность",
 }

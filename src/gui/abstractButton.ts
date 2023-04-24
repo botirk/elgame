@@ -36,14 +36,14 @@ export abstract class ButtonLike<T> {
   protected _endY: number = 0;
   get endY() { return this._endY; };
 
-  protected _x: number = 0;
+  protected _x: number;
   protected _dynamicX?: () => number;
   get x(): number { return this._x; };
   set x(x: number | (() => number)) {
     this.xy(x, this._dynamicY || this._y);
   }
 
-  protected _y: number = 0;
+  protected _y: number;
   protected _dynamicY?: () => number;
   get y(): number { return this._y; };
   set y(y: number | (() => number)) {
@@ -80,7 +80,7 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
   protected abstract calcContentCacheX(): TCacheX;
   protected abstract calcContentCacheY(): TCacheY;
   protected abstract drawer(): void;
-  constructor(init: Init, content: TContent, x: number | (() => number), y: number | (() => number), optional?: ButtonOptional) {    
+  constructor(protected readonly init: Init, content: TContent, x: number | (() => number), y: number | (() => number), optional?: ButtonOptional) {    
     super();
     this.init = init;
     this.content = content;
@@ -88,8 +88,6 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
     Object.entries(optional || {}).forEach(([k, v]) => this[k] = v);
     this.updateManagers();
   }
-
-  protected readonly init: Init;
 
   bgColor?: string;
 
@@ -154,17 +152,11 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
       this._contentCacheY = this.calcContentCacheY();
     }
   }
-  get contentWidth() {
-    return this._contentSize.width;
-  }
-  get contentHeight() {
-    return this.contentSize.height;
-  }
   get innerWidth() {
-    return this.contentWidth + settings.gui.button.padding * 2;
+    return this.contentSize.width + settings.gui.button.padding * 2;
   }
   get innerHeight() {
-    return this.contentHeight + settings.gui.button.padding * 2;
+    return this.contentSize.height + settings.gui.button.padding * 2;
   }
 
   private _contentCacheX: TCacheX;
@@ -196,10 +188,10 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
     }
     if (this._minWidth === minWidth) return;
     this._minWidth = minWidth;
-    this.setwidth(AbstractButton.calcWidth(this.contentWidth, minWidth));
+    this.setwidth(AbstractButton.calcWidth(this.contentSize.width, minWidth));
   }
   get minWidth(): number {
-    return this.minWidth;
+    return this._minWidth;
   }
 
   private setheight(height: number) {
@@ -221,10 +213,10 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
     }
     if (this._minHeight === minHeight) return;
     this._minHeight = minHeight;
-    this.setheight(AbstractButton.calcHeight(this.contentHeight, minHeight));
+    this.setheight(AbstractButton.calcHeight(this.contentSize.height, minHeight));
   }
   get minHeight(): number {
-    return this.minHeight;
+    return this._minHeight;
   }
 
   xy(x: number | (() => number), y: number | (() => number)) {

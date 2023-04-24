@@ -84,7 +84,6 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
     this.stop({ isSuccess: true, name: "memory" });
   }
   protected start(): void {
-    drawBackground(this.init.ctx);
     const this2 = this;
     this._grid = new ButtonGroupGrid(
       this.init, this.shuffleWords().map((shuffled, i) => new Card(

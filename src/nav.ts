@@ -3,12 +3,12 @@ import { AbstractGame, EndGameStats, UnloadedWord } from "./games";
 import Menu from "./games/menu";
 import Viewer from "./games/viewer/game";
 import { Init } from "./init";
-import { suggestGame, saveProgress, loadProgress } from "./learner";
+import { suggestGame, saveProgress, loadProgress, allViewer, sortWordsByProgress } from "./learner";
 
 class Nav {
   constructor(init: Init, words: UnloadedWord[]) {
     this._init = init;
-    this._words = words;
+    this._words = sortWordsByProgress(words);
     window.addEventListener("popstate", () => {
       if (this._curGame) {
         this._curGame?.stop();
@@ -29,14 +29,14 @@ class Nav {
 
   private async showMenu(noRefresh?: boolean) {
     if (!noRefresh) this.refreshSuggestion();
-    const menu = new Menu(this._init, this._suggestion);
-    const result = await menu.onGameEnd;
+    const result = await new Menu(this._init, this._suggestion).onGameEnd;
+    noRefresh = !!result?.isViewer;
     history.pushState(`elgame${Math.floor(Math.random() * 1000)}`, "");
     if (result?.isViewer) await this.showWords();
     else if (result?.isInfinity) await this.playInfinity();
     else if (result?.isAllViewer) await this.showAllWords();
-    else await this.playGame();
-    this.showMenu(result?.isViewer);
+    else if (!(await this.playGame())?.isSuccess) noRefresh = true;
+    this.showMenu(noRefresh);
   }
 
   private async showWords() {
@@ -45,7 +45,7 @@ class Nav {
   }
   
   private async showAllWords() {
-    this._curGame = await this._suggestion.allViewer();
+    this._curGame = await allViewer(this._init, this._words);
     await this._curGame.onGameEnd;
   }
 

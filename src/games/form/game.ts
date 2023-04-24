@@ -1,6 +1,6 @@
 import { Init } from "../../init";
 import settings from "../../settings";
-import { formSettings as formGame, FormGameDifficulty  } from "./settings";
+import { formSettings as formGame, FormGameSetup  } from "./settings";
 import { AbstractGame, WordWithImage } from "..";
 import { EndGameStats } from "..";
 import OneForm from "./oneForm";
@@ -28,15 +28,15 @@ const calcFormPos = (init: Init) => {
   };
 }
 
-class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficulty }, ReturnType<typeof calcForm>, ReturnType<typeof calcFormPos>, EndGameStats> {
+class Form extends AbstractGame<{ words: WordWithImage[], setup: FormGameSetup }, ReturnType<typeof calcForm>, ReturnType<typeof calcFormPos>, EndGameStats> {
   private _curForm: OneForm;
   private _wonForms: OneForm[] = [];
   private _lostForms: OneForm[] = [];
   private score = {
     total: 0, health: 3,
     required: 
-      (this.content.dif.endCount + 1 - this.content.dif.startCount) 
-        * this.content.dif.stepCount * this.content.words.length,
+      (this.content.setup.endCount + 1 - this.content.setup.startCount) 
+        * this.content.setup.stepCount * this.content.words.length,
   }
   private wordsStats() {
     const allForms = [ ...this._wonForms, ...this._lostForms ];
@@ -72,7 +72,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
     const nextAnswerCandidates = wordsStats.filter((word) => word.asSuccessfullAnswer === wordsStats[0].asSuccessfullAnswer);
     const nextAnswerStat = nextAnswerCandidates[Math.floor(Math.random() * nextAnswerCandidates.length)];
     const nextAnswer = nextAnswerStat.word;
-    const nextFalseAnswersCount = nextAnswerStat.asSuccessfullAnswer < this.content.dif.stepCount ? this.content.dif.startCount - 1 : this.content.dif.endCount - 1;
+    const nextFalseAnswersCount = nextAnswerStat.asSuccessfullAnswer < this.content.setup.stepCount ? this.content.setup.startCount - 1 : this.content.setup.endCount - 1;
     const nextFalseAnswers = wordsStats.filter((wordStat) => wordStat.word !== nextAnswer).sort((a, b) => a.asAnswers - b.asAnswers).slice(0, nextFalseAnswersCount).map((stat) => stat.word);
     const this2 = this;
     const isFirst = !this._curForm;
@@ -90,7 +90,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], dif: FormGameDifficult
       if (this2.score.health <= 0) this2.loseAnimation();
       else if (this2.score.total >= this2.score.required) this2.winAnimation();
       else this2.showNextForm();
-    }, () => this.drawStatus(), true);
+    }, () => this.drawStatus());
     if (!isFirst) this.redraw();
   }
   private drawStatus() {

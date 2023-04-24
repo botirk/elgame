@@ -1,13 +1,10 @@
 import { AbstractGame, EndGameStats } from ".";
-import { Init } from "../init";
-import AbstractButton from "../gui/abstractButton";
-import { suggestGame } from "../learner";
+import { loadProgress, suggestGame, Suggestion } from "../learner";
 import { ButtonWithDescription } from "../gui/buttonWithDescription";
 import { drawBackground } from "../gui/background";
 import { Button } from "../gui/button";
 import { ru } from "../translation";
-import settings from "../settings";
-import { ButtonGroupTable } from "../gui/buttonGroup";
+import { ButtonGroupTable, Table } from "../gui/buttonGroup";
 
 interface MenuEnd extends EndGameStats { isInfinity?: boolean, isViewer?: boolean, isAllViewer?: boolean };
 
@@ -59,14 +56,45 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, {}, {}, MenuEnd>
       { onClick: () => this.stop({ isSuccess: true, isAllViewer: true }) }
     );
 
-    this.table = new ButtonGroupTable(
-      this.init, 
-      [
-        [undefined, allWords, undefined],
-        [ words, game, inf ],
-      ], 
-      () => this.init.ctx.canvas.width / 2, () => this.init.ctx.canvas.height / 2
-    );
+    const table: Table = [
+      [undefined, allWords, undefined],
+      [ words, game, inf ],
+    ];
+
+    if (this.content.dif) {
+      const difSaved = this.content.dif;
+      const plus = new Button(this.init, "+", 0, 0, { 
+        onClick: () => {
+          difSaved.dif = Math.min(this.content.dif?.end || 0, difSaved.dif + 1);
+          difSaved.saveDif(difSaved.dif);
+          if (difSaved.dif === difSaved.end) plus.disabled = true;
+          if (difSaved.dif !== 0) minus.disabled = false;
+          dif.content = `${ru.Difficulty}: ${difSaved.dif}`;
+          dif.redraw();
+          pmButton.redraw();
+        },
+        disabled: (difSaved.dif === difSaved.end)
+      });
+      const minus = new Button(this.init, "-", 0, 0, { 
+        onClick: () => { 
+          difSaved.dif = Math.max(0, difSaved.dif - 1);
+          difSaved.saveDif(difSaved.dif);
+          if (difSaved.dif === 0) minus.disabled = true;
+          if (difSaved.dif !== difSaved.end) plus.disabled = false;
+          dif.content = `${ru.Difficulty}: ${difSaved.dif}`;
+          dif.redraw();
+          pmButton.redraw();
+        },
+        disabled: (difSaved.dif === 0)
+      });
+      const pmButton = new ButtonGroupTable(this.init, [[plus], [minus]], 0, 0);
+    
+      const dif = new Button(this.init, `${ru.Difficulty}: ${this.content.dif.dif}`, 0, 0, { likeLabel: true });
+      table.push([ undefined, dif, pmButton ]);
+    }
+
+    this.table = new ButtonGroupTable(this.init, table, () => this.init.ctx.canvas.width / 2, () => this.init.ctx.canvas.height / 2);
+    
   }
   protected freeResources() {
     this.table.stop();
