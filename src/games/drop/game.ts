@@ -1,5 +1,5 @@
 import settings from "../../settings";
-import { dropSettings, DropGameDifficulty } from "./settings";
+import { dropSettings, DropGameSetup } from "./settings";
 import { Init } from "../../init";
 import { randomInArray } from "../../utils";
 import { AbstractGame, WordWithImage } from "..";
@@ -20,7 +20,7 @@ const prepare =  (init: Init) => ({
   ...prepareStatusText(init)
 });
 
-interface DropContent { words: WordWithImage[], dif: DropGameDifficulty };
+interface DropContent { words: WordWithImage[], setup: DropGameSetup };
 
 class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnType<typeof preparePos>, EndGameStats> {
   private stopMouse = this.init.addMoveRequest((x, y) => {
@@ -61,13 +61,13 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
     partners: [] as WordWithImage[],
     candidates: [] as WordWithImage[],
     nextGeneration: 0,
-    speed: this.content.dif.targets.speed,
-    cd: this.content.dif.targets.cd,
+    speed: this.content.setup.targets.speed,
+    cd: this.content.setup.targets.cd,
   }
   private _score = {
-    health: this.content.dif.maxHealth,
-    required: this.content.dif.successCountPerWord * this.content.words.length, total: 0,
-    requiredPerWord: this.content.dif.successCountPerWord,
+    health: this.content.setup.maxHealth,
+    required: this.content.setup.successCountPerWord * this.content.words.length, total: 0,
+    requiredPerWord: this.content.setup.successCountPerWord,
     perWord: this.content.words.reduce((prev, word) => { prev[word.toLearnText] = 0; return prev; }, {}),
     wonTime: undefined as number | undefined, 
     loseTime: undefined as number | undefined,
@@ -90,11 +90,11 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
   private generateTarget() {
     if (this._score.loseTime || this._score.wonTime) {
       if (this._targets.candidates.length === 0) {
-        this._targets.candidates = randomNInArray(this.content.words, dropSettings.difficulties.movie.maxWordsTillQuest + 1);
+        this._targets.candidates = randomNInArray(this.content.words, dropSettings.movieSetup.maxWordsTillQuest + 1);
       }
     } else {
       if (this._targets.candidates.length === 0 || !this._targets.candidates.includes(this._quest)) {
-        this._targets.candidates = randomNInArray(this.content.words, this.content.dif.maxWordsTillQuest + 1);
+        this._targets.candidates = randomNInArray(this.content.words, this.content.setup.maxWordsTillQuest + 1);
         if (!this._targets.candidates.includes(this._quest)) {
           this._targets.candidates[Math.floor(Math.random() * this._targets.candidates.length)] = this._quest;
         }
@@ -118,7 +118,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
           this._targets.partners = [];
         }
         if (this._score.total == this._score.required) {
-          this._targets.nextGeneration = dropSettings.difficulties.movie.targets.cd;
+          this._targets.nextGeneration = dropSettings.movieSetup.targets.cd;
           this._score.wonTime = this._lastTick;
           clearInterval(this._timer);
           this._timer = setInterval(this.onWinTick.bind(this), 1000 / dropSettings.fps);
@@ -129,10 +129,10 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
       } else if ((isMiss && isQuest) || (isHit && !isQuest)) {
         this._score.health = this._score.health - 1;
         this._score.lastHealthLostTime = this._lastTick;
-        this.onProgressFail?.(this._quest, target.word, this._targets.partners);
+        this.onProgressFail?.(this._quest, [target.word]);
         this._targets.partners = [];
         if (this._score.health == 0) {
-          this._targets.nextGeneration = dropSettings.difficulties.movie.targets.cd;
+          this._targets.nextGeneration = dropSettings.movieSetup.targets.cd;
           this._score.loseTime = this._lastTick;
           clearInterval(this._timer);
           this._timer = setInterval(this.onLoseTick.bind(this), 1000 / dropSettings.fps);
@@ -152,7 +152,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
   }
   private lostMotion() {
     // move & remove
-    let speed = dropSettings.difficulties.movie.targets.speed;
+    let speed = dropSettings.movieSetup.targets.speed;
     this._targets.a.forEach((target, i) => {
       if (target.y < settings.gui.status.height - target.word.toLearnImg.height) {
         this._targets.a.splice(i, 1);
@@ -166,7 +166,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
       for (let i = 0; i < 10 && Math.abs(target.x - this._hero.x) < settings.gui.icon.width * 2; i++)
         target.x = this.init.prepared.gameX + Math.random() * this.preparedPos.clickableGameWidth;
       this._targets.a.push(target);
-      this._targets.nextGeneration = dropSettings.difficulties.movie.targets.cd;
+      this._targets.nextGeneration = dropSettings.movieSetup.targets.cd;
     } else {
       this._targets.nextGeneration -= 1000 / dropSettings.fps;
     }
@@ -184,21 +184,21 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
         // x move
         if (target.y < this._hero.y + settings.gui.icon.height * 4) {
           if (target.x > this._hero.x) {
-            target.x = Math.max(this._hero.x, target.x - dropSettings.difficulties.movie.targets.speed);
+            target.x = Math.max(this._hero.x, target.x - dropSettings.movieSetup.targets.speed);
           } else {
-            target.x = Math.min(this._hero.x, target.x + dropSettings.difficulties.movie.targets.speed);
+            target.x = Math.min(this._hero.x, target.x + dropSettings.movieSetup.targets.speed);
           }
         }
         // y move
         if (target.y > this._hero.y) {
-          target.y = Math.max(this._hero.y, target.y - dropSettings.difficulties.movie.targets.speed);
+          target.y = Math.max(this._hero.y, target.y - dropSettings.movieSetup.targets.speed);
         }
       }
     });
     // generate new
     if (this._targets.nextGeneration <= 0) {
       this._targets.a.push(this.generateTarget());
-      this._targets.nextGeneration = dropSettings.difficulties.movie.targets.cd;
+      this._targets.nextGeneration = dropSettings.movieSetup.targets.cd;
     } else {
       this._targets.nextGeneration -= 1000 / dropSettings.fps;
     }
@@ -284,7 +284,6 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepare>, ReturnT
     }
   }
   protected resize() {
-    
   }
 }
 

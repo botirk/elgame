@@ -1,7 +1,7 @@
 import { Init } from "../../init";
 import settings from "../../settings";
 import { formSettings as formGame, FormGameSetup  } from "./settings";
-import { AbstractGame, WordWithImage } from "..";
+import { AbstractGame, Word, WordWithImage } from "..";
 import { EndGameStats } from "..";
 import OneForm from "./oneForm";
 import { drawStatusText, drawStatusTextFail, drawStatusTextSuccess, prepareStatusText } from "../../gui/status";
@@ -42,8 +42,8 @@ class Form extends AbstractGame<{ words: WordWithImage[], setup: FormGameSetup }
     const allForms = [ ...this._wonForms, ...this._lostForms ];
     return this.content.words.map((word) => {
       const forms = allForms.filter((form) => form.answers.includes(word));
-      const answerForms = forms.filter((form) => form.answer === word);
-      const answerFormsSuccess = answerForms.filter((form) => form.clickedWord === word);
+      const answerForms = forms.filter((form) => form._answer === word);
+      const answerFormsSuccess = answerForms.filter((form) => form.clickedCard?.word === word);
       const falseAnswers = forms.filter((form) => form.falseAnswers.includes(word));
       return { word, asAnswers: forms.length, asAnswer: answerForms.length, asSuccessfullAnswer: answerFormsSuccess.length, asFalseAnswers: falseAnswers.length };
     });
@@ -68,7 +68,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], setup: FormGameSetup }
     this.stop({ isSuccess: true, name: "form" });
   }
   private showNextForm() {
-    const wordsStats = this.wordsStats().sort((a, b) => a.asAnswer - b.asAnswer);
+    const wordsStats = this.wordsStats().sort((a, b) => a.asSuccessfullAnswer - b.asSuccessfullAnswer);
     const nextAnswerCandidates = wordsStats.filter((word) => word.asSuccessfullAnswer === wordsStats[0].asSuccessfullAnswer);
     const nextAnswerStat = nextAnswerCandidates[Math.floor(Math.random() * nextAnswerCandidates.length)];
     const nextAnswer = nextAnswerStat.word;
@@ -76,11 +76,11 @@ class Form extends AbstractGame<{ words: WordWithImage[], setup: FormGameSetup }
     const nextFalseAnswers = wordsStats.filter((wordStat) => wordStat.word !== nextAnswer).sort((a, b) => a.asAnswers - b.asAnswers).slice(0, nextFalseAnswersCount).map((stat) => stat.word);
     const this2 = this;
     const isFirst = !this._curForm;
-    this._curForm = new OneForm(this.init, nextAnswer, nextFalseAnswers, function(word) {
+    this._curForm = new OneForm(this.init, this.content.setup, nextAnswer, nextFalseAnswers, function(word) {
       if (word !== nextAnswer) {
         this2.score.health -= 1;
         this2._lostForms.unshift(this);
-        this2.onProgressFail?.(nextAnswer, word, nextFalseAnswers.filter((filter) => filter !== nextAnswer && filter !== word));
+        this2.onProgressFail?.(nextAnswer, word ? [word] : nextFalseAnswers);
       } else {
         this2.score.total += 1;
         this2._wonForms.unshift(this);
@@ -90,16 +90,16 @@ class Form extends AbstractGame<{ words: WordWithImage[], setup: FormGameSetup }
       if (this2.score.health <= 0) this2.loseAnimation();
       else if (this2.score.total >= this2.score.required) this2.winAnimation();
       else this2.showNextForm();
-    }, () => this.drawStatus());
+    }, (remainingTime) => this.drawStatus(remainingTime));
     if (!isFirst) this.redraw();
   }
-  private drawStatus() {
-    if (!this._curForm.clickedWord) {
-      drawStatusText(this.init, this._curForm.answer.toLearnText, this.score.total, this.score.required, this.score.health, this.preparedPos);
-    } else if (this._curForm.clickedWord === this._curForm.answer) {
-      drawStatusTextSuccess(this.init, this._curForm.answer.toLearnText, this.score.health, this.preparedPos);
+  private drawStatus(remainingTime?: Date) {
+    if (!this._curForm.clickedCard) {
+      drawStatusText(this.init, this._curForm._answer.toLearnText, this.score.total, this.score.required, this.score.health, this.preparedPos, remainingTime);
+    } else if (this._curForm.clickedCard.word === this._curForm._answer) {
+      drawStatusTextSuccess(this.init, this._curForm._answer.toLearnText, this.score.health, this.preparedPos, remainingTime);
     } else {
-      drawStatusTextFail(this.init, this._curForm.answer.toLearnText, this.score.health, this.preparedPos);
+      drawStatusTextFail(this.init, this._curForm._answer.toLearnText, this.score.health, this.preparedPos, remainingTime);
     }
   }
   protected start() {

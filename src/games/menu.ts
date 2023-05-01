@@ -5,6 +5,7 @@ import { drawBackground } from "../gui/background";
 import { Button } from "../gui/button";
 import { ru } from "../translation";
 import { ButtonGroupTable, Table } from "../gui/buttonGroup";
+import { ButtonLike } from "../gui/abstractButton";
 
 interface MenuEnd extends EndGameStats { isInfinity?: boolean, isViewer?: boolean, isAllViewer?: boolean };
 
@@ -67,11 +68,18 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, {}, {}, MenuEnd>
         onClick: () => {
           difSaved.dif = Math.min(this.content.dif?.end || 0, difSaved.dif + 1);
           difSaved.saveDif(difSaved.dif);
+
           if (difSaved.dif === difSaved.end) plus.disabled = true;
           if (difSaved.dif !== 0) minus.disabled = false;
-          dif.content = `${ru.Difficulty}: ${difSaved.dif}`;
-          dif.redraw();
           pmButton.redraw();
+
+          const sizeChanged = dif.setContentWithSizeChange(`${ru.Difficulty}: ${difSaved.dif}`);
+          if (sizeChanged) {
+            this.table.innerResize();
+            this.redraw();
+          } else {
+            dif.redraw();
+          }
         },
         disabled: (difSaved.dif === difSaved.end)
       });
@@ -79,22 +87,24 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, {}, {}, MenuEnd>
         onClick: () => { 
           difSaved.dif = Math.max(0, difSaved.dif - 1);
           difSaved.saveDif(difSaved.dif);
+          
           if (difSaved.dif === 0) minus.disabled = true;
           if (difSaved.dif !== difSaved.end) plus.disabled = false;
+          pmButton.redraw();
+
           dif.content = `${ru.Difficulty}: ${difSaved.dif}`;
           dif.redraw();
-          pmButton.redraw();
         },
         disabled: (difSaved.dif === 0)
       });
       const pmButton = new ButtonGroupTable(this.init, [[plus], [minus]], 0, 0);
     
       const dif = new Button(this.init, `${ru.Difficulty}: ${this.content.dif.dif}`, 0, 0, { likeLabel: true });
+      table.push([ undefined, undefined, undefined ]);
       table.push([ undefined, dif, pmButton ]);
     }
 
     this.table = new ButtonGroupTable(this.init, table, () => this.init.ctx.canvas.width / 2, () => this.init.ctx.canvas.height / 2);
-    
   }
   protected freeResources() {
     this.table.stop();

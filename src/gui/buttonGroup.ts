@@ -328,6 +328,10 @@ export class ButtonGroupTable extends ButtonLike<Table> {
     resize() {
         this.place(this.calc());
     }
+    innerResize() {
+        this.equalize();
+        this.resize();
+    }
     redraw() {
         for (const row of this.content) {
             for (const btn of row) {

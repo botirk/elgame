@@ -59,12 +59,12 @@ export const suggestGame = (init: Init, words: UnloadedWord[], progress = loadPr
     const name = "Test game";
     const label = "Test";
     const game = async () => {
-      return new Form(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: formSettings.generateLearningSetup(0) });
+      return new Drop(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: dropSettings.generateSetup(progress.dropDif) });
     };
     const viewer = async () => {
       return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
     };
-    return { name, label, game, viewer, dif: { end: 1, saveDif: (dif) => { progress.learnFormDif = dif; writeProgress(progress); }, dif: progress.learnFormDif } };
+    return { name, label, game, viewer, dif: { end: dropSettings.endDif, saveDif: (dif) => { progress.dropDif = dif; writeProgress(progress); }, dif: progress.dropDif } };
   }
 
   const shouldIntroduce = (progress.words[words[0].toLearnText].stage === 0);
@@ -108,7 +108,7 @@ export const suggestGame = (init: Init, words: UnloadedWord[], progress = loadPr
     const isBonus = !wordsSelected.some((word) => !isLearnedForNow(word, progress, now));
     const label = isBonus ? ru.Bonus : ru.Repeat;
     const game = async () => {
-      return new Drop(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], dif: dropSettings.difficulties.normal });
+      return new Drop(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: dropSettings.generateSetup(0) });
     };
     const viewer = async () => {
       return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
@@ -272,30 +272,32 @@ export const saveProgressSuccess = (successWord: Word, partnerWords: Word[]) => 
   return writeProgress(progress);
 }
 
-export const saveProgressFail = (successWord: Word, failWord: Word, partnerWords: Word[]) => {
+export const saveProgressFail = (successWord: Word, failWords: Word[]) => {
   const progress = loadProgress();
-  // success word
+  // save success
   let wordProgress = progress.words[successWord.toLearnText];
   wordProgress.substage = Math.max(0, wordProgress.substage - 1);
-  // find mistake
-  const mistake = wordProgress.mistakes.find((mistake) => mistake[0] === failWord.toLearnText);
-  // increment
-  if (mistake) mistake[1] += 1;
-  // push new mistake
-  else if (wordProgress.mistakes.length < 10) wordProgress.mistakes.push([failWord.toLearnText, 1]);
-  // replace old mistake with new mistake
-  else {
-    wordProgress.mistakes.sort((a, b) => b[1] - a[1]);
-    wordProgress.mistakes[9] = [failWord.toLearnText, 1];
-  }
-  // save success
   progress.words[successWord.toLearnText] = wordProgress;
-  // fail word
-  wordProgress = progress.words[failWord.toLearnText];
-  wordProgress.fail += 1;
-  wordProgress.substage = Math.max(0, wordProgress.substage - 1);
-  progress.words[failWord.toLearnText] = wordProgress;
-  // write
+  // save failure
+  for (const failWord of failWords) {
+    // find mistake
+    const mistake = wordProgress.mistakes.find((mistake) => mistake[0] === failWord.toLearnText);
+    // increment
+    if (mistake) mistake[1] += 1;
+    // push new mistake
+    else if (wordProgress.mistakes.length < 10) wordProgress.mistakes.push([failWord.toLearnText, 1]);
+    // replace old mistake with new mistake
+    else {
+      wordProgress.mistakes.sort((a, b) => b[1] - a[1]);
+      wordProgress.mistakes[9] = [failWord.toLearnText, 1];
+    }
+
+    wordProgress = progress.words[failWord.toLearnText];
+    wordProgress.fail += 1;
+    wordProgress.substage = Math.max(0, wordProgress.substage - 1 / failWords.length);
+    progress.words[failWord.toLearnText] = wordProgress;
+  }
+  
   return writeProgress(progress);
 }
 

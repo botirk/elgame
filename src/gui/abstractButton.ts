@@ -73,6 +73,8 @@ export abstract class ButtonLike<T> {
   dynamic() {
     this.xy(this._dynamicX?.() || this.x, this._dynamicY?.() || this.y);
   }
+  resize() {
+  }
 }
 
 abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> extends ButtonLike<TContent> implements ButtonOptional {
@@ -253,6 +255,13 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
     super._content = content;
     this.contentSize = this.calcContentSize();
   }
+  setContentWithSizeChange(content: TContent) {
+    if (this._content === content) return false;
+    const width = this.width, height = this.height;
+    super._content = content;
+    this.contentSize = this.calcContentSize();
+    return (width !== this.width || this.height !== this.height);
+  }
   get content() { return this._content; }
 
   hoverManager?: ReturnType<Init["addHoverRequest"]>;
@@ -336,7 +345,6 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
     if (this._dynamicMinWidth) this.minWidth = this._dynamicMinWidth();
     if (this._dynamicMinHeight) this.minHeight = this._dynamicMinHeight();
   }
-  resize() {}
 }
 
 export default AbstractButton;

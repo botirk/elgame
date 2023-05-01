@@ -5,31 +5,28 @@ const recomendation = {
   maxWords: 10,
 }
 
-const startLearnDif = 0;
-const endLearnDif = 1;
+const endDif = 13;
+
+const generateGenericSetup = (difficulty: number) =>  {
+  let maxTime: number | undefined;
+  if (difficulty > 0) maxTime = Math.max(2, 7500 - difficulty * 500);
+  return { stepCount: 1, maxHealth: difficulty === endDif ? 2 : 3, maxTime };
+}
+
 const generateLearningSetup = (difficulty: number) =>  {
-  return {
-    startCount: 1,
-    endCount: 2,
-    stepCount: 1,
-    maxHealth: 3,
-  }
+  return { ...generateGenericSetup(difficulty), startCount: 1, endCount: 2 }
 };
 
 const generateSetup = (difficulty: number) => {
-  return {
-    startCount: 2,
-    endCount: 3,
-    stepCount: 1,
-    maxHealth: 3,
-  }
+  return { ...generateGenericSetup(difficulty), startCount: 2, endCount: 3 }
 };
 
 export const formSettings = {
   endAnimationTime: 3000,
   pause: 900,
   recomendation,
-  generateLearningSetup, startLearnDif, endLearnDif,
+  generateLearningSetup, 
+  endDif,
   generateSetup,
 }
 
