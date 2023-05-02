@@ -294,7 +294,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
                     // shift
                     if (!displayRowResult[0]) {
                         displayRowResult.shift();
-                        displayRowResult[displayColumn] = cur;
+                        displayRowResult[displayColumn - 1] = cur;
                     // no more to shift
                     } else {
                         t.push(displayRowResult);

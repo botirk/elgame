@@ -1,11 +1,13 @@
 
-const endDif = 13;
+const endDif = 15;
 
 const generateSetup = (difficulty: number) => {
+  difficulty = Math.max(0, Math.min(endDif, difficulty));
+
   return {
     targets: {
-      speed: 5 + difficulty * 0.1,
-      cd: 1500 - difficulty * 50,
+      speed: (0.5 + difficulty * 0.0125),
+      cd: 1500 - difficulty * 45,
     },
     successCountPerWord: difficulty === 0 ? 2 : difficulty === endDif ? 4 : 3,
     maxHealth: difficulty === endDif ? 2 : 3,
@@ -15,7 +17,7 @@ const generateSetup = (difficulty: number) => {
 
 export const movieSetup: DropGameSetup = {
   targets: {
-    speed: 15,
+    speed: 1.25,
     cd: 111,
   },
   successCountPerWord: Infinity,
@@ -25,8 +27,7 @@ export const movieSetup: DropGameSetup = {
 
 export const dropSettings = {
   acceleration: 1.85,
-  mouseSpeed: 5.5,
-  fps: 100,
+  mouseSpeed: 0.4, // per 0.001 second or 1 ms
   heroY: 150,
   accelerationButton: " ",
   endDif, generateSetup, movieSetup,

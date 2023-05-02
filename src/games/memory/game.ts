@@ -1,13 +1,14 @@
-import { AbstractGame, EndGameStats } from "..";
+import { AbstractGame, EndGameStats, Word } from "..";
 import { Init } from "../../init";
 import { removeRandomInArray } from "../../utils";
 import settings from "../../settings";
-import { memorySettings } from "./settings";
+import { MemoryGameSetup, memorySettings } from "./settings";
 import { WordWithImage } from "..";
 import Card, { GuessState } from "./card";
 import { calcTextWidth } from "../../gui/text";
 import { drawBackground } from "../../gui/background";
 import { ButtonGroupGrid } from "../../gui/buttonGroup";
+import { drawStatusSimple, drawStatusSimpleFail, drawStatusSimpleSuccess, drawStatusText, prepareStatusText } from "../../gui/status";
 
 const calcCardSize = (init: Init, words: WordWithImage[]) => {
   let height = settings.fonts.fontSize + settings.gui.button.padding * 2;
@@ -19,31 +20,36 @@ const calcCardSize = (init: Init, words: WordWithImage[]) => {
   return { height, width };
 }
 
-class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSize>, {}, EndGameStats> {
-  private _remainingCards: number = this.content.length * 2;
+class Memory extends AbstractGame<{ words: WordWithImage[], setup: MemoryGameSetup }, ReturnType<typeof Memory.prepare>, {}, EndGameStats> {
+  private _remainingCards: number = this.content.words.length * 2;
   private _grid: ButtonGroupGrid<Card[]>;
   private _timer?: NodeJS.Timer;
   private _wonCards: Card[] = [];
+  private _health = this.content.setup.health;
+  private _status?: "success" | "fail";
   
   private finishCardAction() {
+    this._status = undefined;
     for (const failed of this._grid.content.filter((card) => card.gameState == "failed")) {
       failed.gameState = "closed";
-      failed.redraw();
     }
     for (const solvedOpen of this._grid.content.filter((card) => card.gameState == "solved&open")) {
       solvedOpen.gameState = "solved&closed";
-      solvedOpen.redraw();
       if ((this._remainingCards -= 1) <= 0) {
         this.winAnimation();
         break;
       }
     }
+    if (this._health <= 0) {
+      this.loseAnimation();
+    }
+    this.redraw();
   }
   private shuffleWords() {
     const result: { word: WordWithImage, guessState: GuessState }[] = [];
     const freePos: number[] = [];
-    for (let i = 0; i < this.content.length * 2; i++) freePos.push(i);
-    for (const word of this.content) {
+    for (let i = 0; i < this.content.words.length * 2; i++) freePos.push(i);
+    for (const word of this.content.words) {
       let pos: number | undefined;
       for (let tryCount = freePos.length * 5; tryCount > 0; tryCount -= 1) {
         pos = removeRandomInArray(freePos);
@@ -83,14 +89,42 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
     }
     this.stop({ isSuccess: true, name: "memory" });
   }
+  private async loseAnimation() {
+    const openTime = memorySettings.loseTime * 0.5;
+    const seeTime = memorySettings.loseTime * 0.5;
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, openTime / this._grid.content.length);
+    });
+    for (const card of this._wonCards) {
+      card.gameState = "solved&open";
+      card.redraw();
+      await new Promise((resolve) => {
+        setTimeout(resolve, openTime / this._grid.content.length);
+      });
+    }
+    for (const card of this._grid.content) {
+      if (card.gameState !== "solved&open") {
+        card.gameState = "open";
+        card.redraw();
+        await new Promise((resolve) => {
+          setTimeout(resolve, openTime / this._grid.content.length);
+        });
+      }
+    }
+    await new Promise((resolve) => {
+      setTimeout(resolve, seeTime);
+    });
+    this.stop({ isSuccess: true, name: "memory" });
+  }
   protected start(): void {
     const this2 = this;
     this._grid = new ButtonGroupGrid(
       this.init, this.shuffleWords().map((shuffled, i) => new Card(
         this.init, shuffled.word, shuffled.guessState,
-        this.prepared.width, this.prepared.height,
+        this.prepared.card.width, this.prepared.card.height,
         function() {
-          if (this2._remainingCards <= 0) return;
+          if (this2._remainingCards <= 0 || this2._health <= 0) return;
           // finish previous card animations
           clearTimeout(this2._timer);
           this2.finishCardAction();
@@ -106,11 +140,14 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
               this2._wonCards.unshift(open[0]);
               this2._wonCards.unshift(this);
               this2.onProgressSuccess?.(this.word, []);
+              this2._status = "success";
             } else {
               this.gameState = "failed";
               open[0].gameState = "failed";
+              this2._status = "fail";
+              this2._health -= 1;
             }
-            open[0].redraw();
+            this2.redraw();
             this2._timer = setTimeout(() => this2.finishCardAction(), 2000);
           }
         })), 
@@ -121,8 +158,14 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
     this._grid.stop();
     clearTimeout(this._timer);
   }
+  private static prepare(init: Init, words: WordWithImage[]) {
+    return {
+      card: calcCardSize(init, words),
+      status: prepareStatusText(init),
+    }
+  }
   protected prepare() {
-    return calcCardSize(this.init, this.content);
+    return Memory.prepare(this.init, this.content.words);
   }
   protected preparePos() {
     return {};
@@ -130,6 +173,12 @@ class Memory extends AbstractGame<WordWithImage[], ReturnType<typeof calcCardSiz
   protected redraw() {
     drawBackground(this.init.ctx);
     this._grid.redraw();
+    if (this._status === "success") 
+      drawStatusSimpleSuccess(this.init, this._health, this.prepared.status);
+    else if (this._status === "fail")
+      drawStatusSimpleFail(this.init, this._health, this.prepared.status);
+    else
+      drawStatusSimple(this.init, this._health, this.prepared.status);
   }
   protected scrollOptions() {
     return { 

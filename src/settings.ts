@@ -1,4 +1,3 @@
-import { Init } from "./init";
 
 const name = "elgame";
 

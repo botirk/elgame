@@ -8,6 +8,8 @@ const recomendation = {
 const endDif = 13;
 
 const generateGenericSetup = (difficulty: number) =>  {
+  difficulty = Math.max(0, Math.min(endDif, difficulty));
+
   let maxTime: number | undefined;
   if (difficulty > 0) maxTime = Math.max(2, 7500 - difficulty * 500);
   return { stepCount: 1, maxHealth: difficulty === endDif ? 2 : 3, maxTime };

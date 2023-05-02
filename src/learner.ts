@@ -41,7 +41,7 @@ export interface WordProgress {
 
 export interface Suggestion {
   name: string, label: string, 
-  game: (dif: number) => Promise<AbstractGame<any, any, any, any>>,
+  game: () => Promise<AbstractGame<any, any, any, any>>,
   viewer: () => Promise<AbstractGame<any, any, any, any>>,
   dif?: {
     saveDif: (dif: number) => void,
@@ -53,18 +53,20 @@ export interface Suggestion {
 export const allViewer = async (init: Init, words: UnloadedWord[], progress = loadProgress()) => new Viewer(init, { words: await loadWords(words, settings.gui.icon.width, "width"), progress });
 
 export const suggestGame = (init: Init, words: UnloadedWord[], progress = loadProgress(), now = new Date()): Suggestion => {
-  const shouldTest = true;
+  words = sortWordsByProgress(words);
+  
+  const shouldTest = false;
   if (shouldTest) {
     const wordsSelected = words.slice(0, formSettings.recomendation.goodWords);
     const name = "Test game";
     const label = "Test";
     const game = async () => {
-      return new Drop(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: dropSettings.generateSetup(progress.dropDif) });
+      return new Memory(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: memorySettings.generateSetup(progress.memoryDif, wordsSelected.length) });
     };
     const viewer = async () => {
       return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
     };
-    return { name, label, game, viewer, dif: { end: dropSettings.endDif, saveDif: (dif) => { progress.dropDif = dif; writeProgress(progress); }, dif: progress.dropDif } };
+    return { name, label, game, viewer, dif: { end: memorySettings.endDif, saveDif: (dif) => { progress.memoryDif = dif; writeProgress(progress); }, dif: progress.memoryDif } };
   }
 
   const shouldIntroduce = (progress.words[words[0].toLearnText].stage === 0);
@@ -73,12 +75,12 @@ export const suggestGame = (init: Init, words: UnloadedWord[], progress = loadPr
     const name = ru.FormGame;
     const label = ru.Introduction;
     const game = async () => {
-      return new Form(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: formSettings.generateLearningSetup(0) });
+      return new Form(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: formSettings.generateLearningSetup(progress.learnFormDif) });
     };
     const viewer = async () => {
       return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
     };
-    return { name, label, game, viewer };
+    return { name, label, game, viewer, dif: { end: formSettings.endDif, saveDif: (dif) => { progress.learnFormDif = dif; writeProgress(progress); }, dif: progress.learnFormDif } };
   }
 
   const formCount = progress.prevGames.filter((name) => name === "form").length;
@@ -96,36 +98,36 @@ export const suggestGame = (init: Init, words: UnloadedWord[], progress = loadPr
     const isBonus = !wordsSelected.some((word) => !isLearnedForNow(word, progress, now));
     const label = isBonus ? ru.Bonus :  ru.Repeat;
     const game = async () => {
-      return new Form(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: formSettings.generateSetup(0) });
+      return new Form(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: formSettings.generateSetup(progress.formDif) });
     };
     const viewer = async () => {
       return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
     };
-    return { name, label, game, viewer };
+    return { name, label, game, viewer, dif: { end: formSettings.endDif, saveDif: (dif) => { progress.formDif = dif; writeProgress(progress); }, dif: progress.formDif } };
   } else if (vote <= formVotes + dropVotes) {
     const wordsSelected = words.slice(0, dropSettings.recomendation.goodWords);
     const name = ru.DropGame;
     const isBonus = !wordsSelected.some((word) => !isLearnedForNow(word, progress, now));
     const label = isBonus ? ru.Bonus : ru.Repeat;
     const game = async () => {
-      return new Drop(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: dropSettings.generateSetup(0) });
+      return new Drop(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: dropSettings.generateSetup(progress.dropDif) });
     };
     const viewer = async () => {
       return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
     };
-    return { name, label, game, viewer };
+    return { name, label, game, viewer, dif: { end: dropSettings.endDif, saveDif: (dif) => { progress.dropDif = dif; writeProgress(progress); }, dif: progress.dropDif } };
   } else {
     const wordsSelected = words.slice(0,memorySettings.recomendation.goodWords);
     const name = ru.MemoryGame;
     const isBonus = !wordsSelected.some((word) => !isLearnedForNow(word, progress, now));
     const label = isBonus ? ru.Bonus :  ru.Repeat;
     const game = async () => {
-      return new Memory(init, await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[]);
+      return new Memory(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: memorySettings.generateSetup(progress.memoryDif, wordsSelected.length) });
     };
     const viewer = async () => {
       return new Viewer(init, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width"), progress });
     };
-    return { name, label, game, viewer };
+    return { name, label, game, viewer, dif: { end: memorySettings.endDif, saveDif: (dif) => { progress.memoryDif = dif; writeProgress(progress); }, dif: progress.memoryDif } };
   }
 }
 
@@ -134,8 +136,8 @@ export const sortWordsByProgress = (words: UnloadedWord[], progress = loadProgre
     if (progress.words[a.toLearnText].stage === progress.words[b.toLearnText].stage) {
       const aLearned = isLearnedForNow(a, progress, now);
       const bLearned = isLearnedForNow(a, progress, now);
-      if (bLearned && !aLearned) return -1;
-      else if (!bLearned && aLearned) return 1;
+      if (bLearned && !aLearned) return 1;
+      else if (!bLearned && aLearned) return -1;
       else if (aLearned && bLearned) return progress.words[a.toLearnText].bonusstage - progress.words[b.toLearnText].bonusstage;
       else return progress.words[b.toLearnText].substage - progress.words[a.toLearnText].substage;
     } else {

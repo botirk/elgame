@@ -4,7 +4,6 @@ Game for learning foreign languages
 
 ## Ссылки
 https://botirk.github.io/elgame/build/onePage.html
-https://botirk.github.io/elgame/build/onePageDev.html
 
 ## Внимание
 Игра в процессе разработки

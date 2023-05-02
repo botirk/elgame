@@ -1,14 +1,10 @@
-import { loadWords } from "./asset";
 import { AbstractGame, EndGameStats, UnloadedWord } from "./games";
 import Menu from "./games/menu";
-import Viewer from "./games/viewer/game";
 import { Init } from "./init";
-import { suggestGame, saveProgress, loadProgress, allViewer, sortWordsByProgress } from "./learner";
+import { suggestGame, saveProgress, allViewer, sortWordsByProgress } from "./learner";
 
 class Nav {
-  constructor(init: Init, words: UnloadedWord[]) {
-    this._init = init;
-    this._words = sortWordsByProgress(words);
+  constructor(private _init: Init, private _words: UnloadedWord[]) {
     window.addEventListener("popstate", () => {
       if (this._curGame) {
         this._curGame?.stop();
@@ -18,8 +14,6 @@ class Nav {
     this.showMenu();
   }
 
-  private _init: Init;
-  private _words: UnloadedWord[];
   private _suggestion: ReturnType<typeof suggestGame>;
   private _curGame?: AbstractGame<any, any, any, EndGameStats>;
 
