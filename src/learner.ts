@@ -11,8 +11,8 @@ import { Init } from "./init";
 import settings from "./settings";
 import { ru } from "./translation";
 
-export const WordProgressPrevGamesLen = 10;
-export interface WordProgress {
+export const ProgressPrevGamesLen = 10;
+export interface Progress {
   // length <= 10
   prevGames: GameName[],
   words: {
@@ -87,9 +87,9 @@ export const suggestGame = (init: Init, words: UnloadedWord[], progress = loadPr
   const dropCount = progress.prevGames.filter((name) => name === "drop").length;
   const memoryCount = progress.prevGames.filter((name) => name === "memory").length;
 
-  const formVotes = WordProgressPrevGamesLen + 1 - formCount;
-  const dropVotes = WordProgressPrevGamesLen + 1 - dropCount;
-  const memoryVotes = WordProgressPrevGamesLen + 1 - memoryCount;
+  const formVotes = ProgressPrevGamesLen + 1 - formCount;
+  const dropVotes = ProgressPrevGamesLen + 1 - dropCount;
+  const memoryVotes = ProgressPrevGamesLen + 1 - memoryCount;
   
   const vote = Math.random() * (formVotes + dropVotes + memoryVotes);
   if (vote <= formVotes) {
@@ -146,12 +146,12 @@ export const sortWordsByProgress = (words: UnloadedWord[], progress = loadProgre
   });
 }
 
-let progressCache: WordProgress | undefined;
+let progressCache: Progress | undefined;
 export const loadProgress = () => {
   if (progressCache) return progressCache;
   progressCache = {
     prevGames: [], 
-    words: new Proxy<WordProgress["words"]>({}, {
+    words: new Proxy<Progress["words"]>({}, {
       get: (target, p) => target[p.toString()] ||= { stage: 0, substage: 0, bonusstage: 0, timestamp: new Date(), mistakes: [], success: 0, fail: 0 },
     }),
     learnFormDif: 0, formDif: 0, memoryDif: 0, dropDif: 0,
@@ -197,7 +197,7 @@ export const loadProgress = () => {
   }
 }
 
-export const writeProgress = (progress: WordProgress) => {
+export const writeProgress = (progress: Progress) => {
   progressCache = progress;
   try {
     const parsed = JSON.stringify(progress);
@@ -212,17 +212,17 @@ export const stageTime = (stage: number) => {
  return 1000 * (5 ** Math.min(stage, 15));
 }
 
-export const isLearnedForNow = (word: UnloadedWord, progress: WordProgress = loadProgress(), now: Date = new Date()) => {
+export const isLearnedForNow = (word: UnloadedWord, progress: Progress = loadProgress(), now: Date = new Date()) => {
   const wordProgress = progress.words[word.toLearnText];
   return (now.getTime() - wordProgress.timestamp.getTime() < stageTime(wordProgress.stage));
 }
 
-export const nextLearnDate = (word: UnloadedWord, progress: WordProgress = loadProgress(), now: Date = new Date()) => {
+export const nextLearnDate = (word: UnloadedWord, progress: Progress = loadProgress(), now: Date = new Date()) => {
   const wordProgress = progress.words[word.toLearnText];
   return new Date(wordProgress.timestamp.getTime() + stageTime(wordProgress.stage));
 }
 
-export const untilNextLearnDate = (word: UnloadedWord, progress: WordProgress = loadProgress(), now: Date = new Date()) => {
+export const untilNextLearnDate = (word: UnloadedWord, progress: Progress = loadProgress(), now: Date = new Date()) => {
   const nextDate = nextLearnDate(word, progress, now);
   const diffMS = Math.abs(nextDate.getTime() - now.getTime());
   const diffDays = Math.floor(diffMS / (1000 * 60 * 60 * 24));

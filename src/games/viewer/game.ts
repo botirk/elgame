@@ -3,12 +3,12 @@ import settings from "../../settings";
 import { Word, WordWithImage } from "..";
 import { Button } from "../../gui/button";
 import { drawBackground } from "../../gui/background";
-import { isLearnedForNow, untilNextLearnDate, WordProgress } from "../../learner";
+import { isLearnedForNow, untilNextLearnDate, Progress } from "../../learner";
 import { ru } from "../../translation";
 import { ButtonWithDescription } from "../../gui/buttonWithDescription";
 import { ButtonGroupTable } from "../../gui/buttonGroup";
 
-const wordLearning = (word: Word, progress: WordProgress) => {
+const wordLearning = (word: Word, progress: Progress) => {
   if (isLearnedForNow(word, progress)) {
     return {
       text: `${ru.BonusLearning} ${progress.words[word.toLearnText].stage}: ${untilNextLearnDate(word, progress)}`,
@@ -22,11 +22,11 @@ const wordLearning = (word: Word, progress: WordProgress) => {
   }
 }
 
-const wordStats = (word: Word, progress: WordProgress) => {
+const wordStats = (word: Word, progress: Progress) => {
   return { successes: `${ru.OfSuccesses}: ${progress.words[word.toLearnText].success}`, fails: `${ru.OfFails}: ${progress.words[word.toLearnText].fail}` };
 }
 
-class Viewer extends AbstractGame<{ words: Word[], progress: WordProgress }, {}, {}, EndGameStats> {
+class Viewer extends AbstractGame<{ words: Word[], progress: Progress }, {}, {}, EndGameStats> {
   private _table: ButtonGroupTable;
   private _buttonUpdaters: (() => void)[] = [];
   private _timer: NodeJS.Timer;

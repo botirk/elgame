@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "English Learning Game",
   "scripts": {
-    "generate": "cd ./src/compileTime && npx ts-node -e \"require('./generateWords').default();\"",
+    "generate": "cd ./src/compileTime && npx ts-node -e \"require('./generate').default();\"",
     "develop": "npm run generate && npx parcel src/examples/onePageDev.html --host 0.0.0.0 --log-level verbose",
     "build": "npm run generate && npx parcel build src/examples/onePage.html --dist-dir build",
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -1,7 +1,10 @@
+import sounds from "../src/compileTime/generated/sounds.json";
+
 import { AbstractGame, EndGameStats, UnloadedWord } from "./games";
 import Menu from "./games/menu";
+import SoundSetup from "./games/soundSetup";
 import { Init } from "./init";
-import { suggestGame, saveProgress, allViewer, sortWordsByProgress } from "./learner";
+import { suggestGame, saveProgress, allViewer, loadProgress } from "./learner";
 
 class Nav {
   constructor(private _init: Init, private _words: UnloadedWord[]) {
@@ -11,7 +14,10 @@ class Nav {
         this._curGame = undefined;
       } 
     });
-    this.showMenu();
+    this.showSoundSetup().then((sound) => {
+      this.showMenu();
+      this.playBackgroundSound(sound);
+    });
   }
 
   private _suggestion: ReturnType<typeof suggestGame>;
@@ -19,6 +25,10 @@ class Nav {
 
   private refreshSuggestion() {
     this._suggestion = suggestGame(this._init, this._words);
+  }
+
+  private async showSoundSetup() {
+    return !!(await new SoundSetup(this._init, {}).onGameEnd)?.isSuccess;
   }
 
   private async showMenu(noRefresh?: boolean) {
@@ -47,6 +57,18 @@ class Nav {
     this._curGame = await this._suggestion.game();
     saveProgress(this._curGame);
     return await this._curGame.onGameEnd;
+  }
+
+  static audio: HTMLAudioElement;
+  private async playBackgroundSound(isUnmuted: boolean) {
+    Nav.audio = new Audio(`data:audio/mp3;base64,${sounds.theme}`);
+    await new Promise<void>((resolve) => {
+      Nav.audio.addEventListener("loadeddata", () => {
+        resolve();
+      });
+    });
+    Nav.audio.muted = !isUnmuted;
+    Nav.audio.play();
   }
 
   private async playInfinity() {
