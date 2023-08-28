@@ -111,7 +111,13 @@ class Menu extends AbstractGame<ReturnType<typeof suggestGame>, {}, {}, MenuEnd>
   }
   protected resize() {
     this.table.dynamic();
+<<<<<<< HEAD
+=======
+    //console.log(this.table.content[0][1]?.x, this.table.content[0][1]?.y);
+>>>>>>> master
     this.table.resize();
+    //console.log(this.table.content[0][1]?.x, this.table.content[0][1]?.y);
+    //this.update();
   }
 }
 
