@@ -1,27 +1,37 @@
 
-type ResizeRequest = () => void;
+interface ResizeRequest {
+  resize?: () => void;
+  after?: () => void;
+};
 
-const resize = (ctx: CanvasRenderingContext2D) => {
-  const requesters: ResizeRequest[] = [];
-  let init = false;
+export type ResizeManager = () => void;
 
-  const resizeObserver = new ResizeObserver(() => {
-    if (!init) init = true;
-    else requesters.forEach((req) => req());
-  });
-  resizeObserver.observe(ctx.canvas);
+export default class ResizeEvent {
+  constructor(_ctx: CanvasRenderingContext2D) {
+    this._observer = new ResizeObserver(() => {
+      if (!this._init) this._init = true;
+      else {
+        for (const req of this._reqs) req.resize?.();
+        for (const req of this._reqs) req.after?.();
+      }
+    })
+    this._observer.observe(_ctx.canvas);
+  }
 
-  const addRequest = (cb: ResizeRequest) => {
-    requesters.push(cb);
-    
+  then(req: ResizeRequest): ResizeManager {
+    this._reqs.push(req);
     const removeRequest = () => {
-      const i = requesters.indexOf(cb);
-      if (i != -1) requesters.splice(i, 1);
+      const i = this._reqs.indexOf(req);
+      if (i !== -1) this._reqs.splice(i, 1);
     }
     return removeRequest;
   }
 
-  return addRequest;
-}
+  stop() {
+    this._observer.disconnect();
+  }
 
-export default resize;
+  private _init: boolean = false;
+  private _observer: ResizeObserver;
+  private _reqs: ResizeRequest[] = [];
+}

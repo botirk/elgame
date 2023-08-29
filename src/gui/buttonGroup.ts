@@ -1,5 +1,5 @@
-import { Init } from "../init";
 import settings from "../settings";
+import CTX from "./CTX";
 import { ButtonLike } from "./abstractButton";
 
 const calcDir = (buttons: ButtonLike<any>[], dir: "width" | "height", includeStartEnd: boolean, gap: number) => {
@@ -53,7 +53,7 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
     get minWidth() { return this._minWidth; }
     set minWidth(minWidth: number) { this._minWidth = minWidth; }
 
-    constructor(private _init: Init, content: TBLike, _x: number | (() => number), _y: number | (() => number)) {
+    constructor(private _ctx: CTX, content: TBLike, _x: number | (() => number), _y: number | (() => number)) {
         super();
         this._content = content;
         this.equalize();
@@ -78,7 +78,7 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
         let rows = 1;
         let rowWidth = calcDir(this.content, "width", false, settings.gui.button.padding);
         // reduce amount of columns
-        while ((rowWidth + settings.gui.button.padding > this._init.ctx.canvas.width || columns > rows + 1) && columns > 1) {
+        while ((rowWidth + settings.gui.button.padding > this._ctx.ctx.canvas.width || columns > rows + 1) && columns > 1) {
             // count amount moved down
             let gettingReduced = rows - 1;
             if (columns === lastRowColumns) gettingReduced += 1;
@@ -180,7 +180,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
     }
 
     constructor(
-        private _init: Init, content: Table, 
+        private _ctx: CTX, content: Table, 
         _x: number | (() => number), _y: number | (() => number), 
         readonly limitRect?: { startX: number, startY: number }) 
     {
@@ -246,7 +246,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         for (let i = 0; i <= column; i++) {
             if (i > 0) width += settings.gui.button.padding;
             width += (this._itemWidthPerColumn[i] || 0);
-            if (this.x + width / 2 > this._init.ctx.canvas.width) return true;
+            if (this.x + width / 2 > this._ctx.ctx.canvas.width) return true;
         }
         return false;
     }

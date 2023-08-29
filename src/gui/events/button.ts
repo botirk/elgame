@@ -6,27 +6,33 @@ interface ButtonRequest {
   onPressed?: () => void,
 };
 
-const button = (ctx: CanvasRenderingContext2D) => {
-  const requesters: ButtonRequest[] = [];
+export default class ButtonEvent {
+  constructor() {
+    this.keyDown = this.keyDown.bind(this);
+    this.keyUp = this.keyUp.bind(this);
+    document.addEventListener("keydown", this.keyDown);
+    document.addEventListener("keyup", this.keyUp);
+  }
 
-  document.addEventListener("keydown", (e) => { 
-    requesters.forEach((req) => { if (req.button == e.key) req.onPressed?.(); });
-  });
-  document.addEventListener("keyup", (e) => { 
-    requesters.forEach((req) => { if (req.button == e.key) req.onReleased(); });
-  });
-
-  const addButtonRequest = (req: ButtonRequest) => {
-    requesters.push(req);
-    
+  then(req: ButtonRequest) {
+    this._reqs.push(req);
     const removeRequest = () => {
-      const i = requesters.indexOf(req);
-      if (i != -1) requesters.splice(i, 1);
+      const i = this._reqs.indexOf(req);
+      if (i !== -1) this._reqs.splice(i, 1);
     }
     return removeRequest;
   }
 
-  return addButtonRequest;
-}
+  stop() {
+    document.removeEventListener("keydown", this.keyDown);
+    document.removeEventListener("keyup", this.keyUp);
+  }
 
-export default button;
+  private _reqs: ButtonRequest[] = [];
+  private keyDown(e: KeyboardEvent) {
+    this._reqs.forEach((req) => { if (req.button == e.key) req.onPressed?.(); });
+  }
+  private keyUp(e: KeyboardEvent) {
+    this._reqs.forEach((req) => { if (req.button == e.key) req.onReleased(); });
+  }
+}

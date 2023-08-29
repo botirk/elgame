@@ -1,14 +1,13 @@
 import Nav from "./nav";
-import init from "./init";
 import { UnloadedWord } from "./games";
+import CTX from "./gui/CTX";
 
 /**
  * @returns error string or Nav in case everything is okay
  */
-const index = async (elementId: string, words: UnloadedWord[], isDev?: boolean): Promise<string | Nav> => {
-  const inited = await init(elementId, isDev);
-  if (typeof(inited) == "string") return inited;
-  return new Nav(inited, words);
+const index = async (ctx: CanvasRenderingContext2D, words: UnloadedWord[], isDev?: boolean): Promise<Nav> => {
+  const innerCTX = await CTX.aconstructor(ctx);
+  return new Nav(innerCTX, words);
 }
 
 export default index;

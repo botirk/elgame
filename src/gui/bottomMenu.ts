@@ -1,11 +1,13 @@
-import { Init } from "../init";
 import settings from "../settings";
+import CTX from "./CTX";
 import { Button } from "./button";
+import { ClickManager } from "./events/click";
+import { HoverManager } from "./events/hover";
 
 class FullscreenButton extends Button {
   private readonly ownerRedraw: () => void;
-  private moreHover: ReturnType<Init["addHoverRequest"]>;
-  private moreClick: ReturnType<Init["addClickRequest"]>;
+  private moreHover: HoverManager;
+  private moreClick: ClickManager;
 
   private setInvisible(state: boolean) {
     if (!state && this.invisible) {
@@ -19,37 +21,39 @@ class FullscreenButton extends Button {
     }
   };
 
-  constructor(init: Init, ownerRedraw: () => void) {
-    const x = () => init.ctx.canvas.width - init.prepared.assets.fullscreen.width / 2 - settings.gui.button.padding - 15;
-    const y = () => init.ctx.canvas.height - init.prepared.assets.fullscreen.height / 2 - settings.gui.button.padding - 15;
-    super(init, init.prepared.assets.fullscreen, x, y, {
+  constructor(ctx: CTX, ownerRedraw: () => void) {
+    const x = () => ctx.ctx.canvas.width - ctx.assets.fullscreen.width / 2 - settings.gui.button.padding - 15;
+    const y = () => ctx.ctx.canvas.height - ctx.assets.fullscreen.height / 2 - settings.gui.button.padding - 15;
+    super(ctx, ctx.assets.fullscreen, x, y, {
       onClick: () => {
-        init.ctx.canvas.requestFullscreen();
+        ctx.ctx.canvas.requestFullscreen();
         this.invisible = true;
       },
       invisible: true,
     });
     this.ownerRedraw = ownerRedraw;
-    this.moreHover = init.addHoverRequest({ 
+    this.moreHover = ctx.hoverEvent.then({ 
       isInArea: (xIn, yIn) => xIn >= x() - 70 && yIn >= y() - 70,
       onHover: () => this.setInvisible(false),
       onLeave: () => this.setInvisible(true),
     });
-    this.moreClick = init.addClickRequest({
+    this.moreClick = ctx.clickEvent.then({
       isInArea: () => true,
       zIndex: -Infinity,
       onReleased: (isInside) => { 
-        if (isInside && !document.fullscreenElement && init.prepared.isMobile) {
+        if (isInside && !document.fullscreenElement && ctx.isMobile) {
           this.setInvisible(!this.invisible);
         }
       },
     });
   }
+
   stop(shouldRedrawToDefault?: boolean | undefined): void {
     this.moreHover.stop();
     this.moreClick.stop();
     super.stop(shouldRedrawToDefault);
   }
+
   dynamic(): void {
     super.dynamic();
     this.moreHover.update();

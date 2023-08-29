@@ -2,29 +2,35 @@ import settings from "../../settings";
 
 type MoveRequest = (x: number, y: number) => void;
 
-const move = (ctx: CanvasRenderingContext2D) => {
-  const requesters: MoveRequest[] = [];
+export default class MoveEvent {
+  constructor(private readonly _ctx: CanvasRenderingContext2D) {
+    this._mouseMove = this._mouseMove.bind(this);
+    this._touchMove = this._touchMove.bind(this);
+    _ctx.canvas.addEventListener("mousemove", this._mouseMove);
+    _ctx.canvas.addEventListener("touchmove", this._touchMove);
+  }
 
-  ctx.canvas.addEventListener("mousemove", (e) => {
-    const [x, y] = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
-    requesters.forEach((req) => req(x, y));
-  });
-  ctx.canvas.addEventListener("touchmove", (e) => {
-    const [x, y] = settings.calculate.toCanvasCoords(ctx, e.touches[0].pageX, e.touches[0].pageY);
-    requesters.forEach((req) => req(x, y)); 
-  }, { passive: true });
-
-  const addRequest = (cb: MoveRequest) => {
-    requesters.push(cb);
-    
+  then(req: MoveRequest) {
+    this._reqs.push(req);
     const removeRequest = () => {
-      const i = requesters.indexOf(cb);
-      if (i != -1) requesters.splice(i, 1);
+      const i = this._reqs.indexOf(req);
+      if (i !== -1) this._reqs.splice(i, 1);
     }
     return removeRequest;
   }
 
-  return addRequest;
-}
+  stop() {
+    this._ctx.canvas.removeEventListener("mousemove", this._mouseMove);
+    this._ctx.canvas.removeEventListener("touchmove", this._touchMove);
+  }
 
-export default move;
+  private _reqs: MoveRequest[] = [];
+  private _mouseMove(e: MouseEvent) {
+    const [x, y] = settings.calculate.toCanvasCoords(this._ctx, e.x, e.y);
+    for (const req of this._reqs) req(x, y);
+  }
+  private _touchMove(e: TouchEvent) {
+    const [x, y] = settings.calculate.toCanvasCoords(this._ctx, e.touches[0].pageX, e.touches[0].pageY);
+    for (const req of this._reqs) req(x, y);
+  }
+}

@@ -1,6 +1,17 @@
 import assetsJSON from "./compileTime/generated/assets.json";
 import { UnloadedWord, Word } from "./games";
 
+const playBackgroundSound = (isUnmuted: boolean) => {
+  /*Nav.audio = new Audio(`data:audio/mp3;base64,${sounds.theme}`);
+  await new Promise<void>((resolve) => {
+    Nav.audio.addEventListener("loadeddata", () => {
+      resolve();
+    });
+  });
+  Nav.audio.muted = !isUnmuted;
+  Nav.audio.play();*/
+}
+
 const loadAsset = async (b64: string, pxValue: number, side: "width" | "heigth"): Promise<HTMLImageElement> => {
   return new Promise<HTMLImageElement>((resolve) => {
     const asset = new Image();

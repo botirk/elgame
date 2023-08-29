@@ -1,5 +1,7 @@
-import { Init } from "../init";
 import settings from "../settings";
+import CTX from "./CTX";
+import { ClickManager } from "./events/click";
+import { HoverManager } from "./events/hover";
 import { drawRoundedBorder, drawRoundedRect } from "./roundedRect";
 
 type ShouldRedrawAfterClick = boolean | void | Promise<void>;
@@ -82,9 +84,8 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
   protected abstract calcContentCacheX(): TCacheX;
   protected abstract calcContentCacheY(): TCacheY;
   protected abstract drawer(): void;
-  constructor(protected readonly init: Init, content: TContent, x: number | (() => number), y: number | (() => number), optional?: ButtonOptional) {    
+  constructor(protected readonly ctx: CTX, content: TContent, x: number | (() => number), y: number | (() => number), optional?: ButtonOptional) {    
     super();
-    this.init = init;
     this.content = content;
     this.xy(x, y);
     Object.entries(optional || {}).forEach(([k, v]) => this[k] = v);
@@ -264,44 +265,44 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
   }
   get content() { return this._content; }
 
-  hoverManager?: ReturnType<Init["addHoverRequest"]>;
-  clickManager?: ReturnType<Init["addClickRequest"]>;
+  hoverManager?: HoverManager;
+  clickManager?: ClickManager;
   
   private redrawBorder() {
-    this.init.ctx.fillStyle = settings.colors.bg;
-    drawRoundedRect(this.init.ctx, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, settings.gui.button.rounding);
-    this.init.ctx.fillStyle = settings.colors.button.bg;
-    drawRoundedBorder(this.init.ctx, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, settings.gui.button.rounding);
+    this.ctx.ctx.fillStyle = settings.colors.bg;
+    drawRoundedRect(this.ctx.ctx, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, settings.gui.button.rounding);
+    this.ctx.ctx.fillStyle = settings.colors.button.bg;
+    drawRoundedBorder(this.ctx.ctx, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, settings.gui.button.rounding);
   }
   private redrawLabel() {
     if (this?.bgColor) {
-      this.init.ctx.fillStyle = this.bgColor;
+      this.ctx.ctx.fillStyle = this.bgColor;
     } else if (this?._disabled) {
-      this.init.ctx.fillStyle = settings.colors.button.disabled;
+      this.ctx.ctx.fillStyle = settings.colors.button.disabled;
     } else {
-      this.init.ctx.fillStyle = settings.colors.button.bg;
+      this.ctx.ctx.fillStyle = settings.colors.button.bg;
     }
-    this.init.ctx.fillRect(this._startX, this._startY, this._width, this._height);
+    this.ctx.ctx.fillRect(this._startX, this._startY, this._width, this._height);
     this.drawer();
   }
   private redrawContent() {
     if (this?.bgColor) {
-      this.init.ctx.fillStyle = this.bgColor;
+      this.ctx.ctx.fillStyle = this.bgColor;
     } else if (this?._disabled) {
-      this.init.ctx.fillStyle = settings.colors.button.disabled;
+      this.ctx.ctx.fillStyle = settings.colors.button.disabled;
     } else if (this.clickManager?.isPressed()) {
-      this.init.ctx.fillStyle = settings.colors.button.pressed;
+      this.ctx.ctx.fillStyle = settings.colors.button.pressed;
     } else if (this.hoverManager?.isInArea()) {
-      this.init.ctx.fillStyle = settings.colors.button.hover;
+      this.ctx.ctx.fillStyle = settings.colors.button.hover;
     } else {
-      this.init.ctx.fillStyle = settings.colors.button.bg;
+      this.ctx.ctx.fillStyle = settings.colors.button.bg;
     }
     if (this.hoverManager?.isInArea() && !this?._disabled) {
-      this.init.ctx.canvas.style.cursor = "pointer";
+      this.ctx.ctx.canvas.style.cursor = "pointer";
     } else {
-      this.init.ctx.canvas.style.cursor = "default";
+      this.ctx.ctx.canvas.style.cursor = "default";
     }
-    drawRoundedRect(this.init.ctx, this._startX, this._startY, this._width, this._height, settings.gui.button.rounding);
+    drawRoundedRect(this.ctx.ctx, this._startX, this._startY, this._width, this._height, settings.gui.button.rounding);
     this.drawer();
   }
   private updateManagers() {
@@ -311,12 +312,12 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
       this.clickManager?.stop();
       this.clickManager = undefined;
     } else {
-      this.hoverManager ||= this.init.addHoverRequest({
+      this.hoverManager ||= this.ctx.hoverEvent.then({
         isInArea: (x, y) => this.isInArea(x, y),
         onHover: () => this.redraw(),
         onLeave: () => this.redraw(),
       });
-      this.clickManager ||= this.init.addClickRequest({
+      this.clickManager ||= this.ctx.clickEvent.then({
         isInArea: (x, y) => this.isInArea(x, y),
         onReleased: (isInArea) => { 
           if (isInArea) {

@@ -1,8 +1,9 @@
+import CTX from "../gui/CTX";
 import Scroll from "../gui/events/scroll";
-import FullscreenButton from "../gui/fullscreenButton";
-import { Init, reprepareInit } from "../init";
+import FullscreenButton from "../gui/bottomMenu";
 import { saveProgressFail, saveProgressSuccess } from "../learner";
 import { promiseMagic } from "../utils";
+import { ResizeManager } from "../gui/events/resize";
 
 
 export type GameName = "form" | "drop" | "memory";
@@ -35,6 +36,17 @@ export interface WordWithTranslation extends Word {
 }
 
 export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePos extends Object, TEndGameStats extends EndGameStats> {
+  constructor(protected readonly ctx: CTX, protected readonly content: TContent) {
+    [this.onGameEnd, this.stop] = promiseMagic<TEndGameStats | undefined>(() => {
+      this._resizeManager();
+      this.freeResources();
+    });
+
+    setTimeout(() => {
+      this.start();
+      this.redraw();
+    }, 1);
+  }
   protected abstract prepare(): TPrepare;
   protected abstract preparePos(): TPreparePos;
   protected abstract start(): void;
@@ -43,47 +55,13 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
   protected abstract resize(): void;
   protected scroll() {};
   protected abstract scrollOptions(): { oneStep: number, maxHeight: number };
-  constructor(init: Init, initialContent: TContent) {
-    this.init = init;
-    this.content = initialContent;
-    this._prepared = this.prepare();
-    this._preparedPos = this.preparePos();
-    this._fullScreenButton = new FullscreenButton(init, () => this.redraw());
-    this._stopResize = init.addResizeRequest(() => {
-      init.prepared = reprepareInit(init);
-      this._preparedPos = this.preparePos();
-      this._fullScreenButton.dynamic();
-      this.scrollEvent.update();
-      this.resize();
-      this.redraw();
-      this.scrollEvent.drawScroll();
-    });
-    this.scrollEvent = new Scroll(init, () => this.redraw(), () => this.scroll(), () => this.scrollOptions());
-
-    [this.onGameEnd, this.stop] = promiseMagic<TEndGameStats | undefined>(() => {
-      this._fullScreenButton.stop();
-      this.scrollEvent.stop();
-      this._stopResize();
-      this.freeResources();
-    });
-
-    setTimeout(() => { 
-      this.start(); 
-      this.scrollEvent.update();
-      this.redraw(); 
-    }, 1);
-  }
   
-  private _prepared: TPrepare;
+  private _prepared: TPrepare = this.prepare();
   protected get prepared() { return this._prepared; }
-  private _preparedPos: TPreparePos;
+  private _preparedPos: TPreparePos = this.preparePos();
   protected get preparedPos() { return this._preparedPos; }
-  private _fullScreenButton: FullscreenButton;
-  private _stopResize: ReturnType<Init["addResizeRequest"]>;
-  
-  protected readonly scrollEvent: Scroll;
-  protected readonly init: Init;
-  protected readonly content: TContent;
+
+  private _resizeManager: ResizeManager = this.ctx.resizeEvent.then(() => { this.resize(); this.redraw(); });
  
   onGameEnd: Promise<TEndGameStats | undefined>;
   onProgressSuccess?: typeof saveProgressSuccess;

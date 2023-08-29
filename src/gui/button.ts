@@ -1,4 +1,3 @@
-import { Init } from "../init";
 import settings from "../settings";
 import AbstractButton, { Size } from "./abstractButton";
 import { calcTextWidth } from "./text";
@@ -6,10 +5,10 @@ import { calcTextWidth } from "./text";
 export class Button extends AbstractButton<string | HTMLImageElement, number, number, Size> {
   protected drawer(): void {
     if (typeof(this.content) == "string") {
-      this.init.ctx.fillStyle = settings.colors.textColor;
-      this.init.ctx.fillText(this.content, this.contentCacheX, this.contentCacheY);
+      this.ctx.ctx.fillStyle = settings.colors.textColor;
+      this.ctx.ctx.fillText(this.content, this.contentCacheX, this.contentCacheY);
     } else {
-      drawIcon(this.init, this.contentCacheX, this.contentCacheY, this.content);
+      this.ctx.drawIcon(this.contentCacheX, this.contentCacheY, this.content);
     }
   }
   protected calcContentCacheX() {
@@ -40,10 +39,6 @@ export class Button extends AbstractButton<string | HTMLImageElement, number, nu
     }
   }
   protected calcContentSize() {
-    return Button.calcContentSize(this.init.ctx, this.content);
+    return Button.calcContentSize(this.ctx.ctx, this.content);
   }
-}
-
-export const drawIcon = (init: Init, x: number, y: number, img: HTMLImageElement) => {
-  init.ctx.drawImage(img, x, y, img.width, img.height);
 }

@@ -1,12 +1,10 @@
 import settings from "../../settings";
 import { dropSettings, DropGameSetup } from "./settings";
-import { Init } from "../../init";
 import { randomInArray } from "../../utils";
 import { AbstractGame, WordWithImage } from "..";
 import { EndGameStats } from "..";
 import { drawStatusText, prepareStatusText } from "../../gui/status";
 import { randomNInArray } from "../../utils";
-import { drawBackground } from "../../gui/background";
 
 interface DropContent { words: WordWithImage[], setup: DropGameSetup };
 

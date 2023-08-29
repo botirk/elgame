@@ -16,9 +16,7 @@
   <script type="module">
     import index from '../index';
     import words from '../compileTime/generated/words.json';
-    index('elgame', words, true).then((error) => {
-      //if (error) alert(error);
-    });
+    index(document.getElementById("elgame").getContext("2d"), words);
   </script>
 </body>
 </html>

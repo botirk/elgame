@@ -17,12 +17,35 @@ export interface HoverManager {
   isInArea: () => boolean,
 }
 
-const hover = (ctx: CanvasRenderingContext2D) => {
-  const requesters: HoverRequestPlus[] = [];
+export default class HoverEvent {
+  constructor(private readonly _ctx: CanvasRenderingContext2D) {
+    this._mouseMove = this._mouseMove.bind(this);
+    this._ctx.canvas.addEventListener("mousemove", this._mouseMove);
+  }
 
-  ctx.canvas.addEventListener("mousemove", (e) => {
-    const pos = settings.calculate.toCanvasCoords(ctx, e.x, e.y);
-    requesters.forEach((req) => {
+  then(req: HoverRequest): HoverManager {
+    const newReq: HoverRequestPlus = { ...req, lastPos: [-Infinity, -Infinity] };
+    this._reqs.push(newReq);
+    
+    const stop = () => {
+      const i = this._reqs.indexOf(newReq);
+      if (i !== -1) this._reqs.splice(i, 1);
+      newReq.isCurrentlyInside = false;
+    }
+    const isInArea = () => !!newReq.isCurrentlyInside;
+    const update = () => { newReq.isCurrentlyInside = newReq.isInArea(...newReq.lastPos); };
+
+    return { stop, isInArea, update };
+  }
+
+  stop() {
+    this._ctx.canvas.removeEventListener("mousemove", this._mouseMove);
+  }
+
+  private _reqs: HoverRequestPlus[] = [];
+  private _mouseMove(e: MouseEvent) {
+    const pos = settings.calculate.toCanvasCoords(this._ctx, e.x, e.y);
+    this._reqs.forEach((req) => {
       req.lastPos = pos;
       if (!req.isCurrentlyInside && req.isInArea(...req.lastPos)) {
         req.isCurrentlyInside = true;
@@ -32,24 +55,5 @@ const hover = (ctx: CanvasRenderingContext2D) => {
         req.onLeave();
       }
     });
-  });
-
-  const addRequest = (req: HoverRequest): HoverManager => {
-    const newReq: HoverRequestPlus = { ...req, lastPos: [-Infinity, -Infinity] };
-    requesters.push(newReq);
-    
-    const stop = () => {
-      const i = requesters.indexOf(newReq);
-      if (i != -1) requesters.splice(i, 1);
-      newReq.isCurrentlyInside = false;
-    }
-    const isInArea = () => !!newReq.isCurrentlyInside;
-    const update = () => { newReq.isCurrentlyInside = newReq.isInArea(...newReq.lastPos); };
-
-    return { stop, isInArea, update };
   }
-
-  return addRequest;
 }
-
-export default hover;

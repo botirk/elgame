@@ -1,38 +1,74 @@
-import { Init } from "../../init";
 import settings from "../../settings";
 
-class Scroll {
-  maxHeight = 0;
-  oneStep = 0;
+interface ScrollRequest {
+  update?: () => void;
+  redraw?: () => void;
+};
 
-  constructor(init: Init, private redrawCB: () => void, private updateCB: () => void, private optsCB: () => ({ maxHeight: number, oneStep: number }), private saveId?: string) {
-    this.beforeUnloadListener = this.beforeUnloadListener.bind(this);
+export default class ScrollEvent {
+  constructor(private readonly _ctx: CanvasRenderingContext2D) {
     this.wheelListener = this.wheelListener.bind(this);
     this.touchStartListener = this.touchStartListener.bind(this);
     this.touchMoveListener = this.touchMoveListener.bind(this);
     this.touchEndListener = this.touchEndListener.bind(this);
-    window.addEventListener("beforeunload", this.beforeUnloadListener);
-    init.ctx.canvas.addEventListener("wheel", this.wheelListener, { passive: false });
-    init.ctx.canvas.addEventListener("touchstart", this.touchStartListener, { passive: true });
-    init.ctx.canvas.addEventListener("touchmove", this.touchMoveListener, { passive: false });
-    init.ctx.canvas.addEventListener("touchend", this.touchEndListener);
-    this.init = init;
+    _ctx.canvas.addEventListener("wheel", this.wheelListener, { passive: false });
+    _ctx.canvas.addEventListener("touchstart", this.touchStartListener, { passive: true });
+    _ctx.canvas.addEventListener("touchmove", this.touchMoveListener, { passive: false });
+    _ctx.canvas.addEventListener("touchend", this.touchEndListener);
   }
 
-  private atTop: boolean;
-  private atBot: boolean;
-  private init: Init;
-  
-  private botTouch?: number;
-  private topTouch?: number;
-  private hideTimeout?: NodeJS.Timeout;
+  then(req: ScrollRequest) {
+    this._reqs.push(req);
+    const removeRequest = () => {
+      const i = this._reqs.indexOf(req);
+      if (i !== -1) this._reqs.splice(i, 1);
+    }
+    return removeRequest;
+  }
 
+  newScene(maxHeight = 0, oneStep = 0) {
+    clearTimeout(this.hideTimeout);
+    this.hideTimeout = undefined;
+    this._pos = 0;
+    this._maxHeight = maxHeight;
+    this.oneStep = oneStep;
+  }
+
+  drawScroll() {
+    const pagePercent = this._ctx.canvas.height / this._maxHeight;
+    if (pagePercent >= 1) return;
+    const heightPercent = this.pos / this.maxPos();
+    const scrollHeight = this._ctx.canvas.height * pagePercent;
+    const scrollPos = (this._ctx.canvas.height - scrollHeight) * heightPercent;
+    this._ctx.fillStyle = settings.colors.button.bg;
+    this._ctx.fillRect(this._ctx.canvas.width - settings.gui.scroll.width - settings.gui.scroll.padding, scrollPos, settings.gui.scroll.width, scrollHeight);
+    clearTimeout(this.hideTimeout);
+    this.hideTimeout = setTimeout(() => { for (const req of this._reqs) req.redraw?.(); this.hideTimeout = undefined; }, settings.gui.scroll.timeout);
+  }
+
+  stop() {
+    this._ctx.canvas.removeEventListener("wheel", this.wheelListener);
+    this._ctx.canvas.removeEventListener("touchstart", this.touchStartListener);
+    this._ctx.canvas.removeEventListener("touchmove", this.touchMoveListener);
+    this._ctx.canvas.removeEventListener("touchend", this.touchEndListener);
+    clearTimeout(this.hideTimeout);
+  }
+
+  oneStep = 0;
+  _maxHeight = 0;
+  get maxHeight() { return this._maxHeight; }
+  set maxHeight(maxHeight: number) {
+    this._maxHeight = maxHeight;
+    this.pos = Math.min(this.maxPos(), this._pos);
+  }
+
+  private _reqs: ScrollRequest[] = [];
   private _pos = 0;
   private set pos(curPos: number) {
     if (this._pos === curPos) return;
     this._pos = curPos;
-    this.updateCB();
-    this.redrawCB();
+    for (const req of this._reqs) req.update?.();
+    for (const req of this._reqs) req.redraw?.();
     this.drawScroll();
     if (this._pos === this.maxPos()) {
       this.atBot = true;
@@ -45,47 +81,19 @@ class Scroll {
       this.atBot = false;
     }
   }
-  public get pos() {
+  get pos() {
     return this._pos;
   }
 
-  private loadPoses(): { [saveId: string]: number } {
-    const saveJSON = localStorage.getItem(settings.localStorage.scroll);
-    if (saveJSON) {
-      const parsed = JSON.parse(saveJSON);
-      if (typeof(parsed) == "object") {
-        if (!Object.values(parsed).some((key) => typeof(key) !== "number")) {
-          return parsed;
-        }
-      }
-    }
-    return {};
-  }
-  private loadPos() {
-    if (!this.saveId) this._pos = 0;
-    else this._pos = this.loadPoses()[this.saveId] || 0;
-  }
-  private savePos(): boolean {
-    if (!this.saveId) return true;
-    const loaded = this.loadPoses();
-    loaded[this.saveId] = this.pos;
-    try {
-      localStorage.setItem(settings.localStorage.scroll, JSON.stringify(loaded));
-      return true;
-    } catch {
-      try {
-        localStorage.removeItem(settings.localStorage.scroll);
-        localStorage.setItem(settings.localStorage.scroll, JSON.stringify(loaded));
-        return true;
-      } catch {
-        return false;
-      }
-      
-    }
-    
-  }
+  private atTop: boolean;
+  private atBot: boolean;
+  
+  private botTouch?: number;
+  private topTouch?: number;
+  private hideTimeout?: NodeJS.Timeout;
+
   private maxPos() {
-    return Math.max(0, this.maxHeight - this.init.ctx.canvas.height);
+    return Math.max(0, this._maxHeight - this._ctx.canvas.height);
   }
   private wheelListener(e: WheelEvent) {
     // to top
@@ -99,7 +107,7 @@ class Scroll {
     if (!e.targetTouches.length) return;
     this.topTouch = Infinity, this.botTouch = -Infinity;
     for (let i = 0; i < e.targetTouches.length; i++) {
-      const [_, y] = settings.calculate.toCanvasCoords(this.init.ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
+      const [_, y] = settings.calculate.toCanvasCoords(this._ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
       if (y < this.topTouch) this.topTouch = y;
       if (y > this.botTouch) this.botTouch = y;
     }
@@ -109,7 +117,7 @@ class Scroll {
     const oldPos = this.pos;
     let topTouch = Infinity, botTouch = -Infinity;
     for (let i = 0; i < e.targetTouches.length; i++) {
-      const [_, y] = settings.calculate.toCanvasCoords(this.init.ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
+      const [_, y] = settings.calculate.toCanvasCoords(this._ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
       if (y < topTouch) topTouch = y;
       if (y > botTouch) botTouch = y;
     }
@@ -129,37 +137,4 @@ class Scroll {
   private touchEndListener(e: TouchEvent) {
     this.topTouch = undefined, this.botTouch = undefined;
   }
-  private beforeUnloadListener(e: BeforeUnloadEvent) {
-    this.savePos();
-  }
-
-  update() {
-    const opts = this.optsCB();
-    this.maxHeight = opts.maxHeight;
-    this.oneStep = opts.oneStep;
-    if (!this._pos) this.loadPos();
-    this._pos = Math.min(this.maxPos(), this._pos);
-  }
-  drawScroll() {
-    const pagePercent = this.init.ctx.canvas.height / this.maxHeight;
-    if (pagePercent >= 1) return;
-    const heightPercent = this.pos / this.maxPos();
-    const scrollHeight = this.init.ctx.canvas.height * pagePercent;
-    const scrollPos = (this.init.ctx.canvas.height - scrollHeight) * heightPercent;
-    this.init.ctx.fillStyle = settings.colors.button.bg;
-    this.init.ctx.fillRect(this.init.ctx.canvas.width - settings.gui.scroll.width - settings.gui.scroll.padding, scrollPos, settings.gui.scroll.width, scrollHeight);
-    clearTimeout(this.hideTimeout);
-    this.hideTimeout = setTimeout(() => { this.redrawCB(); this.hideTimeout = undefined; }, settings.gui.scroll.timeout);
-  }
-  stop() {
-    window.removeEventListener("beforeunload", this.beforeUnloadListener);
-    this.init.ctx.canvas.removeEventListener("wheel", this.wheelListener);
-    this.init.ctx.canvas.removeEventListener("touchstart", this.touchStartListener);
-    this.init.ctx.canvas.removeEventListener("touchmove", this.touchMoveListener);
-    this.init.ctx.canvas.removeEventListener("touchend", this.touchEndListener);
-    clearTimeout(this.hideTimeout);
-    this.savePos();
-  }
 }
-
-export default Scroll;
