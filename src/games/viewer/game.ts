@@ -2,7 +2,6 @@ import { AbstractGame, EndGameStats } from "..";
 import settings from "../../settings";
 import { Word, WordWithImage } from "..";
 import { Button } from "../../gui/button";
-import { drawBackground } from "../../gui/background";
 import { isLearnedForNow, untilNextLearnDate, Progress } from "../../learner";
 import { ru } from "../../translation";
 import { ButtonWithDescription } from "../../gui/buttonWithDescription";

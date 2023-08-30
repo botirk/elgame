@@ -1,39 +1,25 @@
 import settings from "../settings";
 import CTX from "./CTX";
 import { Button } from "./button";
+import { ButtonGroupGrid, ButtonGroupTable } from "./buttonGroup";
 import { ClickManager } from "./events/click";
 import { HoverManager } from "./events/hover";
 
-class FullscreenButton extends Button {
-  private readonly ownerRedraw: () => void;
-  private moreHover: HoverManager;
-  private moreClick: ClickManager;
-
-  private setInvisible(state: boolean) {
-    if (!state && this.invisible) {
-      if (!document.fullscreenElement) {
-        this.invisible = false;
-        this.redraw();
-      }
-    } else if (state && !this.invisible) {
-      this.invisible = true;
-      this.ownerRedraw();
-    }
-  };
-
-  constructor(ctx: CTX, ownerRedraw: () => void) {
-    const x = () => ctx.ctx.canvas.width - ctx.assets.fullscreen.width / 2 - settings.gui.button.padding - 15;
-    const y = () => ctx.ctx.canvas.height - ctx.assets.fullscreen.height / 2 - settings.gui.button.padding - 15;
-    super(ctx, ctx.assets.fullscreen, x, y, {
+export default class BottomMenu extends ButtonGroupTable {
+  constructor(ctx: CTX) {
+    const fsButton = new Button(ctx, ctx.assets.fullscreen, {
       onClick: () => {
+        this.setInvisible(true);
         ctx.ctx.canvas.requestFullscreen();
-        this.invisible = true;
       },
       invisible: true,
     });
-    this.ownerRedraw = ownerRedraw;
-    this.moreHover = ctx.hoverEvent.then({ 
-      isInArea: (xIn, yIn) => xIn >= x() - 70 && yIn >= y() - 70,
+    super(ctx, [[fsButton]]);
+    const x = () => ctx.ctx.canvas.width - this.width / 2 - settings.gui.button.padding - 15;
+    const y = () => ctx.ctx.canvas.height - this.height / 2 - settings.gui.button.padding - 15;
+    this.xy(x, y);
+    this.moreHover = ctx.hoverEvent.then({
+      isInArea: (xIn, yIn) => yIn >= ctx.ctx.canvas.height - this.height - settings.gui.button.padding * 2,
       onHover: () => this.setInvisible(false),
       onLeave: () => this.setInvisible(true),
     });
@@ -48,16 +34,29 @@ class FullscreenButton extends Button {
     });
   }
 
-  stop(shouldRedrawToDefault?: boolean | undefined): void {
+  protected _content: (Button | undefined)[][];
+
+  private moreHover: HoverManager;
+  private moreClick: ClickManager;
+
+  private invisible = true;
+  private setInvisible(state: boolean) {
+    if (!state && this.invisible === true) {
+      if (!document.fullscreenElement) {
+        this.invisible = false;
+        for (const row of this._content) for (const btn of row) if (btn) btn.invisible = false;
+        this.redraw();
+      }
+    } else if (state && this.invisible === false) {
+      this.invisible = true;
+      for (const row of this._content) for (const btn of row) if (btn) btn.invisible = true;
+      this.ctx.redraw();
+    }
+  }
+
+  stop(): void {
     this.moreHover.stop();
     this.moreClick.stop();
-    super.stop(shouldRedrawToDefault);
-  }
-
-  dynamic(): void {
-    super.dynamic();
-    this.moreHover.update();
+    super.stop();
   }
 }
-
-export default FullscreenButton;

@@ -1,6 +1,6 @@
 import settings from "../settings";
 import CTX from "./CTX";
-import { ButtonLike } from "./abstractButton";
+import { ButtonLike, Updateable } from "./abstractButton";
 
 const calcDir = (buttons: ButtonLike<any>[], dir: "width" | "height", includeStartEnd: boolean, gap: number) => {
     let result = 0;
@@ -13,6 +13,15 @@ const calcDir = (buttons: ButtonLike<any>[], dir: "width" | "height", includeSta
 }
 
 export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLike<TBLike> {
+    constructor(ctx: CTX, content: TBLike, x: Updateable, y: Updateable) {
+        super(ctx, content, x, y);
+    }
+
+    protected newContent(content: TBLike) {
+        this.equalize();
+        this.place();
+    }
+    
     private _itemWidth: number;
     get itemWidth() { return this._itemWidth; }
     private _itemHeight: number;
@@ -24,14 +33,6 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
     private _innerWidth: number;
     get innerWidth() { return this._innerWidth; }
 
-    constructor(private _ctx: CTX, content: TBLike, x: () => number, y: () => number) {
-        super();
-        this._content = content;
-        this.equalize();
-        this._x = x;
-        this._y = y;
-        this.newXY(x(), y());
-    }
     private equalize() {
         this._itemWidth = 0;
         this._itemHeight = 0;
@@ -50,7 +51,7 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
         let rows = 1;
         let rowWidth = calcDir(this.content, "width", false, settings.gui.button.padding);
         // reduce amount of columns
-        while ((rowWidth + settings.gui.button.padding > this._ctx.ctx.canvas.width || columns > rows + 1) && columns > 1) {
+        while ((rowWidth + settings.gui.button.padding > this.ctx.ctx.canvas.width || columns > rows + 1) && columns > 1) {
             // count amount moved down
             let gettingReduced = rows - 1;
             if (columns === lastRowColumns) gettingReduced += 1;
@@ -77,11 +78,11 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
         this._innerWidth = rowWidth;
         this._innerHeight = columnHeight;
         // save total size
-        this._width = Math.max(this.innerWidth, this._minWidth());
-        this._height = Math.max(this.innerHeight, this._minHeight());
+        this._width = Math.max(this.innerWidth, this.minWidth);
+        this._height = Math.max(this.innerHeight, this.minHeight);
         // save start / end
-        this._startX = this._x() - this._width / 2;
-        this._startY = this._y() - this._height / 2;
+        this._startX = this.x - this._width / 2;
+        this._startY = this.y - this._height / 2;
         this._endX = this._startX + this.width;
         this._endY = this._startY + this.height;
 
@@ -97,8 +98,8 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
         for (let row = 1; row <= calced.rows; row++) {
             for (let column = 1; column <= calced.columns && (row !== calced.rows || column <= calced.lastRowColumns); column++) {
                 this.content[i++].xy(
-                    () => realStartX + (column - 1) * (this._itemWidth + settings.gui.button.padding), 
-                    () => realStartY + (row - 1) * (this._itemHeight + settings.gui.button.padding)
+                    realStartX + (column - 1) * (this._itemWidth + settings.gui.button.padding), 
+                    realStartY + (row - 1) * (this._itemHeight + settings.gui.button.padding)
                 );
             }
         }
@@ -109,17 +110,28 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
     stop() {
         for (const btn of this.content) btn.stop();
     }
+    dynamic(): void {
+        super.dynamic();
+        this.place();
+    }
 }
 
 export type TableItem = (ButtonLike<any> | undefined);
 export type Table = TableItem[][];
 
 export class ButtonGroupTable extends ButtonLike<Table> {
+    constructor(ctx: CTX, content: Table, x?: Updateable, y?: Updateable,  readonly limitRect?: { startX: number, startY: number }) {
+        super(ctx, content, x, y);
+    }
+
+    protected newContent(content: Table) {
+        this.equalize();
+        this.place();
+    }
+
     private _itemWidthPerColumn: number[];
     private _itemHeight: number;
     get itemHeight() { return this._itemHeight; }
-
-    public scroll: number = 0;
 
     private _innerHeight: number;
     get innerHeight() { return this._innerHeight; }
@@ -144,23 +156,13 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         }
         this._innerWidth = width;
     }
-
-    constructor(
-        private _ctx: CTX, content: Table, 
-        _x: () => number, _y: () => number, 
-        readonly limitRect?: { startX: number, startY: number }) 
-    {
-        super();
-        this._content = content;
-        this.equalize();
-        this.xy(_x, _y);
-    }
     
     private calcStartEnd() {
         this._startX = this.x - this.width / 2;
-        if (this.limitRect?.startX) this._startX = Math.max(this.limitRect.startX - this.scroll, this.startX);
-        this._startY = Math.max(0 - this.scroll, this.y - this.height / 2);
-        if (this.limitRect?.startY) this._startY = Math.max(this.limitRect.startY - this.scroll, this.startY);
+        if (this.limitRect?.startX) this._startX = Math.max(this.limitRect.startX, this.startX);
+        
+        this._startY = Math.max(0, this.y - this.height / 2);
+        if (this.limitRect?.startY) this._startY = Math.max(this.limitRect.startY, this.startY);
         this._endX = this._startX + this.width;
         this._endY = this._startY + this.height;
     }
@@ -176,7 +178,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         return x;
     }
     private calcDisplayItemY(row: number) {
-        let y = this.startY - this.scroll;
+        let y = this.startY;
         let prevHeight = 0;
         for (let i = 0; i <= row; i++) {
             const curHeight = this._itemHeight;
@@ -191,7 +193,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         for (let i = 0; i <= column; i++) {
             if (i > 0) width += settings.gui.button.padding;
             width += (this._itemWidthPerColumn[i] || 0);
-            if (this.x + width / 2 > this._ctx.ctx.canvas.width) return true;
+            if (this.x + width / 2 > this.ctx.ctx.canvas.width) return true;
         }
         return false;
     }
@@ -260,22 +262,19 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         
         return t;
     }
-    private place(t: Table) {
+    private place() {
+        const t = this.calc();
         for (let row = 0; row < t.length; row++) {
             for (let column = 0; column < t[row].length; column++) {
                 const cur = t[row][column];
                 if (!cur) continue;
-                cur.x = () => this.calcDisplayItemX(column);
-                cur.y = () => this.calcDisplayItemY(row);
+                cur.x = this.calcDisplayItemX(column);
+                cur.y = this.calcDisplayItemY(row);
             }
         }
     }
-    resize() {
-        this.place(this.calc());
-    }
-    innerResize() {
-        this.equalize();
-        this.resize();
+    protected newPos(x: any, y: any): void {
+        this.place();
     }
     redraw() {
         for (const row of this.content) {
@@ -290,13 +289,5 @@ export class ButtonGroupTable extends ButtonLike<Table> {
                 btn?.stop();
             }
         }
-    }
-    dynamic() {
-        /*super.dynamic();
-        for (const row of this.content) {
-            for (const btn of row) {
-                btn?.dynamic();
-            }
-        }*/
     }
 }

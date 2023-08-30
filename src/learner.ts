@@ -7,7 +7,6 @@ import { formSettings } from "./games/form/settings";
 import Memory from "./games/memory/game";
 import { memorySettings } from "./games/memory/settings";
 import Viewer from "./games/viewer/game";
-import { Init } from "./init";
 import settings from "./settings";
 import { ru } from "./translation";
 
@@ -201,7 +200,7 @@ export const writeProgress = (progress: Progress) => {
   progressCache = progress;
   try {
     const parsed = JSON.stringify(progress);
-    localStorage.setItem("elgame", parsed);
+    localStorage.setItem(settings.name, parsed);
     return true;
   } catch {
     return false;

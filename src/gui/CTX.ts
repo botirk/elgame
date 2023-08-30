@@ -6,27 +6,27 @@ import HoverEvent from "./events/hover";
 import MoveEvent from "./events/move";
 import ResizeEvent from "./events/resize";
 import ScrollEvent from "./events/scroll";
-import FullscreenButton from "./bottomMenu";
-import SoundSetup from "../games/soundSetup";
+import BottomMenu from "./bottomMenu";
+import Progress from "../progress";
 
 export default class CTX {
   private constructor(public readonly ctx: CanvasRenderingContext2D, public readonly assets: Awaited<ReturnType<typeof loadAssets>>) {
     this.prepareCtx();
-    this.resizeEvent.then({ resize: () => this.prepareCtx(), after: () => this.redraw() });
+    this.bottomMenu = new BottomMenu(this);
+    this.resizeEvent.then({ fix: () => this.prepareCtx(), redraw: () => this.redraw() });
   }
   static async aconstructor(ctx: CanvasRenderingContext2D) {
     CTX.drawLoadingBackground(ctx);
     const assets = await loadAssets(settings.gui.icon.width, "width");
-    const result = new CTX(ctx, assets);
-    await new SoundSetup(result, {}).onGameEnd;
-    return result;
+    return new CTX(ctx, assets);
   }
   readonly loaded: Promise<void>;
 
   /** drawings */
   innerRedraw?: () => void;
   outerRedraw() {
-    
+    this.scrollEvent.drawScroll();
+    this.bottomMenu.redraw();
   }
   redraw() {
     this.innerRedraw?.();
@@ -121,7 +121,9 @@ export default class CTX {
   readonly resizeEvent = new ResizeEvent(this.ctx);
   readonly scrollEvent = new ScrollEvent(this.ctx);
   // fullscreen button
-  readonly fsButton = new FullscreenButton(this, () => 0);
+  readonly bottomMenu;
+  // progress
+  readonly progress = new Progress();
 
   stop() {
     this.buttonEvent.stop();

@@ -69,6 +69,8 @@ const localStorage = {
   scroll: "elgame-scroll",
 }
 
+const maxBonusDif = 10;
+
 const settings = {
   name,
   calculate,
@@ -77,6 +79,7 @@ const settings = {
   dimensions,
   gui,
   localStorage,
+  maxBonusDif,
 }
 
 export type Settings = typeof settings;

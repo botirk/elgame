@@ -1,21 +1,30 @@
 
 interface ResizeRequest {
-  resize?: () => void;
-  after?: () => void;
+  fix?: () => void;
+  update?: () => void;
+  redraw?: () => void;
 };
 
 export type ResizeManager = () => void;
 
 export default class ResizeEvent {
-  constructor(_ctx: CanvasRenderingContext2D) {
-    this._observer = new ResizeObserver(() => {
-      if (!this._init) this._init = true;
-      else {
-        for (const req of this._reqs) req.resize?.();
-        for (const req of this._reqs) req.after?.();
-      }
-    })
-    this._observer.observe(_ctx.canvas);
+  constructor(ctx: CanvasRenderingContext2D) {
+    this.onObserve = this.onObserve.bind(this);
+    this._observer = new ResizeObserver(this.onObserve);
+    this._observer.observe(ctx.canvas);
+  }
+
+  private isFixing: boolean = false;
+  private onObserve() {
+    if (this.isFixing) return;
+    else if (!this._init) this._init = true;
+    else {
+      this.isFixing = true;
+      for (const req of this._reqs) req.fix?.();
+      this.isFixing = false;
+      for (const req of this._reqs) req.update?.();
+      for (const req of this._reqs) req.redraw?.();
+    }
   }
 
   then(req: ResizeRequest): ResizeManager {

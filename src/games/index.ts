@@ -1,6 +1,6 @@
 import CTX from "../gui/CTX";
 import Scroll from "../gui/events/scroll";
-import FullscreenButton from "../gui/bottomMenu";
+import BottomMenu from "../gui/bottomMenu";
 import { saveProgressFail, saveProgressSuccess } from "../learner";
 import { promiseMagic } from "../utils";
 import { ResizeManager } from "../gui/events/resize";
@@ -35,7 +35,7 @@ export interface WordWithTranslation extends Word {
   translation: string,
 }
 
-export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePos extends Object, TEndGameStats extends EndGameStats> {
+export abstract class AbstractGame<TContent, TPrepare extends any, TPreparePos extends any, TEndGameStats extends EndGameStats> {
   constructor(protected readonly ctx: CTX, protected readonly content: TContent) {
     [this.onGameEnd, this.stop] = promiseMagic<TEndGameStats | undefined>(() => this.freeResources());
 
