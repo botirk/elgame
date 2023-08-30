@@ -69,7 +69,7 @@ class Viewer extends AbstractGame<{ words: Word[], progress: Progress }, {}, {},
     this._table.stop();
     clearInterval(this._timer);
   }
-  protected redraw() {
+  protected innerRedraw() {
     drawBackground(this.init.ctx);
     this._table.redraw();
   }

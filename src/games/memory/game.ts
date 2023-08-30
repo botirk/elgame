@@ -43,7 +43,7 @@ class Memory extends AbstractGame<{ words: WordWithImage[], setup: MemoryGameSet
     if (this._health <= 0) {
       this.loseAnimation();
     }
-    this.redraw();
+    this.innerRedraw();
   }
   private shuffleWords() {
     const result: { word: WordWithImage, guessState: GuessState }[] = [];
@@ -147,7 +147,7 @@ class Memory extends AbstractGame<{ words: WordWithImage[], setup: MemoryGameSet
               this2._status = "fail";
               this2._health -= 1;
             }
-            this2.redraw();
+            this2.innerRedraw();
             this2._timer = setTimeout(() => this2.finishCardAction(), 2000);
           }
         })), 
@@ -170,7 +170,7 @@ class Memory extends AbstractGame<{ words: WordWithImage[], setup: MemoryGameSet
   protected preparePos() {
     return {};
   }
-  protected redraw() {
+  protected innerRedraw() {
     drawBackground(this.init.ctx);
     this._grid.redraw();
     if (this._status === "success") 

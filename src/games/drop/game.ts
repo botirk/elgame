@@ -225,7 +225,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareStatusText
     this._lastFrameTime = newTime;
     this.motion(dif);
     this.gameplay();
-    this.redraw();
+    this.innerRedraw();
   }
   private onLoseTick() {
     this._frameRequest = requestAnimationFrame(() => this.onLoseTick());
@@ -233,7 +233,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareStatusText
     const dif = newTime - this._lastFrameTime;
     this._lastFrameTime = newTime;
     this.lostMotion(dif);
-    this.redraw();
+    this.innerRedraw();
   }
   private onWinTick() {
     this._frameRequest = requestAnimationFrame(() => this.onWinTick());
@@ -241,11 +241,11 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareStatusText
     const dif = newTime - this._lastFrameTime;
     this._lastFrameTime = newTime;
     this.wonMotion(dif);
-    this.redraw();
+    this.innerRedraw();
   }
   protected start(): void {
     this._quest = this.generateQuest();
-    this.redraw();
+    this.innerRedraw();
     this._frameRequest = requestAnimationFrame(() => this.onTick());
   }
   protected freeResources(): void {
@@ -271,7 +271,7 @@ class Drop extends AbstractGame<DropContent, ReturnType<typeof prepareStatusText
   protected preparePos() {
     return Drop.preparePos(this.init);
   }
-  protected redraw() {
+  protected innerRedraw() {
     drawBackground(this.init.ctx);
     this.drawGameBackground();
     this.drawHero();

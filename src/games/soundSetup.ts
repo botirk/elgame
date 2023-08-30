@@ -9,13 +9,13 @@ class SoundSetup extends AbstractGame<{}, {}, {}, EndGameStats> {
     
     protected start() {
         const mute = new Button(
-            this.ctx, this.ctx.assets["volume-mute"], 0, 0, 
+            this.ctx, this.ctx.assets["volume-mute"], () => 0, () => 0, 
             { onClick: () => {
                 this.stop({ isSuccess: false });
             }}
         );
         const unmute = new Button(
-            this.ctx, this.ctx.assets.volume, 0, 0, 
+            this.ctx, this.ctx.assets.volume, () => 0, () => 0, 
             { onClick: () => {
                 this.stop({ isSuccess: true });
             }}
@@ -31,12 +31,11 @@ class SoundSetup extends AbstractGame<{}, {}, {}, EndGameStats> {
     protected freeResources() {
         this._grid.stop();
     }
-    protected redraw() {
+    protected innerRedraw() {
         this.ctx.drawBackground();
         this._grid.redraw();
     }
     protected resize() {
-        this._grid.dynamic();
         this._grid.resize();
     }
     protected scrollOptions() {

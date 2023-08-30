@@ -12,7 +12,7 @@ import SoundSetup from "../games/soundSetup";
 export default class CTX {
   private constructor(public readonly ctx: CanvasRenderingContext2D, public readonly assets: Awaited<ReturnType<typeof loadAssets>>) {
     this.prepareCtx();
-    this.resizeEvent.then(() => this.prepareCtx());
+    this.resizeEvent.then({ resize: () => this.prepareCtx(), after: () => this.redraw() });
   }
   static async aconstructor(ctx: CanvasRenderingContext2D) {
     CTX.drawLoadingBackground(ctx);
@@ -23,8 +23,15 @@ export default class CTX {
   }
   readonly loaded: Promise<void>;
 
-  /** set this inside the game */
-  redraw?: () => void;
+  /** drawings */
+  innerRedraw?: () => void;
+  outerRedraw() {
+    
+  }
+  redraw() {
+    this.innerRedraw?.();
+    this.outerRedraw();
+  }
   
   centerX() { return this.ctx.canvas.width / 2; }
   centerY() { return this.ctx.canvas.height / 2; }

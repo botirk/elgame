@@ -22,9 +22,27 @@ export interface Size { width: number, height: number }
 export abstract class ButtonLike<T> {
   protected _width: number = 0;
   get width() { return this._width; }
+  protected setwidth(width: number) {
+    if (this._width === width) return;
+    this._width = width;
+    this.newWidth(width);
+  }
+  protected newWidth(width: number) {
+    this._startX = this.x - width / 2;
+    this._endX = this._startX + width;
+  }
 
   protected _height: number = 0;
   get height() { return this._height; }
+  protected setheight(height: number) {
+    if (this._height === height) return;
+    this._height = height;
+    this.newHeight(height);
+  }
+  protected newHeight(height: number) {
+    this._startY = this.y - height / 2;
+    this._endY = this._startY + height;
+  }
 
   protected _startX: number = 0;
   get startX() { return this._startX; };
@@ -38,31 +56,58 @@ export abstract class ButtonLike<T> {
   protected _endY: number = 0;
   get endY() { return this._endY; };
 
-  protected _x: number;
-  protected _dynamicX?: () => number;
-  get x(): number { return this._x; };
-  set x(x: number | (() => number)) {
-    this.xy(x, this._dynamicY || this._y);
+  protected _x: () => number;
+  get x(): number { return this._x(); };
+  set x(x: () => number) {
+    const oldX = this.x, newX = x();
+    this._x = x;
+    if (newX !== oldX) this.newXY(newX, this.y);
   }
 
-  protected _y: number;
-  protected _dynamicY?: () => number;
-  get y(): number { return this._y; };
-  set y(y: number | (() => number)) {
-    this.xy(this._dynamicX || this._x, y);
+  protected _y: () => number;
+  get y(): number { return this._y(); };
+  set y(y: () => number) {
+    const oldY = this.y, newY = y();
+    this._y = y;
+    if (newY !== oldY) this.newXY(this.x ,newY);
   }
-  abstract xy(x: number | (() => number), y: number | (() => number));
+
+  xy(x: () => number, y: () => number) {
+    const oldX = this._x(), newX = x(), oldY = this._y(), newY = y();
+    this._x = x, this._y = y;
+    if (oldX !== newX || oldY !== newY) this.newXY(x(), y());
+  }
+  protected newXY(x: number, y: number) {
+    this._startX = x - this._width / 2;
+    this._endX = this._startX + this._width;
+    this._startY = y - this._height / 2;
+    this._endY = this._startY + this._height;
+  }
 
   abstract get innerWidth(): number;
   abstract get innerHeight(): number;
 
-  protected _minWidth: number = 0;
-  abstract get minWidth(): number;
-  abstract set minWidth(minWidth: number);
+  protected _minWidth: () => number = () => 0;
+  get minWidth(): number { return this._minWidth(); };
+  set minWidth(minWidth: () => number) {
+    const oldMinWidth = this._minWidth(), newMinWidth = minWidth();
+    this._minWidth = minWidth;
+    if (oldMinWidth !== newMinWidth) this.newMinWidth(newMinWidth);
+  }
+  protected newMinWidth(minWidth: number) {
 
-  protected _minHeight: number = 0;
-  abstract get minHeight(): number;
-  abstract set minHeight(minHeight: number);
+  }
+
+  protected _minHeight: () => number = () => 0;
+  get minHeight(): number { return this._minHeight(); };
+  set minHeight(minHeight: () => number) {
+    const oldMinHeight = this._minHeight(), newMinHeight = minHeight();
+    this._minHeight = minHeight;
+    if (oldMinHeight !== newMinHeight) this.newMinHeight(newMinHeight);
+  }
+  protected newMinHeight(minHeight: number) {
+
+  }
 
   protected _content: T;
   get content() { return this._content; };
@@ -71,9 +116,6 @@ export abstract class ButtonLike<T> {
   abstract stop(shouldRedrawToDefault?: boolean): void;
   isInArea(x: number, y: number) {
     return x >= this._startX && x <= this._endX && y >= this._startY && y <= this._endY;
-  }
-  dynamic() {
-    this.xy(this._dynamicX?.() || this.x, this._dynamicY?.() || this.y);
   }
   resize() {
   }
@@ -84,7 +126,7 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
   protected abstract calcContentCacheX(): TCacheX;
   protected abstract calcContentCacheY(): TCacheY;
   protected abstract drawer(): void;
-  constructor(protected readonly ctx: CTX, content: TContent, x: number | (() => number), y: number | (() => number), optional?: ButtonOptional) {    
+  constructor(protected readonly ctx: CTX, content: TContent, x: () => number, y: () => number, optional?: ButtonOptional) {    
     super();
     this.content = content;
     this.xy(x, y);
@@ -147,11 +189,11 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
     const oldContentSize = this._contentSize;
     this._contentSize = contentSize;
     if (!oldContentSize || oldContentSize.width !== contentSize.width) {
-      this.setwidth(Math.max(this._minWidth, contentSize.width + settings.gui.button.padding * 2));
+      this.setwidth(Math.max(this._minWidth(), contentSize.width + settings.gui.button.padding * 2));
       this._contentCacheX = this.calcContentCacheX();
     }
     if (!oldContentSize || oldContentSize.height !== contentSize.height) {
-      this.setheight(Math.max(this._minHeight, contentSize.height + settings.gui.button.padding * 2));
+      this.setheight(Math.max(this._minHeight(), contentSize.height + settings.gui.button.padding * 2));
       this._contentCacheY = this.calcContentCacheY();
     }
   }
@@ -172,78 +214,43 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
     return this._contentCacheY;
   }
   
-  private setwidth(width: number) {
-    if (this._width === width) return;
-    this._width = width;
-    this._startX = this._x - this._width / 2;
-    this._endX = this._startX + this._width;
+  protected newWidth(width: number): void {
+    super.newWidth(width);
     this.hoverManager?.update();
   }
   static calcWidth(contentWidth: number, minWidth = 0) {
     return Math.max(contentWidth + settings.gui.button.padding * 2, minWidth);
   }
-
-  private _dynamicMinWidth?: () => number;
-  set minWidth(minWidth: number | (() => number)) {
-    if (typeof(minWidth) === "function") {
-      this._dynamicMinWidth = minWidth;
-      minWidth = minWidth();
-    }
-    if (this._minWidth === minWidth) return;
-    this._minWidth = minWidth;
+  protected newMinWidth(minWidth: number): void {
     this.setwidth(AbstractButton.calcWidth(this.contentSize.width, minWidth));
   }
-  get minWidth(): number {
-    return this._minWidth;
-  }
 
-  private setheight(height: number) {
-    if (this._height === height) return;
-    this._height = height;
-    this._startY = this._y - this._height / 2;
-    this._endY = this._startY + this._height;
+  protected newHeight(height: number): void {
+    super.newHeight(height);
     this.hoverManager?.update();
   }
   static calcHeight(contentHeight: number, minHeight = 0) {
     return Math.max(contentHeight + settings.gui.button.padding * 2, minHeight);
   }
-
-  private _dynamicMinHeight?: () => number;
-  set minHeight(minHeight: number | (() => number)) {
-    if (typeof(minHeight) === "function") {
-      this._dynamicMinHeight = minHeight;
-      minHeight = minHeight();
-    }
-    if (this._minHeight === minHeight) return;
-    this._minHeight = minHeight;
+  protected newMinHeight(minHeight: number): void {
     this.setheight(AbstractButton.calcHeight(this.contentSize.height, minHeight));
   }
-  get minHeight(): number {
-    return this._minHeight;
-  }
 
-  xy(x: number | (() => number), y: number | (() => number)) {
-    if (typeof(x) == "function") {
-      this._dynamicX = x;
-      x = x();
-    }
-    if (typeof(y) == "function") {
-      this._dynamicY = y;
-      y = y();
-    }
+  xy(x: () => number, y: () => number) {
+    const oldX = this.x, oldY = this.y;
+    this._x = x, this._y = y;
+    const newX = this.x, newY = this.y;
     let changed = false;
-    if (this._x !== x) {
+    if (newX !== oldX) {
       changed = true;
-      this._x = x;
-      this._startX = this._x - this._width / 2;
+      this._startX = newX - this._width / 2;
       this._endX = this._startX + this._width;
       this._contentCacheX = this.calcContentCacheX();
       this.hoverManager?.update();
     }
-    if (this._y !== y) {
+    if (newY !== oldY) {
       changed = true;
-      this._y = y;
-      this._startY = this._y - this._height / 2;
+      this._startY = newY - this._height / 2;
       this._endY = this._startY + this._height;
       this._contentCacheY = this.calcContentCacheY();
       this.hoverManager?.update();
@@ -342,9 +349,9 @@ abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> ex
     if (shouldRedrawToDefault) this.redraw();
   }
   dynamic() {
-    super.dynamic();
-    if (this._dynamicMinWidth) this.minWidth = this._dynamicMinWidth();
-    if (this._dynamicMinHeight) this.minHeight = this._dynamicMinHeight();
+    
+    //if (this._dynamicMinWidth) this.minWidth = this._dynamicMinWidth();
+    //if (this._dynamicMinHeight) this.minHeight = this._dynamicMinHeight();
   }
 }
 

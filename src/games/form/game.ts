@@ -91,7 +91,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], setup: FormGameSetup }
       else if (this2.score.total >= this2.score.required) this2.winAnimation();
       else this2.showNextForm();
     }, (remainingTime) => this.drawStatus(remainingTime));
-    if (!isFirst) this.redraw();
+    if (!isFirst) this.innerRedraw();
   }
   private drawStatus(remainingTime?: Date) {
     if (!this._curForm.clickedCard) {
@@ -114,7 +114,7 @@ class Form extends AbstractGame<{ words: WordWithImage[], setup: FormGameSetup }
   protected preparePos() {
     return calcFormPos(this.init);
   }
-  protected redraw(): void {
+  protected innerRedraw(): void {
     this._curForm.redraw();
   }
   protected scrollOptions(): { oneStep: number; maxHeight: number; } {

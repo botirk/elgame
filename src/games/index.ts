@@ -37,22 +37,19 @@ export interface WordWithTranslation extends Word {
 
 export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePos extends Object, TEndGameStats extends EndGameStats> {
   constructor(protected readonly ctx: CTX, protected readonly content: TContent) {
-    [this.onGameEnd, this.stop] = promiseMagic<TEndGameStats | undefined>(() => {
-      this._resizeManager();
-      this.freeResources();
-    });
+    [this.onGameEnd, this.stop] = promiseMagic<TEndGameStats | undefined>(() => this.freeResources());
 
     setTimeout(() => {
       this.start();
-      this.redraw();
+      this.ctx.innerRedraw = this.innerRedraw.bind(this);
+      this.ctx.redraw();
     }, 1);
   }
   protected abstract prepare(): TPrepare;
   protected abstract preparePos(): TPreparePos;
   protected abstract start(): void;
   protected abstract freeResources(): void;
-  protected abstract redraw(): void;
-  protected abstract resize(): void;
+  protected abstract innerRedraw(): void;
   protected scroll() {};
   protected abstract scrollOptions(): { oneStep: number, maxHeight: number };
   
@@ -60,8 +57,6 @@ export abstract class AbstractGame<TContent, TPrepare extends Object, TPreparePo
   protected get prepared() { return this._prepared; }
   private _preparedPos: TPreparePos = this.preparePos();
   protected get preparedPos() { return this._preparedPos; }
-
-  private _resizeManager: ResizeManager = this.ctx.resizeEvent.then(() => { this.resize(); this.redraw(); });
  
   onGameEnd: Promise<TEndGameStats | undefined>;
   onProgressSuccess?: typeof saveProgressSuccess;
