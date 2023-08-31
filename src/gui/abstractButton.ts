@@ -71,7 +71,10 @@ export abstract class ButtonLike<T> {
   set x(x: Updateable) {
     const oldX = this.x, newX = typeof(x) === "function" ? x() : x;
     this._x = x;
-    if (newX !== oldX) this.newX(newX);
+    if (newX !== oldX) {
+      this.newX(newX);
+      this.newPos(newX, this.y);
+    }
   }
   protected newX(x: number) {
     this._startX = x - this._width / 2;
@@ -84,7 +87,10 @@ export abstract class ButtonLike<T> {
   set y(y: Updateable) {
     const oldY = this.y, newY = typeof(y) === "function" ? y() : y;
     this._y = y;
-    if (newY !== oldY) this.newY(newY);
+    if (newY !== oldY) {
+      this.newY(newY);
+      this.newPos(this.y, newY);
+    }
   }
   protected newY(y: number) {
     this._startY = y - this._height / 2;

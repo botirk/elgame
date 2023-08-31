@@ -268,12 +268,15 @@ export class ButtonGroupTable extends ButtonLike<Table> {
             for (let column = 0; column < t[row].length; column++) {
                 const cur = t[row][column];
                 if (!cur) continue;
-                cur.x = this.calcDisplayItemX(column);
-                cur.y = this.calcDisplayItemY(row);
+                cur.xy(this.calcDisplayItemX(column), this.calcDisplayItemY(row));
             }
         }
     }
     protected newPos(x: any, y: any): void {
+        this.place();
+    }
+    innerResize() {
+        this.equalize();
         this.place();
     }
     redraw() {
@@ -289,5 +292,9 @@ export class ButtonGroupTable extends ButtonLike<Table> {
                 btn?.stop();
             }
         }
+    }
+    dynamic(): void {
+        super.dynamic();
+        this.place();
     }
 }

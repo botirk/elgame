@@ -1,4 +1,4 @@
-import { EndGameStats, GameName, UnloadedWord, Word } from "./games";
+import { EndGameStats, GameName } from "./games";
 import settings from "./settings";
 import { ru } from "./translation";
 
@@ -157,13 +157,13 @@ export default class Progress {
 		return this.save();
 	}
 
-	nextLearnDate(word: UnloadedWord, now: Date = new Date()) {
-		const wordProgress = this.words[word.toLearnText] || new WordProgress();
+	nextLearnDate(word: string) {
+		const wordProgress = this.getWord(word);
 		return new Date(wordProgress.timestamp.getTime() + Progress.stageTime(wordProgress.stage));
 	}
 
-	untilNextLearnDate(word: UnloadedWord, now: Date = new Date()) {
-		const nextDate = this.nextLearnDate(word, now);
+	untilNextLearnDate(word: string, now: Date = new Date()) {
+		const nextDate = this.nextLearnDate(word);
 		const diffMS = Math.abs(nextDate.getTime() - now.getTime());
 		const diffDays = Math.floor(diffMS / (1000 * 60 * 60 * 24));
 		const diffTime = new Date(diffMS % (1000 * 60 * 60 * 24));
@@ -175,10 +175,34 @@ export default class Progress {
 		result += `${diffTime.getSeconds()}`
 		return result;
 	}
+
+	wordLearning(word: string) {
+		const wordProgress = this.getWord(word);
+		if (this.isLearnedForNow(word)) {
+			return {
+			text: `${ru.BonusLearning} ${wordProgress.stage}: ${this.untilNextLearnDate(word)}`,
+			updateRequired: true,
+			};
+		} else {
+			return {
+			text: `${ru.Learning} ${wordProgress.stage}: ${Math.floor(wordProgress.substage / 4 * 100)}%`,
+			updateRequired: false,
+			};
+		}
+	  }
+		
+	  wordStats(word: string) {
+		const wordProgress = this.getWord(word);
+		return { successes: `${ru.OfSuccesses}: ${wordProgress.success}`, fails: `${ru.OfFails}: ${wordProgress.fail}` };
+	  }
 	
 	// length <= 10
 	prevGames: GameName[] = [];
 	words: { [word: string]: WordProgress } = {};
+	getWord(name: string) {
+		if (!this.words[name]) this.words[name] = new WordProgress();
+		return this.words[name];
+	}
 	bonusDif = 0;
 	learnFormDif = 0;
 	formDif = 0;
