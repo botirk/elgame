@@ -14,8 +14,13 @@ class Menu extends AbstractGame<Word[], any, any, MenuEnd> {
   protected preparePos() { }
   protected start() {
     const menuTable = this.menuTable();
+    debugger;
     const wordsTable = new WordsTable(this.ctx, this.content);
     this.table = new ButtonGroupTable(this.ctx, [[menuTable], [wordsTable]], () => this.ctx.centerX(), () => this.ctx.centerY());
+    debugger;
+    console.log(menuTable.content[2][2]?.endY);
+    console.log(menuTable.startY, menuTable.endY)
+    console.log(wordsTable.startY, wordsTable.endY)
   }
   protected innerRedraw() {
     this.ctx.drawBackground();

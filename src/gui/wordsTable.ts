@@ -9,7 +9,7 @@ export default class WordsTable extends ButtonGroupTable {
   constructor(ctx: CTX, words: Word[], x?: Updateable, y?: Updateable) {
     const table = words.map((word) => {
       const text = new Button(ctx, word.toLearnText, { likeLabel: true });
-      const img = new Button(ctx, (word as WordWithImage).toLearnImg, { likeLabel: true });
+      const img = (word.toLearnImg) ? new Button(ctx, (word as WordWithImage).toLearnImg, { likeLabel: true }) : undefined;    
 
       // progress
       let learning = ctx.progress.wordLearning(word.toLearnText);
