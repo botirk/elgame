@@ -22,13 +22,11 @@ export interface Size { width: number, height: number }
 export type Updateable = number | (() => number);
 
 export abstract class ButtonLike<T> {
-  constructor(protected readonly ctx: CTX, protected _content: T, protected _x: Updateable = 0, protected _y: Updateable = 0) { }
-  protected abstract init(): typeof this;
+  constructor(protected readonly ctx: CTX) { }
 
-  private scrollManager = this.ctx.scrollEvent.then({ update: () => this.dynamic() });
   private resizeManager = this.ctx.resizeEvent.then({ update: () => this.dynamic() });
 
-  protected _width: number = 0;
+  private _width: number = 0;
   get width() { return this._width; }
   protected set width(width: number) {
     if (this._width === width) return;
@@ -40,7 +38,7 @@ export abstract class ButtonLike<T> {
     this._endX = this._startX + width;
   }
 
-  protected _height: number = 0;
+  private _height: number = 0;
   get height() { return this._height; }
   protected set height(height: number) {
     if (this._height === height) return;
@@ -64,6 +62,7 @@ export abstract class ButtonLike<T> {
   protected _endY: number = 0;
   get endY() { return this._endY; };
 
+  private _x: Updateable = 0;
   get x(): number { 
     return typeof(this._x) === "function" ? this._x() : this._x;
   }
@@ -80,6 +79,7 @@ export abstract class ButtonLike<T> {
     this._endX = this._startX + this._width;
   }
 
+  private _y: Updateable = 0;
   get y(): number { 
     return typeof(this._y) === "function" ? this._y() : this._y;
   }
@@ -109,7 +109,7 @@ export abstract class ButtonLike<T> {
   abstract get innerWidth(): number;
   abstract get innerHeight(): number;
 
-  protected _minWidth: Updateable = 0;
+  private _minWidth: Updateable = 0;
   get minWidth(): number { 
     return typeof(this._minWidth) === "function" ? this._minWidth() : this._minWidth; 
   };
@@ -122,7 +122,7 @@ export abstract class ButtonLike<T> {
 
   }
 
-  protected _minHeight: Updateable = 0;
+  private _minHeight: Updateable = 0;
   get minHeight(): number { 
     return typeof(this._minHeight) === "function" ? this._minHeight() : this._minHeight;  
   };
@@ -135,38 +135,34 @@ export abstract class ButtonLike<T> {
 
   }
 
-  set content(content: T) {
+  private _content?: T;
+  set content(content: T | undefined) {
     if (this._content === content) return;
     this._content = content;
-    this.init();
+    this.newContent();
   }
-  get content() { return this._content; };
+  get content(): T | undefined { return this._content; };
+  protected newContent() {}
 
   abstract redraw(): void;
   stop(shouldRedrawToDefault?: boolean) {
     this.resizeManager();
-    this.scrollManager();
   };
   isInArea(x: number, y: number) {
     return x >= this._startX && x <= this._endX && y >= this._startY && y <= this._endY;
   }
   dynamic() {
-    this.newMinWidth(this.minWidth);
-    this.newMinHeight(this.minHeight);
-    this.newX(this.x);
-    this.newY(this.y);
+    if (typeof(this._minWidth) === "function") this.newMinWidth(this.minWidth);
+    if (typeof(this._minHeight) === "function") this.newMinWidth(this.minHeight);
+    if (typeof(this._x) === "function") this.newX(this.minHeight);
+    if (typeof(this._y) === "function") this.newY(this.minHeight);
+    if (typeof(this._x) === "function" || typeof(this._y) === "function") this.newPos(this.x, this.y);
   }
 }
 
 export default abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize extends Size> extends ButtonLike<TContent> {
-  constructor(ctx: CTX, content: TContent, optional?: ButtonOptional, x?: Updateable , y?: Updateable) {    
-    super(ctx, content, x, y);
-    Object.entries(optional || {}).forEach(([k, v]) => this[k] = v);
-    this.updateManagers();
-  }
-  protected init() {
-    this.contentSize = this.calcContentSize();
-    return this;
+  constructor(ctx: CTX) {    
+    super(ctx);
   }
 
   protected abstract calcContentSize(): TSize;
@@ -221,9 +217,14 @@ export default abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize e
     return !!this._justBorder;
   }
 
-  private _contentSize: TSize;
-  protected get contentSize() {
-    return this._contentSize;
+  protected newContent(): void {
+    this.contentSize = this.calcContentSize();
+  }
+  
+  private _contentSize?: TSize;
+  protected get contentSize(): TSize {
+    if (this._contentSize === undefined) return this.calcContentSize();
+    else return this._contentSize;
   }
   private set contentSize(contentSize: TSize) {
     const oldContentSize = this._contentSize;
@@ -238,17 +239,17 @@ export default abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize e
     }
   }
   get innerWidth() {
-    return this.contentSize.width + settings.gui.button.padding * 2;
+    if (this.contentSize === undefined) return 0;
+    else return this.contentSize.width + settings.gui.button.padding * 2;
   }
   get innerHeight() {
-    return this.contentSize.height + settings.gui.button.padding * 2;
+    if (this.contentSize === undefined) return 0;
+    else return this.contentSize.height + settings.gui.button.padding * 2;
   }
-
   private _contentCacheX: TCacheX;
   protected get contentCacheX() {
     return this._contentCacheX;
   }
-
   private _contentCacheY: TCacheY;
   protected get contentCacheY() {
     return this._contentCacheY;
@@ -262,7 +263,7 @@ export default abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize e
     return Math.max(contentWidth + settings.gui.button.padding * 2, minWidth);
   }
   protected newMinWidth(minWidth: number): void {
-    this.width = AbstractButton.calcWidth(this.contentSize.width, minWidth);
+    this.width = AbstractButton.calcWidth(this.contentSize?.width || 0, minWidth);
   }
 
   protected newHeight(height: number): void {
@@ -273,7 +274,7 @@ export default abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize e
     return Math.max(contentHeight + settings.gui.button.padding * 2, minHeight);
   }
   protected newMinHeight(minHeight: number): void {
-    this.height = AbstractButton.calcHeight(this.contentSize.height, minHeight);
+    this.height = AbstractButton.calcHeight(this.contentSize?.height || 0, minHeight);
   }
 
   protected newX(x: number): void {
@@ -289,13 +290,13 @@ export default abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize e
   }
 
   setContentWithSizeChangeCheck(content: TContent) {
-    const width = this.width, height = this.height;
+    const oldWidth = this.width, oldHeight = this.height;
     this.content = content;
-    return (width !== this.width || this.height !== this.height);
+    return (oldWidth !== this.width || oldHeight !== this.height);
   }
 
-  hoverManager?: HoverManager;
-  clickManager?: ClickManager;
+  protected hoverManager?: HoverManager;
+  protected clickManager?: ClickManager;
   
   private redrawBorder() {
     this.ctx.ctx.fillStyle = settings.colors.bg;
@@ -311,7 +312,7 @@ export default abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize e
     } else {
       this.ctx.ctx.fillStyle = settings.colors.button.bg;
     }
-    this.ctx.ctx.fillRect(this._startX, this._startY, this._width, this._height);
+    this.ctx.ctx.fillRect(this._startX, this._startY, this.width, this.height);
     this.drawer();
   }
   private redrawContent() {
@@ -331,7 +332,7 @@ export default abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize e
     } else {
       this.ctx.ctx.canvas.style.cursor = "default";
     }
-    drawRoundedRect(this.ctx.ctx, this._startX, this._startY, this._width, this._height, settings.gui.button.rounding);
+    drawRoundedRect(this.ctx.ctx, this._startX, this._startY, this.width, this.height, settings.gui.button.rounding);
     this.drawer();
   }
   private updateManagers() {

@@ -1,9 +1,6 @@
 import CTX from "../gui/CTX";
-import Scroll from "../gui/events/scroll";
-import BottomMenu from "../gui/bottomMenu";
 import { saveProgressFail, saveProgressSuccess } from "../learner";
 import { promiseMagic } from "../utils";
-import { ResizeManager } from "../gui/events/resize";
 
 
 export type GameName = "form" | "drop" | "memory";
@@ -36,15 +33,16 @@ export interface WordWithTranslation extends Word {
 }
 
 export abstract class AbstractGame<TContent, TPrepare extends any, TPreparePos extends any, TEndGameStats extends EndGameStats> {
-  constructor(protected readonly ctx: CTX, protected readonly content: TContent) {
-    [this.onGameEnd, this.stop] = promiseMagic<TEndGameStats | undefined>(() => this.freeResources());
+  constructor(protected readonly ctx: CTX, protected readonly content: TContent) { }
 
-    setTimeout(() => {
-      this.start();
-      this.ctx.innerRedraw = this.innerRedraw.bind(this);
-      this.ctx.redraw();
-    }, 1);
+  init() {
+    [this.onGameEnd, this.stop] = promiseMagic<TEndGameStats | undefined>(() => this.freeResources());
+    this.start();
+    this.ctx.innerRedraw = this.innerRedraw.bind(this);
+    this.ctx.redraw();
+    return this;
   }
+
   protected abstract prepare(): TPrepare;
   protected abstract preparePos(): TPreparePos;
   protected abstract start(): void;

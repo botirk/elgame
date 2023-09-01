@@ -1,19 +1,27 @@
 import { Word, WordWithImage } from "../games";
 import CTX from "./CTX";
-import { Updateable } from "./abstractButton";
 import { Button } from "./button";
 import { ButtonGroupTable } from "./buttonGroup";
 import { ButtonWithDescription } from "./buttonWithDescription";
 
-export default class WordsTable extends ButtonGroupTable {
-  constructor(ctx: CTX, words: Word[], x?: Updateable, y?: Updateable) {
-    const table = words.map((word) => {
-      const text = new Button(ctx, word.toLearnText, { likeLabel: true });
-      const img = (word.toLearnImg) ? new Button(ctx, (word as WordWithImage).toLearnImg, { likeLabel: true }) : undefined;    
+const wordsTable = (ctx: CTX, words: Word[]) => {
+  const result = new ButtonGroupTable(ctx);
+  result.content = words.map((word) => {
+    const text = new Button(ctx);
+      text.likeLabel = true;
+      text.content = word.toLearnText;
+      
+      const img = (word.toLearnImg) ? new Button(ctx) : undefined;
+      if (img) {
+        img.likeLabel = true;
+        img.content = (word as WordWithImage).toLearnImg;
+      }
 
       // progress
       let learning = ctx.progress.wordLearning(word.toLearnText);
-      const progress = new Button(ctx, learning.text, { likeLabel: true });
+      const progress = new Button(ctx);
+      progress.likeLabel = true;
+      progress.content = learning.text;
       /*if (learning.updateRequired) this._buttonUpdaters.push(() => {
         learning = wordLearning(word, this.content.progress);
         progress.content = learning.text;
@@ -22,11 +30,13 @@ export default class WordsTable extends ButtonGroupTable {
 
       // stats
       const stats = ctx.progress.wordStats(word.toLearnText);
-      const desc = new ButtonWithDescription(ctx, { text: stats.successes, description: stats.fails }, { likeLabel: true });
+      const desc = new ButtonWithDescription(ctx);
+      desc.likeLabel = true;
+      desc.content = { text: stats.successes, description: stats.fails };
 
       return [text, img, progress, desc];
-    });
-    //this._timer = setInterval(this.updateButton.bind(this), 1050);
-    super(ctx, table, x, y);
-  }
+  });
+  return result;
 }
+
+export default wordsTable;

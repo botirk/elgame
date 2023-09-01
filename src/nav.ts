@@ -12,7 +12,7 @@ class Nav {
   private _curGame?: AbstractGame<any, any, any, EndGameStats>;
 
   private async showMenu(noRefresh?: boolean) {
-    const result = await new Menu(this._ctx, this._words).onGameEnd;
+    const result = await new Menu(this._ctx, this._words).init().onGameEnd;
     //noRefresh = !!result?.isViewer;
     //history.pushState(`elgame${Math.floor(Math.random() * 1000)}`, "");
     //if (result?.isViewer) await this.showWords();

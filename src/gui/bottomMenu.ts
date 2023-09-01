@@ -7,49 +7,46 @@ import { HoverManager } from "./events/hover";
 
 export default class BottomMenu extends ButtonGroupTable {
   constructor(ctx: CTX) {
-    const fsButton = new Button(ctx, ctx.assets.fullscreen, {
-      onClick: () => {
-        this.setInvisible(true);
-        ctx.ctx.canvas.requestFullscreen();
-      },
-      invisible: true,
-    });
-    super(ctx, [[fsButton]]);
-    const x = () => ctx.ctx.canvas.width - this.width / 2 - settings.gui.button.padding - 15;
-    const y = () => ctx.ctx.canvas.height - this.height / 2 - settings.gui.button.padding - 15;
-    this.xy(x, y);
-    this.moreHover = ctx.hoverEvent.then({
-      isInArea: (xIn, yIn) => yIn >= ctx.ctx.canvas.height - this.height - settings.gui.button.padding * 2,
-      onHover: () => this.setInvisible(false),
-      onLeave: () => this.setInvisible(true),
-    });
-    this.moreClick = ctx.clickEvent.then({
-      isInArea: () => true,
-      zIndex: -Infinity,
-      onReleased: (isInside) => { 
-        if (isInside && !document.fullscreenElement && ctx.isMobile) {
-          this.setInvisible(!this.invisible);
-        }
-      },
-    });
+    super(ctx);
+
+    const fsButton = new Button(ctx);
+    fsButton.onClick = () => {
+      this.setInvisible(true);
+      ctx.ctx.canvas.requestFullscreen();
+    }
+    fsButton.invisible = true;
+    fsButton.content = ctx.assets.fullscreen;
+    
+    this.xy(() => ctx.ctx.canvas.width - this.width / 2 - settings.gui.button.padding - 15, () => ctx.ctx.canvas.height - this.height / 2 - settings.gui.button.padding - 15);
+    this.content = [[ fsButton ]];
   }
 
-  protected _content: (Button | undefined)[][];
-
-  private moreHover: HoverManager;
-  private moreClick: ClickManager;
+  private moreHover: HoverManager = this.ctx.hoverEvent.then({
+    isInArea: (xIn, yIn) => yIn >= this.ctx.ctx.canvas.height - this.height - settings.gui.button.padding * 2,
+    onHover: () => this.setInvisible(false),
+    onLeave: () => this.setInvisible(true),
+  });;
+  private moreClick: ClickManager = this.ctx.clickEvent.then({
+    isInArea: () => true,
+    zIndex: -Infinity,
+    onReleased: (isInside) => { 
+      if (isInside && !document.fullscreenElement && this.ctx.isMobile) {
+        this.setInvisible(!this.invisible);
+      }
+    },
+  });
 
   private invisible = true;
   private setInvisible(state: boolean) {
     if (!state && this.invisible === true) {
       if (!document.fullscreenElement) {
         this.invisible = false;
-        for (const row of this._content) for (const btn of row) if (btn) btn.invisible = false;
+        for (const row of (this.content || [[]])) for (const btn of row) if (btn instanceof Button) btn.invisible = false;
         this.redraw();
       }
     } else if (state && this.invisible === false) {
       this.invisible = true;
-      for (const row of this._content) for (const btn of row) if (btn) btn.invisible = true;
+      for (const row of (this.content || [[]])) for (const btn of row) if (btn instanceof Button) btn.invisible = true;
       this.ctx.redraw();
     }
   }

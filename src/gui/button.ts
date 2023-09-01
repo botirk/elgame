@@ -4,7 +4,9 @@ import { calcTextWidth } from "./text";
 
 export class Button extends AbstractButton<string | HTMLImageElement, number, number, Size> {
   protected drawer(): void {
-    if (typeof(this.content) == "string") {
+    if (this.content === undefined) {
+      return;
+    } else if (typeof(this.content) == "string") {
       this.ctx.ctx.fillStyle = settings.colors.textColor;
       this.ctx.ctx.fillText(this.content, this.contentCacheX, this.contentCacheY);
     } else {
@@ -25,8 +27,13 @@ export class Button extends AbstractButton<string | HTMLImageElement, number, nu
       return this.y - this.contentSize.height / 2;
     }
   }
-  static calcContentSize(ctx: CanvasRenderingContext2D, content: string | HTMLImageElement) {
-    if (typeof(content) == "string") {
+  static calcContentSize(ctx: CanvasRenderingContext2D, content: string | HTMLImageElement | undefined) {
+    if (content === undefined) {
+      return {
+        width: 0,
+        height: 0,
+      }
+    } else if (typeof(content) == "string") {
       return {
         width: calcTextWidth(ctx, content),
         height: settings.fonts.fontSize,

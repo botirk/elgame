@@ -1,75 +1,94 @@
 import settings from "../../settings";
+import CTX from "../CTX";
 
 interface ScrollRequest {
-  update?: () => void;
-  redraw?: () => void;
+  oneStep: number,
+  maxHeight: () => number;
+  dynamic: () => void;
 };
 
+export type ScrollManager = () => void;
+
 export default class ScrollEvent {
-  constructor(private readonly _ctx: CanvasRenderingContext2D) {
+  constructor(private readonly ctx: CTX) {
     this.wheelListener = this.wheelListener.bind(this);
     this.touchStartListener = this.touchStartListener.bind(this);
     this.touchMoveListener = this.touchMoveListener.bind(this);
     this.touchEndListener = this.touchEndListener.bind(this);
-    _ctx.canvas.addEventListener("wheel", this.wheelListener, { passive: false });
-    _ctx.canvas.addEventListener("touchstart", this.touchStartListener, { passive: true });
-    _ctx.canvas.addEventListener("touchmove", this.touchMoveListener, { passive: false });
-    _ctx.canvas.addEventListener("touchend", this.touchEndListener);
+    ctx.ctx.canvas.addEventListener("wheel", this.wheelListener, { passive: false });
+    ctx.ctx.canvas.addEventListener("touchstart", this.touchStartListener, { passive: true });
+    ctx.ctx.canvas.addEventListener("touchmove", this.touchMoveListener, { passive: false });
+    ctx.ctx.canvas.addEventListener("touchend", this.touchEndListener);
   }
 
-  then(req: ScrollRequest) {
-    this._reqs.push(req);
+  then(req: ScrollRequest): ScrollManager {
+    this._pos = 0;
+    this.oneStep = req.oneStep;
+    this.atTop = true;
+    this.atBot = false;
+    this.req = req;
+    this.maxHeight = this.req.maxHeight();
     const removeRequest = () => {
-      const i = this._reqs.indexOf(req);
-      if (i !== -1) this._reqs.splice(i, 1);
+      if (this.req === req) this.req = undefined;
     }
     return removeRequest;
   }
 
-  newScene(maxHeight = 0, oneStep = 0) {
-    clearTimeout(this.hideTimeout);
-    this.hideTimeout = undefined;
-    this._pos = 0;
-    this._maxHeight = maxHeight;
-    this.oneStep = oneStep;
+  redraw() {
+    if (this.hideTimeout === undefined) return;
+    this.draw();
   }
 
-  drawScroll() {
-    const pagePercent = this._ctx.canvas.height / this._maxHeight;
+  private showScroll() {
+    this.startHiding();
+    this.draw();
+  }
+
+  private draw() {
+    const pagePercent = this.ctx.ctx.canvas.height / this._maxHeight;
     if (pagePercent >= 1) return;
     const heightPercent = this.pos / this.maxPos();
-    const scrollHeight = this._ctx.canvas.height * pagePercent;
-    const scrollPos = (this._ctx.canvas.height - scrollHeight) * heightPercent;
-    this._ctx.fillStyle = settings.colors.button.bg;
-    this._ctx.fillRect(this._ctx.canvas.width - settings.gui.scroll.width - settings.gui.scroll.padding, scrollPos, settings.gui.scroll.width, scrollHeight);
+    const scrollHeight = this.ctx.ctx.canvas.height * pagePercent;
+    const scrollPos = (this.ctx.ctx.canvas.height - scrollHeight) * heightPercent;
+    this.ctx.ctx.fillStyle = settings.colors.button.bg;
+    this.ctx.ctx.fillRect(this.ctx.ctx.canvas.width - settings.gui.scroll.width - settings.gui.scroll.padding, scrollPos, settings.gui.scroll.width, scrollHeight);
+  }
+
+  private startHiding() {
     clearTimeout(this.hideTimeout);
-    this.hideTimeout = setTimeout(() => { for (const req of this._reqs) req.redraw?.(); this.hideTimeout = undefined; }, settings.gui.scroll.timeout);
+    this.hideTimeout = setTimeout(() => { this.hideTimeout = undefined; this.ctx.redraw(); }, settings.gui.scroll.timeout);
   }
 
   stop() {
-    this._ctx.canvas.removeEventListener("wheel", this.wheelListener);
-    this._ctx.canvas.removeEventListener("touchstart", this.touchStartListener);
-    this._ctx.canvas.removeEventListener("touchmove", this.touchMoveListener);
-    this._ctx.canvas.removeEventListener("touchend", this.touchEndListener);
+    this.ctx.ctx.canvas.removeEventListener("wheel", this.wheelListener);
+    this.ctx.ctx.canvas.removeEventListener("touchstart", this.touchStartListener);
+    this.ctx.ctx.canvas.removeEventListener("touchmove", this.touchMoveListener);
+    this.ctx.ctx.canvas.removeEventListener("touchend", this.touchEndListener);
     clearTimeout(this.hideTimeout);
   }
 
-  oneStep = 0;
-  _maxHeight = 0;
-  get maxHeight() { return this._maxHeight; }
-  set maxHeight(maxHeight: number) {
+  private oneStep = 0;
+  private _maxHeight = 0;
+  private get maxHeight() { return this._maxHeight; }
+  private set maxHeight(maxHeight: number) {
     this._maxHeight = maxHeight;
     this.pos = Math.min(this.maxPos(), this._pos);
   }
 
-  private _reqs: ScrollRequest[] = [];
+  private req?: ScrollRequest;
   private _pos = 0;
   private set pos(curPos: number) {
     if (this._pos === curPos) return;
+    console.log("pos")
     this._pos = curPos;
-    for (const req of this._reqs) req.update?.();
-    for (const req of this._reqs) req.redraw?.();
-    this.drawScroll();
+    if (this.req) {
+      this.req.dynamic();
+      this.startHiding();
+      // already there is scroll(incorrect position), need whole redraw of scene
+      if (this.hideTimeout) this.ctx.redraw(); // ctx will redraw whole scene which will redraw the scroll
+      // there is no scroll, can draw on top
+      else this.draw();
+    }
     if (this._pos === this.maxPos()) {
       this.atBot = true;
       this.atTop = false;
@@ -93,7 +112,7 @@ export default class ScrollEvent {
   private hideTimeout?: NodeJS.Timeout;
 
   private maxPos() {
-    return Math.max(0, this._maxHeight - this._ctx.canvas.height);
+    return Math.max(0, this._maxHeight - this.ctx.ctx.canvas.height);
   }
   private wheelListener(e: WheelEvent) {
     // to top
@@ -107,7 +126,7 @@ export default class ScrollEvent {
     if (!e.targetTouches.length) return;
     this.topTouch = Infinity, this.botTouch = -Infinity;
     for (let i = 0; i < e.targetTouches.length; i++) {
-      const [_, y] = settings.calculate.toCanvasCoords(this._ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
+      const [_, y] = settings.calculate.toCanvasCoords(this.ctx.ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
       if (y < this.topTouch) this.topTouch = y;
       if (y > this.botTouch) this.botTouch = y;
     }
@@ -117,7 +136,7 @@ export default class ScrollEvent {
     const oldPos = this.pos;
     let topTouch = Infinity, botTouch = -Infinity;
     for (let i = 0; i < e.targetTouches.length; i++) {
-      const [_, y] = settings.calculate.toCanvasCoords(this._ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
+      const [_, y] = settings.calculate.toCanvasCoords(this.ctx.ctx, e.targetTouches[i].pageX, e.targetTouches[i].pageY);
       if (y < topTouch) topTouch = y;
       if (y > botTouch) botTouch = y;
     }

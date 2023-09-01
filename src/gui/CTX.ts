@@ -12,6 +12,7 @@ import Progress from "../progress";
 export default class CTX {
   private constructor(public readonly ctx: CanvasRenderingContext2D, public readonly assets: Awaited<ReturnType<typeof loadAssets>>) {
     this.prepareCtx();
+    this.scrollEvent = new ScrollEvent(this);
     this.bottomMenu = new BottomMenu(this);
     this.resizeEvent.then({ fix: () => this.prepareCtx(), redraw: () => this.redraw() });
   }
@@ -25,7 +26,7 @@ export default class CTX {
   /** drawings */
   innerRedraw?: () => void;
   outerRedraw() {
-    this.scrollEvent.drawScroll();
+    this.scrollEvent.redraw();
     this.bottomMenu.redraw();
   }
   redraw() {
@@ -119,9 +120,9 @@ export default class CTX {
   readonly hoverEvent = new HoverEvent(this.ctx);
   readonly moveEvent  = new MoveEvent(this.ctx);
   readonly resizeEvent = new ResizeEvent(this.ctx);
-  readonly scrollEvent = new ScrollEvent(this.ctx);
+  readonly scrollEvent: ScrollEvent;
   // fullscreen button
-  readonly bottomMenu;
+  readonly bottomMenu: BottomMenu;
   // progress
   readonly progress = new Progress();
 

@@ -1,4 +1,3 @@
-import { Init } from "../init";
 import settings from "../settings";
 import AbstractButton from "./abstractButton";
 import { calcTextWidth } from "./text";
@@ -11,14 +10,18 @@ export class ButtonWithDescription extends AbstractButton<
 > {
 
   protected drawer(): void {
-    this.ctx.ctx.fillStyle = settings.colors.textColor;
-    this.ctx.ctx.fillText(this.content.text, this.contentCacheX.text, this.contentCacheY.text);
+    if (this.content) {
+      this.ctx.ctx.fillStyle = settings.colors.textColor;
+      this.ctx.ctx.fillText(this.content.text, this.contentCacheX.text, this.contentCacheY.text);
+    }    
     this.ctx.ctx.strokeStyle = settings.colors.textColor;
     this.ctx.ctx.beginPath();
     this.ctx.ctx.moveTo(this.startX, this.y);
     this.ctx.ctx.lineTo(this.endX, this.y);
     this.ctx.ctx.stroke();
-    this.ctx.ctx.fillText(this.content.description, this.contentCacheX.desc, this.contentCacheY.desc);
+    if (this.content) {
+      this.ctx.ctx.fillText(this.content.description, this.contentCacheX.desc, this.contentCacheY.desc);
+    }
   }
   static calcContentSize(ctx: CanvasRenderingContext2D, text: string, description: string) {
     const firstWidth = calcTextWidth(ctx, text);
@@ -31,7 +34,7 @@ export class ButtonWithDescription extends AbstractButton<
     };
   }
   protected calcContentSize() {
-    return ButtonWithDescription.calcContentSize(this.ctx.ctx, this.content.text, this.content.description);
+    return ButtonWithDescription.calcContentSize(this.ctx.ctx, this.content?.text || "", this.content?.description || "");
   }
   protected calcContentCacheX() {
     return {
