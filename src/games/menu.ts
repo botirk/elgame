@@ -14,13 +14,8 @@ class Menu extends AbstractGame<Word[], any, any, MenuEnd> {
   protected preparePos() { }
   protected start() {
     const menuTable = this.menuTable();
-    debugger;
     const wordsTable = new WordsTable(this.ctx, this.content);
     this.table = new ButtonGroupTable(this.ctx, [[menuTable], [wordsTable]], () => this.ctx.centerX(), () => this.ctx.centerY());
-    debugger;
-    console.log(menuTable.content[2][2]?.endY);
-    console.log(menuTable.startY, menuTable.endY)
-    console.log(wordsTable.startY, wordsTable.endY)
   }
   protected innerRedraw() {
     this.ctx.drawBackground();
@@ -28,7 +23,7 @@ class Menu extends AbstractGame<Word[], any, any, MenuEnd> {
   }
   protected scrollOptions() {
     return {
-      oneStep: this.table.itemHeight,
+      oneStep: 0,
       maxHeight: this.table.height,
     };
   }
@@ -80,7 +75,7 @@ class Menu extends AbstractGame<Word[], any, any, MenuEnd> {
       const dif = new Button(this.ctx, `${ru.BonusDifficulty}: ${this.ctx.progress.bonusDif}`, { likeLabel: true });
       result.push([ undefined, dif, pmButton ]);
     }
-    return new ButtonGroupTable(this.ctx, result);
+    return new ButtonGroupTable(this.ctx, result, undefined, undefined, { equalizeAllHeight: true });
   }
 }
 

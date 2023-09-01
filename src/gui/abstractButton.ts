@@ -22,9 +22,8 @@ export interface Size { width: number, height: number }
 export type Updateable = number | (() => number);
 
 export abstract class ButtonLike<T> {
-  constructor(protected readonly ctx: CTX, protected _content: T, protected _x: Updateable = 0, protected _y: Updateable = 0) {
-    this.newContent(_content);
-  }
+  constructor(protected readonly ctx: CTX, protected _content: T, protected _x: Updateable = 0, protected _y: Updateable = 0) { }
+  protected abstract init(): typeof this;
 
   private scrollManager = this.ctx.scrollEvent.then({ update: () => this.dynamic() });
   private resizeManager = this.ctx.resizeEvent.then({ update: () => this.dynamic() });
@@ -139,10 +138,9 @@ export abstract class ButtonLike<T> {
   set content(content: T) {
     if (this._content === content) return;
     this._content = content;
-    this.newContent(content);
+    this.init();
   }
   get content() { return this._content; };
-  protected abstract newContent(content: T);
 
   abstract redraw(): void;
   stop(shouldRedrawToDefault?: boolean) {
@@ -166,9 +164,9 @@ export default abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize e
     Object.entries(optional || {}).forEach(([k, v]) => this[k] = v);
     this.updateManagers();
   }
-
-  protected newContent(content: TContent) {
+  protected init() {
     this.contentSize = this.calcContentSize();
+    return this;
   }
 
   protected abstract calcContentSize(): TSize;
