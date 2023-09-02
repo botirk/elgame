@@ -226,13 +226,14 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         return y;
     }
     private doesItemOverflows(column: number) {
-        let width = 0;
+        /*let width = 0;
         for (let i = 0; i <= column; i++) {
             if (i > 0) width += this.padding;
             width += (this._itemWidthPerColumn[i] || 0);
             if (this.x + width / 2 > this.ctx.ctx.canvas.width) return true;
         }
-        return false;
+        return false;*/
+        return this.calcDisplayItemX(column) + (this._itemWidthPerColumn[column] || 0) / 2 > this.ctx.ctx.canvas.width;
     }
     private equalize() {
         const content = (this.content || []);
@@ -272,24 +273,27 @@ export class ButtonGroupTable extends ButtonLike<Table> {
             for (let column = 0; column < content[row].length; column++) {
                 const cur = content[row][column];
                 if (!pushToEnd) {
+                    if (this.content?.length === 1 && this.content[0].length === 2 && this.doesItemOverflows(displayColumn)) debugger;
                     // empty push OR empty row OR it fits screen
                     if (!cur || !displayRowResult.some((item) => item) || !this.doesItemOverflows(displayColumn)) {
                         displayRowResult.push(cur);
                         displayColumn += 1;
                     // does not fit on screen
                     } else {
+                        // if (this.content?.length === 1 && this.content[0].length === 2) debugger;
                         t.push(displayRowResult);
                         displayRowResult = [];
                         // push it to end in next iteration on the column bellow last one
                         pushToEnd = true;
                         column -= 1;
+                        // if (this.content?.length === 1 && this.content[0].length === 2) debugger;
                     }
                 } else {
-                    // shift
+                    // is first element empty?
                     if (!displayRowResult[0]) {
                         displayRowResult.shift();
                         displayRowResult[displayColumn - 1] = cur;
-                    // no more to shift
+                    // can't shift no more
                     } else {
                         t.push(displayRowResult);
                         displayRowResult = [];
@@ -297,6 +301,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
                 }
             }
             t.push(displayRowResult);
+            // if (this.content?.length === 1 && this.content[0].length === 2) debugger;
         }
         // inner size
         this.calcInnerWidth(t);
@@ -307,6 +312,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         // start / end
         this.calcStartEnd();
         
+        // if (this.content?.length === 1 && this.content[0].length === 2) debugger;
         return t;
     }
     private place() {

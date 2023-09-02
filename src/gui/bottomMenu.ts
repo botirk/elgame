@@ -16,9 +16,25 @@ export default class BottomMenu extends ButtonGroupTable {
     }
     fsButton.invisible = true;
     fsButton.content = ctx.assets.fullscreen;
+
+    const musicButton = new Button(ctx);
+    musicButton.onClick = () => {
+      if (musicButton.content === this.ctx.assets["volume-mute"]) {
+        if (this.ctx.assets.theme.paused) this.ctx.assets.theme.play();
+        this.ctx.assets.theme.muted = false;
+        musicButton.content = this.ctx.assets.volume;
+      } else {
+        this.ctx.assets.theme.muted = true;
+        musicButton.content = this.ctx.assets["volume-mute"];
+      }
+      musicButton.redraw();
+    }
+    musicButton.invisible = true;
+    musicButton.content = this.ctx.assets["volume-mute"];
     
+    this.content = [[ musicButton, fsButton ]];
     this.xy(() => ctx.ctx.canvas.width - this.width / 2 - settings.gui.button.padding - 15, () => ctx.ctx.canvas.height - this.height / 2 - settings.gui.button.padding - 15);
-    this.content = [[ fsButton ]];
+    //debugger;
   }
 
   private moreHover: HoverManager = this.ctx.hoverEvent.then({

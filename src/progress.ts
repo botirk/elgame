@@ -27,7 +27,7 @@ export default class Progress {
 	}
 	
 	private load() {
-		const str = localStorage.getItem(settings.name);
+		const str = localStorage.getItem(settings.localStorage.progress);
 		if (!str) return;
 		const parsed = JSON.parse(str);
 		if (typeof(parsed) !== "object") return;
@@ -66,6 +66,16 @@ export default class Progress {
 		if (typeof(parsed.dropDif) === "number") this.dropDif = parsed.dropDif;
 	}
 
+	save() {
+		try {
+			const parsed = JSON.stringify(this);
+			localStorage.setItem(settings.localStorage.progress, parsed);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
 	static stageTime(stage: number) {
 		return 1000 * (5 ** Math.min(stage, 15));
 	}
@@ -73,16 +83,6 @@ export default class Progress {
 	isLearnedForNow(word: string, now: Date = new Date()) {
 		const wordProgress = this.words[word] || new WordProgress();
 		return (now.getTime() - wordProgress.timestamp.getTime() < Progress.stageTime(wordProgress.stage));
-	}
-
-	save() {
-		try {
-			const parsed = JSON.stringify(this);
-			localStorage.setItem(settings.name, parsed);
-			return true;
-		} catch {
-			return false;
-		}
 	}
 
 	saveProgressFail(successWord: string, failWords: string[]) {

@@ -49,6 +49,33 @@ export default class CTX {
   drawBackground() {
     CTX.drawBackground(this.ctx);
   }
+
+  drawRoundedRect(x: number, y: number, w: number, h: number, r: number) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    this.ctx.beginPath();
+    this.ctx.moveTo(x+r, y);
+    this.ctx.arcTo(x+w, y,   x+w, y+h, r);
+    this.ctx.arcTo(x+w, y+h, x,   y+h, r);
+    this.ctx.arcTo(x,   y+h, x,   y,   r);
+    this.ctx.arcTo(x,   y,   x+w, y,   r);
+    this.ctx.closePath();
+    this.ctx.fill();
+  }
+  
+  drawRoundedBorder(x: number, y: number, w: number, h: number, r: number) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    this.ctx.beginPath();
+    this.ctx.moveTo(x+r, y);
+    this.ctx.arcTo(x+w, y,   x+w, y+h, r);
+    this.ctx.arcTo(x+w, y+h, x,   y+h, r);
+    this.ctx.arcTo(x,   y+h, x,   y,   r);
+    this.ctx.arcTo(x,   y,   x+w, y,   r);
+    this.ctx.closePath();
+    this.ctx.stroke();
+  }
+  
   
   static drawLoadingBackground(ctx: CanvasRenderingContext2D) {
     CTX.drawBackground(ctx);

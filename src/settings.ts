@@ -31,7 +31,7 @@ const fonts = {
 const gui = {
   margin: 15,
   button: {
-    rounding: 4,
+    rounding: 6,
     padding: 9,
     distance: fonts.fontSize,
   },
@@ -62,11 +62,8 @@ const calculate = {
   toCanvasCoords: (ctx: CanvasRenderingContext2D, x: number, y: number): [ number, number ] => [x * (ctx.canvas.width / ctx.canvas.clientWidth), y * (ctx.canvas.height / ctx.canvas.clientHeight)],
 }
 
-
-
 const localStorage = {
   progress: name,
-  scroll: "elgame-scroll",
 }
 
 const maxBonusDif = 10;

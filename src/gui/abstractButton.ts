@@ -2,7 +2,6 @@ import settings from "../settings";
 import CTX from "./CTX";
 import { ClickManager } from "./events/click";
 import { HoverManager } from "./events/hover";
-import { drawRoundedBorder, drawRoundedRect } from "./roundedRect";
 
 type ShouldRedrawAfterClick = boolean | void | Promise<void>;
 export interface ButtonOptional {
@@ -300,9 +299,9 @@ export default abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize e
   
   private redrawBorder() {
     this.ctx.ctx.fillStyle = settings.colors.bg;
-    drawRoundedRect(this.ctx.ctx, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, settings.gui.button.rounding);
+    this.ctx.drawRoundedRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, settings.gui.button.rounding);
     this.ctx.ctx.fillStyle = settings.colors.button.bg;
-    drawRoundedBorder(this.ctx.ctx, this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, settings.gui.button.rounding);
+    this.ctx.drawRoundedBorder(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height, settings.gui.button.rounding);
   }
   private redrawLabel() {
     if (this?.bgColor) {
@@ -332,7 +331,7 @@ export default abstract class AbstractButton<TContent, TCacheX, TCacheY, TSize e
     } else {
       this.ctx.ctx.canvas.style.cursor = "default";
     }
-    drawRoundedRect(this.ctx.ctx, this._startX, this._startY, this.width, this.height, settings.gui.button.rounding);
+    this.ctx.drawRoundedRect(this._startX, this._startY, this.width, this.height, settings.gui.button.rounding);
     this.drawer();
   }
   private updateManagers() {
