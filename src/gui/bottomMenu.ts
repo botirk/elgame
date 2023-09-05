@@ -34,7 +34,6 @@ export default class BottomMenu extends ButtonGroupTable {
     
     this.content = [[ musicButton, fsButton ]];
     this.xy(() => ctx.ctx.canvas.width - this.width / 2 - settings.gui.button.padding - 15, () => ctx.ctx.canvas.height - this.height / 2 - settings.gui.button.padding - 15);
-    //debugger;
   }
 
   private moreHover: HoverManager = this.ctx.hoverEvent.then({

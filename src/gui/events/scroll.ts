@@ -79,7 +79,6 @@ export default class ScrollEvent {
   private _pos = 0;
   private set pos(curPos: number) {
     if (this._pos === curPos) return;
-    console.log("pos")
     this._pos = curPos;
     if (this.req) {
       this.req.dynamic();

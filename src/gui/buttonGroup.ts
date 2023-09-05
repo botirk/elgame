@@ -127,6 +127,16 @@ interface LimitRect {
     startY: number,
 }
 
+interface ButtonGroupTableCalc {
+    item: TableItem;
+    itemWidth: number;
+    itemHeight: number;
+    prevWidth: number;
+    prevHeight: number;
+    padding: number;
+    isReverseRow: boolean;
+}
+
 export class ButtonGroupTable extends ButtonLike<Table> {
     constructor(ctx: CTX) {
         super(ctx);
@@ -166,7 +176,6 @@ export class ButtonGroupTable extends ButtonLike<Table> {
 
     private _itemWidthPerColumn: number[];
     private _itemHeightPerRow: number[];
-    get itemHeight() { return this._itemHeightPerRow; }
 
     private _innerHeight: number;
     get innerHeight() { return this._innerHeight; }
@@ -190,50 +199,6 @@ export class ButtonGroupTable extends ButtonLike<Table> {
             width += (this._itemWidthPerColumn[i] || 0);
         }
         this._innerWidth = width;
-    }
-    
-    private calcStartEnd() {
-        this._startX = this.x - this.width / 2;
-        if (this?._limitRect?.startX) this._startX = Math.max(this._limitRect.startX, this.startX);
-        
-        this._startY = Math.max(0 - this.ctx.scrollEvent.pos, this.y - this.height / 2);
-        if (this?._limitRect?.startY) this._startY = Math.max(this._limitRect.startY - this.ctx.scrollEvent.pos, this.startY);
-        this._endX = this._startX + this.width;
-        this._endY = this._startY + this.height;
-    }
-    private calcDisplayItemX(column: number) {
-        let x = this.startX;
-        if (this.width > this.innerWidth) x += (this.width - this.innerWidth) / 2;
-        let prevWidth = 0;
-        for (let i = 0; i <= column; i++) {
-            const curWidth = (this._itemWidthPerColumn[i] || 0);
-            if (curWidth === 0) continue;
-            if (prevWidth > 0) x += this.padding;
-            x += prevWidth / 2 + curWidth / 2;
-            prevWidth = curWidth;
-        }
-        return x;
-    }
-    private calcDisplayItemY(calcRow: number) {
-        let y = this.startY;
-        let prevHeight = 0;
-        for (let row = 0; row <= calcRow; row++) {
-            const curHeight = (this._itemHeightPerRow[row] || 0);
-            if (row > 0) y += this.padding;
-            y += prevHeight / 2 + (this._itemHeightPerRow[row] || 0) / 2;
-            prevHeight = curHeight;
-        }
-        return y;
-    }
-    private doesItemOverflows(column: number) {
-        /*let width = 0;
-        for (let i = 0; i <= column; i++) {
-            if (i > 0) width += this.padding;
-            width += (this._itemWidthPerColumn[i] || 0);
-            if (this.x + width / 2 > this.ctx.ctx.canvas.width) return true;
-        }
-        return false;*/
-        return this.calcDisplayItemX(column) + (this._itemWidthPerColumn[column] || 0) / 2 > this.ctx.ctx.canvas.width;
     }
     private equalize() {
         const content = (this.content || []);
@@ -262,66 +227,107 @@ export class ButtonGroupTable extends ButtonLike<Table> {
             }
         }
     }
-    private calc() {
+    private calcStartEnd() {
+        this._startX = this.x - this.width / 2;
+        if (this?._limitRect?.startX) this._startX = Math.max(this._limitRect.startX, this.startX);
+        
+        this._startY = Math.max(0 - this.ctx.scrollEvent.pos, this.y - this.height / 2);
+        if (this?._limitRect?.startY) this._startY = Math.max(this._limitRect.startY - this.ctx.scrollEvent.pos, this.startY);
+        this._endX = this._startX + this.width;
+        this._endY = this._startY + this.height;
+    }
+    private calc(): ButtonGroupTableCalc[][] {
         const content = (this.content || []);
-        const t: Table = [];
-        // calc display content
-        for (let row = 0; row < content.length; row++) {
-            let displayColumn = 0;
-            let pushToEnd = false;
-            let displayRowResult: TableItem[] = [];
+        const result: ButtonGroupTableCalc[][] = [];
+        
+        let prevHeight = 0;
+        for (let row = 0; row < content.length; row += 1) {
+            let rowResult: ButtonGroupTableCalc[] = [];
+            let moreRows: ButtonGroupTableCalc[][] = [];
+            let prevWidth = 0;
+            const equalizedHeight = (this._itemHeightPerRow[row] || 0);
+            const paddingY = (equalizedHeight === 0) ? 0 : this.padding;
             for (let column = 0; column < content[row].length; column++) {
                 const cur = content[row][column];
-                if (!pushToEnd) {
-                    if (this.content?.length === 1 && this.content[0].length === 2 && this.doesItemOverflows(displayColumn)) debugger;
-                    // empty push OR empty row OR it fits screen
-                    if (!cur || !displayRowResult.some((item) => item) || !this.doesItemOverflows(displayColumn)) {
-                        displayRowResult.push(cur);
-                        displayColumn += 1;
+                const equalizedWidth = (this._itemWidthPerColumn[column] || 0);
+                const paddingX = (equalizedWidth === 0) ? 0 : this.padding;
+                const couldBeWidth = prevWidth + equalizedWidth;
+                const item: ButtonGroupTableCalc = {
+                    item: cur,
+                    itemHeight: equalizedHeight,
+                    itemWidth: equalizedWidth,
+                    prevHeight, 
+                    prevWidth,
+                    isReverseRow: (moreRows.length > 0),
+                    padding: paddingX,
+                }
+                if (moreRows.length === 0) {
+                    // empty item OR empty row OR it fits screen
+                    if (!cur || !rowResult.some((item) => item) || couldBeWidth <= this.ctx.ctx.canvas.width) {
+                        rowResult.push(item);
+                        prevWidth += paddingX + item.itemWidth;
                     // does not fit on screen
                     } else {
-                        // if (this.content?.length === 1 && this.content[0].length === 2) debugger;
-                        t.push(displayRowResult);
-                        displayRowResult = [];
-                        // push it to end in next iteration on the column bellow last one
-                        pushToEnd = true;
+                        // create empty row bellow
+                        moreRows.push([]);
+                        prevHeight += equalizedHeight;
+                        prevWidth = 0;
+                        // continue iterating array, but now put it into moreRows
                         column -= 1;
-                        // if (this.content?.length === 1 && this.content[0].length === 2) debugger;
                     }
                 } else {
-                    // is first element empty?
-                    if (!displayRowResult[0]) {
-                        displayRowResult.shift();
-                        displayRowResult[displayColumn - 1] = cur;
-                    // can't shift no more
+                    // empty item OR empty row OR it fits screen
+                    if (!cur || !moreRows[moreRows.length - 1].some((item) => item) || couldBeWidth <= this.ctx.ctx.canvas.width) {
+                        moreRows[moreRows.length - 1].push(item);
+                        prevWidth += paddingX + item.itemWidth;
+                    // does not fit on screen
                     } else {
-                        t.push(displayRowResult);
-                        displayRowResult = [];
+                        // create empty row bellow
+                        moreRows.push([]);
+                        prevHeight += equalizedHeight;
+                        prevWidth = 0;
+                        // continue iterating array
+                        column -= 1;
                     }
                 }
             }
-            t.push(displayRowResult);
-            // if (this.content?.length === 1 && this.content[0].length === 2) debugger;
+            result.push(rowResult);
+            for (const moreRow of moreRows) result.push(moreRow);
+            prevHeight += paddingY + equalizedHeight;
         }
-        // inner size
-        this.calcInnerWidth(t);
-        this.calcInnerHeight(t);
+        // calc inner size
+        this._innerWidth = 0;
+        this._innerHeight = 0;
+        for (let row = 0; row < result.length; row += 1) {
+            for (let column = 0; column < result[row].length; column += 1) {
+                const item = result[row][column];
+                this._innerWidth = Math.max(this._innerWidth, item.prevWidth + item.itemWidth);
+                this._innerHeight = Math.max(this._innerHeight, item.prevHeight + item.itemHeight);
+            }
+        }
         // save total size
-        this.width = Math.max(this.innerWidth, this.minWidth);
-        this.height = Math.max(this.innerHeight, this.minHeight);
+        this.width = Math.max(this._innerWidth, this.minWidth);
+        this.height = Math.max(this._innerHeight, this.minHeight);
         // start / end
         this.calcStartEnd();
         
-        // if (this.content?.length === 1 && this.content[0].length === 2) debugger;
-        return t;
+        return result;
     }
     private place() {
         const t = this.calc();
+        let startX = this.startX, startY = this.startY, endX = this.endX;
+        if (this.width > this.innerWidth) {
+            startX += (this.width - this.innerWidth) / 2;
+            endX -= (this.width - this.innerWidth) / 2;
+        }
+        if (this.height > this.innerHeight) startY += (this.height - this.innerHeight) / 2;
         for (let row = 0; row < t.length; row++) {
             for (let column = 0; column < t[row].length; column++) {
                 const cur = t[row][column];
-                if (!cur) continue;
-                cur.xy(this.calcDisplayItemX(column), this.calcDisplayItemY(row));
+                if (!cur.item) continue;
+                const x = (!cur.isReverseRow) ? startX + cur.prevWidth + cur.itemWidth / 2 : this.endX - cur.prevWidth - cur.itemWidth / 2;
+                const y = startY + cur.prevHeight + cur.itemHeight / 2;
+                cur.item.xy(x, y);
             }
         }
     }
