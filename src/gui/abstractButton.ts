@@ -146,7 +146,7 @@ export abstract class ButtonLike<T> {
   abstract redraw(): void;
   stop(shouldRedrawToDefault?: boolean) {
     this.resizeManager();
-  };
+  }
   isInArea(x: number, y: number) {
     return x >= this._startX && x <= this._endX && y >= this._startY && y <= this._endY;
   }

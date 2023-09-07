@@ -28,6 +28,12 @@ class Menu extends AbstractGame<Word[], any, any, MenuEnd> {
     this.table.xy(() => this.ctx.centerX(), () => this.ctx.centerY() - this.ctx.scrollEvent.pos);
     this.table.content = [[menuTable], [words]];
     this.scrollManager = this.ctx.scrollEvent.then({ oneStep: 25, maxHeight: () => (this.table.limitRect?.startY || 0) + this.table.height + settings.gui.button.padding, dynamic: () => this.table.dynamic() });
+    const dynamic = this.table.dynamic.bind(this.table);
+    this.table.dynamic = () => {
+      const b = this;
+      dynamic();
+      debugger;
+    }
   }
   protected innerRedraw() {
     this.ctx.drawBackground();

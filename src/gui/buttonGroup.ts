@@ -179,27 +179,9 @@ export class ButtonGroupTable extends ButtonLike<Table> {
 
     private _innerHeight: number;
     get innerHeight() { return this._innerHeight; }
-    private calcInnerHeight(t: Table) {
-        let height = 0
-        const rows = t.length;
-        for (let row = 0; row < rows; row++) {
-            if (row > 0) height += this.padding;
-            height += (this._itemHeightPerRow[row] || 0);
-        }
-        this._innerHeight = height;
-    }
-
     private _innerWidth: number;
     get innerWidth() { return this._innerWidth; }
-    private calcInnerWidth(t: Table) {
-        let width = 0;
-        const columns = t.reduce((prev, cur) => Math.max(prev, cur.length), 0);
-        for (let i = 0; i < columns; i++) {
-            if (i > 0) width += this.padding;
-            width += (this._itemWidthPerColumn[i] || 0);
-        }
-        this._innerWidth = width;
-    }
+
     private equalize() {
         const content = (this.content || []);
         this._itemWidthPerColumn = [];
@@ -236,9 +218,10 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         this._endX = this._startX + this.width;
         this._endY = this._startY + this.height;
     }
-    private calc(): ButtonGroupTableCalc[][] {
+    private calced: ButtonGroupTableCalc[][];
+    private calc()  {
         const content = (this.content || []);
-        const result: ButtonGroupTableCalc[][] = [];
+        this.calced = [];
         
         let prevHeight = 0;
         for (let row = 0; row < content.length; row += 1) {
@@ -270,7 +253,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
                     } else {
                         // create empty row bellow
                         moreRows.push([]);
-                        prevHeight += equalizedHeight;
+                        prevHeight += paddingY + equalizedHeight;
                         prevWidth = 0;
                         // continue iterating array, but now put it into moreRows
                         column -= 1;
@@ -284,23 +267,23 @@ export class ButtonGroupTable extends ButtonLike<Table> {
                     } else {
                         // create empty row bellow
                         moreRows.push([]);
-                        prevHeight += equalizedHeight;
+                        prevHeight += paddingY + equalizedHeight;
                         prevWidth = 0;
                         // continue iterating array
                         column -= 1;
                     }
                 }
             }
-            result.push(rowResult);
-            for (const moreRow of moreRows) result.push(moreRow);
+            this.calced.push(rowResult);
+            for (const moreRow of moreRows) this.calced.push(moreRow);
             prevHeight += paddingY + equalizedHeight;
         }
         // calc inner size
         this._innerWidth = 0;
         this._innerHeight = 0;
-        for (let row = 0; row < result.length; row += 1) {
-            for (let column = 0; column < result[row].length; column += 1) {
-                const item = result[row][column];
+        for (let row = 0; row < this.calced.length; row += 1) {
+            for (let column = 0; column < this.calced[row].length; column += 1) {
+                const item = this.calced[row][column];
                 this._innerWidth = Math.max(this._innerWidth, item.prevWidth + item.itemWidth);
                 this._innerHeight = Math.max(this._innerHeight, item.prevHeight + item.itemHeight);
             }
@@ -310,20 +293,18 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         this.height = Math.max(this._innerHeight, this.minHeight);
         // start / end
         this.calcStartEnd();
-        
-        return result;
     }
     private place() {
-        const t = this.calc();
+        this.calc();
         let startX = this.startX, startY = this.startY, endX = this.endX;
         if (this.width > this.innerWidth) {
             startX += (this.width - this.innerWidth) / 2;
             endX -= (this.width - this.innerWidth) / 2;
         }
         if (this.height > this.innerHeight) startY += (this.height - this.innerHeight) / 2;
-        for (let row = 0; row < t.length; row++) {
-            for (let column = 0; column < t[row].length; column++) {
-                const cur = t[row][column];
+        for (let row = 0; row < this.calced.length; row++) {
+            for (let column = 0; column < this.calced[row].length; column++) {
+                const cur = this.calced[row][column];
                 if (!cur.item) continue;
                 const x = (!cur.isReverseRow) ? startX + cur.prevWidth + cur.itemWidth / 2 : this.endX - cur.prevWidth - cur.itemWidth / 2;
                 const y = startY + cur.prevHeight + cur.itemHeight / 2;
