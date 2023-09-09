@@ -73,14 +73,14 @@ class Viewer extends AbstractGame<{ words: Word[], progress: Progress }, {}, {},
     this._table.redraw();
   }
   protected resize() {
-    this._table.resize();
+    this._table.screenResize();
   }
   private updateButton() {
     for (const update of this._buttonUpdaters) update();
   }
   protected scroll() {
     this._table.scroll = this.scrollEvent.pos;
-    this._table.dynamic();
+    this._table.screenResize();
   }
   protected scrollOptions(): { oneStep: number; maxHeight: number; } {
     return {

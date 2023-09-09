@@ -1,5 +1,6 @@
 import settings from "../settings";
 import CTX from "./CTX";
+import { Button } from "./button";
 import { ClickManager } from "./events/click";
 import { HoverManager } from "./events/hover";
 
@@ -23,7 +24,10 @@ export type Updateable = number | (() => number);
 export abstract class ButtonLike<T> {
   constructor(protected readonly ctx: CTX) { }
 
-  private resizeManager = this.ctx.resizeEvent.then({ update: () => this.dynamic() });
+  parent?: ButtonLike<any>;
+
+  private resizeManager = this.ctx.resizeEvent.then({ update: () => { if (this.parent === undefined) this.screenResize(); }});
+  screenResize() { }
 
   private _width: number = 0;
   get width() { return this._width; }

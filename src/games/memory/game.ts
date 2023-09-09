@@ -187,7 +187,7 @@ class Memory extends AbstractGame<{ words: WordWithImage[], setup: MemoryGameSet
     };
   }
   protected resize() {
-    this._grid.dynamic();
+    this._grid.screenResize();
   }
 }
 

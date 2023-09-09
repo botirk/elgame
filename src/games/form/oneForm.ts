@@ -85,7 +85,7 @@ class OneForm {
     this.redrawStatus();
   }
   repos() {
-    this._grid.dynamic();
+    this._grid.screenResize();
   }
 }
 

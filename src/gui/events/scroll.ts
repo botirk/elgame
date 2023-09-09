@@ -3,8 +3,8 @@ import CTX from "../CTX";
 
 interface ScrollRequest {
   oneStep: number,
-  maxHeight: () => number;
-  dynamic: () => void;
+  maxHeight: () => number,
+  dynamic: () => void,
 };
 
 export type ScrollManager = () => void;
@@ -21,13 +21,23 @@ export default class ScrollEvent {
     ctx.ctx.canvas.addEventListener("touchend", this.touchEndListener);
   }
 
+  private resizeManager = this.ctx.resizeEvent.then(({ redraw: () => {
+    if (!this.req) return;
+    this._maxHeight = this.req.maxHeight();
+    if (this._pos > this.maxPos()) {
+      this._pos = this.maxPos();
+      this.req.dynamic();
+      this.ctx.redraw();
+    }
+  }}))
+
   then(req: ScrollRequest): ScrollManager {
     this._pos = 0;
     this.oneStep = req.oneStep;
     this.atTop = true;
     this.atBot = false;
     this.req = req;
-    this.maxHeight = this.req.maxHeight();
+    this._maxHeight = this.req.maxHeight();
     const removeRequest = () => {
       if (this.req === req) this.req = undefined;
     }
@@ -36,11 +46,6 @@ export default class ScrollEvent {
 
   redraw() {
     if (this.hideTimeout === undefined) return;
-    this.draw();
-  }
-
-  private showScroll() {
-    this.startHiding();
     this.draw();
   }
 
@@ -65,29 +70,24 @@ export default class ScrollEvent {
     this.ctx.ctx.canvas.removeEventListener("touchmove", this.touchMoveListener);
     this.ctx.ctx.canvas.removeEventListener("touchend", this.touchEndListener);
     clearTimeout(this.hideTimeout);
+    this.resizeManager();
   }
 
   private oneStep = 0;
   private _maxHeight = 0;
-  private get maxHeight() { return this._maxHeight; }
-  private set maxHeight(maxHeight: number) {
-    this._maxHeight = maxHeight;
-    this.pos = Math.min(this.maxPos(), this._pos);
-  }
 
   private req?: ScrollRequest;
   private _pos = 0;
   private set pos(curPos: number) {
-    if (this._pos === curPos) return;
+    if (this._pos === curPos || !this.req) return;
     this._pos = curPos;
-    if (this.req) {
-      this.req.dynamic();
-      this.startHiding();
-      // already there is scroll(incorrect position), need whole redraw of scene
-      if (this.hideTimeout) this.ctx.redraw(); // ctx will redraw whole scene which will redraw the scroll
-      // there is no scroll, can draw on top
-      else this.draw();
-    }
+    this.req.dynamic();
+    // scroll happening, begin scroll hiding timer
+    this.startHiding();
+    // already there is scroll(incorrect position), need whole redraw of scene
+    if (this.hideTimeout) this.ctx.redraw(); // ctx will redraw whole scene which will redraw the scroll
+    // there is no scroll, can draw on top
+    else this.draw();
     if (this._pos === this.maxPos()) {
       this.atBot = true;
       this.atTop = false;
