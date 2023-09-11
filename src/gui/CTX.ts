@@ -1,4 +1,4 @@
-import { loadAssets } from "../asset";
+import { Assets, loadAssets, loadWords } from "../asset";
 import settings from "../settings";
 import ButtonEvent from "./events/button";
 import ClickEvent from "./events/click";
@@ -8,18 +8,20 @@ import ResizeEvent from "./events/resize";
 import ScrollEvent from "./events/scroll";
 import BottomMenu from "./bottomMenu";
 import Progress from "../progress";
+import { UnloadedWord, Word } from "../games";
 
 export default class CTX {
-  private constructor(public readonly ctx: CanvasRenderingContext2D, public readonly assets: Awaited<ReturnType<typeof loadAssets>>) {
+  private constructor(public readonly ctx: CanvasRenderingContext2D, public readonly assets: Assets, public readonly words: Word[]) {
     this.prepareCtx();
     this.scrollEvent = new ScrollEvent(this);
     this.bottomMenu = new BottomMenu(this);
     this.resizeEvent.then({ fix: () => this.prepareCtx(), redraw: () => this.redraw() });
   }
-  static async aconstructor(ctx: CanvasRenderingContext2D) {
+  static async aconstructor(ctx: CanvasRenderingContext2D, unloadedWords: UnloadedWord[]) {
     CTX.drawLoadingBackground(ctx);
     const assets = await loadAssets(settings.gui.icon.width, "width");
-    return new CTX(ctx, assets);
+    const words = await loadWords(unloadedWords, settings.gui.icon.width);
+    return new CTX(ctx, assets, words);
   }
   readonly loaded: Promise<void>;
 
@@ -151,7 +153,7 @@ export default class CTX {
   // fullscreen button
   readonly bottomMenu: BottomMenu;
   // progress
-  readonly progress = new Progress();
+  readonly progress = new Progress(this);
 
   stop() {
     this.buttonEvent.stop();

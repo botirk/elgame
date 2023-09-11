@@ -4,9 +4,9 @@ import { Button } from "./button";
 import { ButtonGroupTable } from "./buttonGroup";
 import { ButtonWithDescription } from "./buttonWithDescription";
 
-const wordsTable = (ctx: CTX, words: Word[]) => {
+const wordsTable = (ctx: CTX) => {
   const result = new ButtonGroupTable(ctx);
-  result.content = words.map((word) => {
+  result.content = ctx.progress.sortedWords().map((word) => {
     const text = new Button(ctx);
       text.likeLabel = true;
       text.content = word.toLearnText;

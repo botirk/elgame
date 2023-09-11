@@ -3,7 +3,7 @@ import Menu from "./games/menu";
 import CTX from "./gui/CTX";
 
 class Nav {
-  constructor(private _ctx: CTX, private _words: Word[]) {
+  constructor(private _ctx: CTX) {
     this.onPopState = this.onPopState.bind(this);
     window.addEventListener("popstate", this.onPopState);
     this.showMenu();
@@ -12,7 +12,7 @@ class Nav {
   private _curGame?: AbstractGame<any, any, any, EndGameStats>;
 
   private async showMenu(noRefresh?: boolean) {
-    const result = await new Menu(this._ctx, this._words).init().onGameEnd;
+    const result = await new Menu(this._ctx, undefined).init().onGameEnd;
     //noRefresh = !!result?.isViewer;
     //history.pushState(`elgame${Math.floor(Math.random() * 1000)}`, "");
     //if (result?.isViewer) await this.showWords();

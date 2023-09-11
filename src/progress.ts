@@ -1,4 +1,5 @@
-import { EndGameStats, GameName } from "./games";
+import { EndGameStats, GameName, Word } from "./games";
+import CTX from "./gui/CTX";
 import settings from "./settings";
 import { ru } from "./translation";
 
@@ -22,7 +23,7 @@ export class WordProgress {
 }
 
 export default class Progress {
-	constructor() {
+	constructor(private readonly ctx: CTX) {
 		this.load();
 	}
 	
@@ -189,12 +190,34 @@ export default class Progress {
 			updateRequired: false,
 			};
 		}
-	  }
+	}
 		
-	  wordStats(word: string) {
-		const wordProgress = this.getWord(word);
-		return { successes: `${ru.OfSuccesses}: ${wordProgress.success}`, fails: `${ru.OfFails}: ${wordProgress.fail}` };
-	  }
+  wordStats(word: string) {
+    const wordProgress = this.getWord(word);
+    return { successes: `${ru.OfSuccesses}: ${wordProgress.success}`, fails: `${ru.OfFails}: ${wordProgress.fail}` };
+  }
+
+  sortedWords(now = new Date()) {
+    return this.ctx.words.sort((a, b) => {
+      if (this.getWord(a.toLearnText).stage === this.getWord(b.toLearnText).stage) {
+        const aLearned = this.isLearnedForNow(a.toLearnText, now);
+        const bLearned = this.isLearnedForNow(b.toLearnText, now);
+        if (bLearned && !aLearned) return 1;
+        else if (!bLearned && aLearned) return -1;
+        else if (aLearned && bLearned) return this.getWord(a.toLearnText).bonusstage - this.getWord(b.toLearnText).bonusstage;
+        else if (this.getWord(b.toLearnText).substage !== this.getWord(a.toLearnText).substage) return this.getWord(b.toLearnText).substage - this.getWord(a.toLearnText).substage;
+        else if (a.toLearnText < b.toLearnText) return -1;
+        else if (a.toLearnText > b.toLearnText) return 1;
+        else return 0;
+      } else {
+        return this.getWord(a.toLearnText).stage - this.getWord(b.toLearnText).stage;
+      }
+    });
+  }
+
+  suggestGame(timer: Date, now = new Date()) {
+    
+  }
 	
 	// length <= 10
 	prevGames: GameName[] = [];

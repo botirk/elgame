@@ -9,7 +9,7 @@ import { ru } from "../translation";
 
 interface MenuEnd extends EndGameStats { is5?: boolean, is25?: boolean };
 
-class Menu extends AbstractGame<Word[], any, any, MenuEnd> {
+class Menu extends AbstractGame<undefined, any, any, MenuEnd> {
   private table: ButtonGroupTable;
 
   private resizeManager: ResizeManager;
@@ -19,15 +19,18 @@ class Menu extends AbstractGame<Word[], any, any, MenuEnd> {
   protected preparePos() { }
   protected start() {
     const menuTable = this.menuTable();
-    const words = wordsTable(this.ctx, this.content);
+    const words = wordsTable(this.ctx);
     this.table = new ButtonGroupTable(this.ctx);
-    const limitRect = () => ({ startX: 0, startY: this.ctx.ctx.canvas.height / 5 }); 
     this.table.padding *= 5;
-    this.table.limitRect = limitRect();
-    this.resizeManager = this.ctx.resizeEvent.then(({ update: () => { this.table.limitRect = limitRect() }}));
-    this.table.xy(() => this.ctx.centerX(), () => this.ctx.centerY() - this.ctx.scrollEvent.pos);
+    const dynamic = () => {
+      this.table.xy(this.ctx.centerX(), this.ctx.centerY() - this.ctx.scrollEvent.pos);
+      this.table.limitRect = { startX: 0, startY: this.ctx.ctx.canvas.height / 5 };
+    }
+    dynamic();
     this.table.content = [[menuTable], [words]];
-    this.scrollManager = this.ctx.scrollEvent.then({ oneStep: 25, maxHeight: () => (this.table.limitRect?.startY || 0) + this.table.height + settings.gui.button.padding, dynamic: () => this.table.dynamic() });
+    
+    this.resizeManager = this.ctx.resizeEvent.then(({ update: () => {  dynamic(); this.table.screenResize(); }}));
+    this.scrollManager = this.ctx.scrollEvent.then({ oneStep: 25, maxHeight: () => (this.table.limitRect?.startY || 0) + this.table.height + settings.gui.button.padding, dynamic });
   }
   protected innerRedraw() {
     this.ctx.drawBackground();

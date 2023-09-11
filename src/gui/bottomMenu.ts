@@ -4,6 +4,7 @@ import { Button } from "./button";
 import { ButtonGroupGrid, ButtonGroupTable } from "./buttonGroup";
 import { ClickManager } from "./events/click";
 import { HoverManager } from "./events/hover";
+import { ResizeManager } from "./events/resize";
 
 export default class BottomMenu extends ButtonGroupTable {
   constructor(ctx: CTX) {
@@ -33,14 +34,17 @@ export default class BottomMenu extends ButtonGroupTable {
     musicButton.content = this.ctx.assets["volume-mute"];
     
     this.content = [[ musicButton, fsButton ]];
-    this.xy(() => ctx.ctx.canvas.width - this.width / 2 - settings.gui.button.padding - 15, () => ctx.ctx.canvas.height - this.height / 2 - settings.gui.button.padding - 15);
+    const dynamic = () => this.xy(ctx.ctx.canvas.width - this.width / 2 - settings.gui.button.padding - 15, ctx.ctx.canvas.height - this.height / 2 - settings.gui.button.padding - 15);
+    dynamic();
+    this.resizeManager = this.ctx.resizeEvent.then({ update: dynamic });
   }
 
+  private resizeManager: ResizeManager;
   private moreHover: HoverManager = this.ctx.hoverEvent.then({
     isInArea: (xIn, yIn) => yIn >= this.ctx.ctx.canvas.height - this.height - settings.gui.button.padding * 2,
     onHover: () => this.setInvisible(false),
     onLeave: () => this.setInvisible(true),
-  });;
+  })
   private moreClick: ClickManager = this.ctx.clickEvent.then({
     isInArea: () => true,
     zIndex: -Infinity,
@@ -49,7 +53,7 @@ export default class BottomMenu extends ButtonGroupTable {
         this.setInvisible(!this.invisible);
       }
     },
-  });
+  })
 
   private invisible = true;
   private setInvisible(state: boolean) {
@@ -69,6 +73,7 @@ export default class BottomMenu extends ButtonGroupTable {
   stop(): void {
     this.moreHover.stop();
     this.moreClick.stop();
+    this.resizeManager();
     super.stop();
   }
 }

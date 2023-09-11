@@ -5,9 +5,8 @@ import { loadWords } from "./asset";
 import settings from "./settings";
 
 const index = async (ctx: CanvasRenderingContext2D, unloadedWords: UnloadedWord[], isDev?: boolean): Promise<Nav> => {
-  const innerCTX = await CTX.aconstructor(ctx);
-  const words = await loadWords(unloadedWords, settings.gui.icon.width);
-  return new Nav(innerCTX, words);
+  const innerCTX = await CTX.aconstructor(ctx, unloadedWords);
+  return new Nav(innerCTX);
 }
 
 export default index;

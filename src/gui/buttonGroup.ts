@@ -19,7 +19,6 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
     }
 
     protected newContent() {
-        for (const item of (this.content || [])) item.parent = this;
         this.equalize();
         this.place();
     }
@@ -44,8 +43,8 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
             this._itemHeight = Math.max(this._itemHeight, btn.height);
         }
         for (const btn of this.content) {
-            btn.minWidth = () => this._itemWidth;
-            btn.minHeight = () => this._itemHeight;
+            btn.minWidth = this._itemWidth;
+            btn.minHeight = this._itemHeight;
         }
     }
     private calc() {
@@ -145,8 +144,6 @@ export class ButtonGroupTable extends ButtonLike<Table> {
     }
 
     protected newContent(): void {
-        for (const row of (this.content || [])) for (const item of row) if (item) item.parent = this;
-        this.equalize();
         this.place();
     }
 
@@ -166,7 +163,6 @@ export class ButtonGroupTable extends ButtonLike<Table> {
     set equalizeAllHeight(value: boolean) {
         if (this._equalizeAllHeight === value) return;
         this._equalizeAllHeight = value;
-        this.equalize();
         this.place();
     }
 
@@ -223,6 +219,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
     }
     private calced: ButtonGroupTableCalc[][];
     private calc()  {
+        this.equalize();
         const content = (this.content || []);
         this.calced = [];
         
@@ -315,11 +312,10 @@ export class ButtonGroupTable extends ButtonLike<Table> {
             }
         }
     }
-    protected newPos(x: any, y: any): void {
+    protected newPos(): void {
         this.place();
     }
     innerResize() {
-        this.equalize();
         this.place();
     }
     redraw() {
@@ -337,15 +333,7 @@ export class ButtonGroupTable extends ButtonLike<Table> {
         }
     }
     screenResize(): void {
-        let childChanged = false;
-        for (const row of (this.content || [])) for (const item of row) {
-            if (!item) continue;
-            const oldWidth = item.innerWidth, oldHeight = item.innerHeight;
-            item.screenResize();
-            if (oldWidth !== item.innerWidth || oldHeight !== item.innerHeight) childChanged = true;
-        }
-
-        if (childChanged) this.equalize();
+        for (const row of (this.content || [])) for (const item of row) item?.screenResize();
         this.place();
     }
 }
