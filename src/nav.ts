@@ -3,29 +3,30 @@ import Menu from "./games/menu";
 import CTX from "./gui/CTX";
 
 class Nav {
-  constructor(private _ctx: CTX) {
+  constructor(private ctx: CTX) {
     this.onPopState = this.onPopState.bind(this);
     window.addEventListener("popstate", this.onPopState);
     this.showMenu();
   }
 
-  private _curGame?: AbstractGame<any, any, any, EndGameStats>;
+  private curGame?: AbstractGame<any, EndGameStats>;
 
-  private async showMenu(noRefresh?: boolean) {
-    const result = await new Menu(this._ctx, undefined).init().onGameEnd;
-    //noRefresh = !!result?.isViewer;
-    //history.pushState(`elgame${Math.floor(Math.random() * 1000)}`, "");
-    //if (result?.isViewer) await this.showWords();
-    //else if (result?.isInfinity) await this.playInfinity();
-    //else if (result?.isAllViewer) await this.showAllWords();
-    //else if (!(await this.playGame())?.isSuccess) noRefresh = true;
-    //this.showMenu(noRefresh);*/
+  private async showMenu() {
+    const result = await new Menu(this.ctx, undefined).start().onGameEnd;
+    history.pushState(`elgame${Math.floor(Math.random() * 1000)}`, "");
+    await this.playGame(new Date());
+    this.showMenu();
+  }
+
+  private async playGame(endTime: Date) {
+    this.curGame = this.ctx.progress.suggestGame(endTime).start();
+    await this.curGame.onGameEnd;
   }
 
   private onPopState() {
-    if (this._curGame) {
-      this._curGame?.stop();
-      this._curGame = undefined;
+    if (this.curGame) {
+      this.curGame?.stop();
+      this.curGame = undefined;
     }
   }
 }

@@ -10,7 +10,7 @@ export interface EndGameStats {
   name?: GameName,
 }
 
-export type Game = () => AbstractGame<any, any, any, EndGameStats>;
+export type Game = () => AbstractGame<any, EndGameStats>;
 
 export interface UnloadedWord {
   toLearnText: string,
@@ -32,29 +32,20 @@ export interface WordWithTranslation extends Word {
   translation: string,
 }
 
-export abstract class AbstractGame<TContent, TPrepare extends any, TPreparePos extends any, TEndGameStats extends EndGameStats> {
+export abstract class AbstractGame<TContent, TEndGameStats extends EndGameStats> {
   constructor(protected readonly ctx: CTX, protected readonly content: TContent) { }
 
-  init() {
+  start() {
     [this.onGameEnd, this.stop] = promiseMagic<TEndGameStats | undefined>(() => this.freeResources());
-    this.start();
+    this.init();
     this.ctx.innerRedraw = this.innerRedraw.bind(this);
     this.ctx.redraw();
     return this;
   }
-
-  protected abstract prepare(): TPrepare;
-  protected abstract preparePos(): TPreparePos;
-  protected abstract start(): void;
+  protected abstract init(): void;
   protected abstract freeResources(): void;
   protected abstract innerRedraw(): void;
   protected scroll() {};
-  protected abstract scrollOptions(): { oneStep: number, maxHeight: number };
-  
-  private _prepared: TPrepare = this.prepare();
-  protected get prepared() { return this._prepared; }
-  private _preparedPos: TPreparePos = this.preparePos();
-  protected get preparedPos() { return this._preparedPos; }
  
   onGameEnd: Promise<TEndGameStats | undefined>;
   onProgressSuccess?: typeof saveProgressSuccess;

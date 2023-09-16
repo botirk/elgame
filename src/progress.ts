@@ -1,4 +1,6 @@
-import { EndGameStats, GameName, Word } from "./games";
+import { AbstractGame, EndGameStats, GameName, Word, WordWithImage } from "./games";
+import Form from "./games/form/game";
+import { formSettings } from "./games/form/settings";
 import CTX from "./gui/CTX";
 import settings from "./settings";
 import { ru } from "./translation";
@@ -86,40 +88,31 @@ export default class Progress {
 		return (now.getTime() - wordProgress.timestamp.getTime() < Progress.stageTime(wordProgress.stage));
 	}
 
-	saveProgressFail(successWord: string, failWords: string[]) {
+	saveProgressFail(answerWord: string, clickedWord: string) {
 		// save success
-		let wordProgress = this.words[successWord] || new WordProgress();
-		wordProgress.substage = Math.max(0, wordProgress.substage - 1);
-		this.words[successWord] = wordProgress;
+		const answerProgress = this.getWord(answerWord);
+		answerProgress.substage = Math.max(0, answerProgress.substage - 1);
 		// save failure
-		for (const failWord of failWords) {
-			// find mistake
-			const mistake = wordProgress.mistakes.find((mistake) => mistake[0] === failWord);
-			// increment
-			if (mistake) mistake[1] += 1;
-			// push new mistake
-			else if (wordProgress.mistakes.length < 10) wordProgress.mistakes.push([failWord, 1]);
-			// replace old mistake with new mistake
-			else {
-				wordProgress.mistakes.sort((a, b) => b[1] - a[1]);
-				wordProgress.mistakes[9] = [failWord, 1];
-			}
-	
-			wordProgress = this.words[failWord] || new WordProgress();
-			wordProgress.fail += 1;
-			wordProgress.substage = Math.max(0, wordProgress.substage - 1 / failWords.length);
-			this.words[failWord] = wordProgress;
+		const mistake = answerProgress.mistakes.find((mistake) => mistake[0] === clickedWord);
+		// increment
+		if (mistake) mistake[1] += 1;
+		// push new mistake
+		else if (answerProgress.mistakes.length < 10) answerProgress.mistakes.push([clickedWord, 1]);
+		// replace old mistake with new mistake
+		else {
+			answerProgress.mistakes.sort((a, b) => b[1] - a[1]);
+			answerProgress.mistakes[9] = [clickedWord, 1];
 		}
 		
 		return this.save();
 	}
 	
-	saveProgressSuccess(successWord: string, partnerWords: string[]) {
+	saveProgressSuccess(answerWord: string, partnerWords: string[]) {
 		const now = new Date();
 		// main word
-		let wordProgress = this.words[successWord];
+		let wordProgress = this.getWord(answerWord);
 		wordProgress.success += 1;
-		if (!this.isLearnedForNow(successWord, now)) {
+		if (!this.isLearnedForNow(answerWord, now)) {
 			wordProgress.substage += 1;
 			if (wordProgress.substage >= 4) {
 				wordProgress.bonusstage = 0;
@@ -130,7 +123,7 @@ export default class Progress {
 		} else {
 			wordProgress.bonusstage += 1;
 		}
-		this.words[successWord] = wordProgress;
+		this.words[answerWord] = wordProgress;
 		// partners
 		for (const partnerWord of partnerWords) {
 			wordProgress = this.words[partnerWord];
@@ -215,8 +208,13 @@ export default class Progress {
     });
   }
 
-  suggestGame(timer: Date, now = new Date()) {
-    
+  suggestGame(timer: Date, now = new Date()): AbstractGame<any, any> {
+    const shouldTest = true;
+		const words = this.ctx.progress.sortedWords(now) as WordWithImage[];
+		if (shouldTest) {
+			//return () => new Form(this.ctx, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: formSettings.generateLearningSetup(progress.learnFormDif) });
+		}
+		return new Form(this.ctx, { answer: words[0], falseAnswers: [words[1]], setup: formSettings.generateLearningSetup(this.ctx.progress.learnFormDif) });
   }
 	
 	// length <= 10

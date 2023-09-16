@@ -118,6 +118,9 @@ export class ButtonGroupGrid<TBLike extends ButtonLike<any>[]> extends ButtonLik
         super.screenResize();
         this.place();
     }
+    protected newPos(): void {
+        this.place();
+    }
 }
 
 export type TableItem = (ButtonLike<any> | undefined);

@@ -1,27 +1,15 @@
-import { WordWithImage } from "..";
-import { Init } from "../../init";
+import { AbstractGame, EndGameStats, WordWithImage } from "..";
 import settings from "../../settings";
 import { FormGameSetup, formSettings as formGame } from "./settings";
-import Card from "./card";
-import { drawBackground } from "../../gui/background";
 import { ButtonGroupGrid } from "../../gui/buttonGroup";
 import { randomiseArray } from "../../utils";
-import { ButtonLike } from "../../gui/abstractButton";
 
-class OneForm {
-  readonly answers: WordWithImage[] = randomiseArray([ this._answer, ...this.falseAnswers ]);
-
-  constructor(private readonly  _init: Init, private readonly _setup: FormGameSetup, readonly _answer: WordWithImage, readonly falseAnswers: WordWithImage[], private _onClick: (this: OneForm, card?: WordWithImage) => void, private _onFinish: (this, card?: WordWithImage) => void, private _redrawStatus: (remainingTime?: Date) => void) {
-    const this2 = this;
-    this._grid = new ButtonGroupGrid(this._init, this.answers.map((word) => new Card(this._init, word, function() {
-      return this2.click(this);
-    })), () => this._init.ctx.canvas.width / 2, () => settings.gui.status.height + (this._init.ctx.canvas.height - settings.gui.status.height) / 2);
-    this._redrawTimer = setInterval(() => this.redrawStatus(), 90);
-    const remainingTime = this.remainingTime();
-    if (isFinite(remainingTime)) {
-      this._finishTimeout = setTimeout(() => this.click(null), this.remainingTime());
-    }
+class Form extends AbstractGame<{ answer: WordWithImage, falseAnswers: WordWithImage[], setup: FormGameSetup }, EndGameStats> {
+  protected init(): void {
+    
   }
+
+  readonly answers: WordWithImage[] = randomiseArray([ this.content.answer, ...this.content.falseAnswers ]);
 
   private readonly _grid: ButtonGroupGrid<Card[]>;
   
@@ -89,4 +77,4 @@ class OneForm {
   }
 }
 
-export default OneForm;
+export default Form;

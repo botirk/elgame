@@ -9,15 +9,8 @@ import { ru } from "../translation";
 
 interface MenuEnd extends EndGameStats { is5?: boolean, is25?: boolean };
 
-class Menu extends AbstractGame<undefined, any, any, MenuEnd> {
-  private table: ButtonGroupTable;
-
-  private resizeManager: ResizeManager;
-  private scrollManager: ScrollManager;
-  
-  protected prepare() { }
-  protected preparePos() { }
-  protected start() {
+class Menu extends AbstractGame<undefined, MenuEnd> {
+  protected init() {
     const menuTable = this.menuTable();
     const words = wordsTable(this.ctx);
     this.table = new ButtonGroupTable(this.ctx);
@@ -107,6 +100,10 @@ class Menu extends AbstractGame<undefined, any, any, MenuEnd> {
     
     return result;
   }
+
+  private table: ButtonGroupTable;
+  private resizeManager: ResizeManager;
+  private scrollManager: ScrollManager;
 }
 
 export default Menu;

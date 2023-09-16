@@ -2,7 +2,7 @@ import { loadWords } from "./asset";
 import { AbstractGame, EndGameStats, GameName, UnloadedWord, Word, WordWithImage } from "./games";
 import Drop from "./games/drop/game";
 import { dropSettings } from "./games/drop/settings";
-import Form from "./games/form/game";
+import Form from "./games/form/game2";
 import { formSettings } from "./games/form/settings";
 import Memory from "./games/memory/game";
 import { memorySettings } from "./games/memory/settings";
