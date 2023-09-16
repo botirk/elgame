@@ -12,7 +12,9 @@ class Form extends AbstractGame<{ answer: WordWithImage, falseAnswers: WordWithI
       const button = new Button(this.ctx);
       button.content = answer.toLearnImg;
       button.onClick = () => {
-        if (answer === this.content.answer) {
+        if (this.endTimer) {
+          return;
+        } else if (answer === this.content.answer) {
           button.bgColor = settings.colors.success;
           this.ctx.progress.saveProgressSuccess(this.content.answer.toLearnText, this.content.falseAnswers.map((fa) => fa.toLearnText));
           this.endTimer = setTimeout(() => {

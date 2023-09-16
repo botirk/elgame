@@ -1,4 +1,4 @@
-import { AbstractGame } from ".";
+import { AbstractGame, EndGameStats } from ".";
 import { Button } from "../gui/button";
 import { ButtonGroupTable} from "../gui/buttonGroup";
 import { ResizeManager } from "../gui/events/resize";
@@ -7,12 +7,12 @@ import wordsTable from "../gui/wordsTable";
 import settings from "../settings";
 import { ru } from "../translation";
 
-interface MenuEnd { is5?: boolean, is25?: boolean };
+interface MenuEnd extends EndGameStats { is5?: boolean, is25?: boolean };
 
 class Menu extends AbstractGame<undefined, MenuEnd> {
   protected init() {
     const menuTable = this.menuTable();
-    const words = wordsTable(this.ctx);
+    const { table: words, dynamic: dynamicWords } = wordsTable(this.ctx);
     this.table = new ButtonGroupTable(this.ctx);
     this.table.padding *= 5;
     const dynamic = () => {
@@ -22,6 +22,10 @@ class Menu extends AbstractGame<undefined, MenuEnd> {
     dynamic();
     this.table.content = [[menuTable], [words]];
     
+    this.refreshTimer = setInterval(() => {
+      if (dynamicWords()) this.table.innerResize();
+      this.ctx.redraw();
+    }, 300);
     this.resizeManager = this.ctx.resizeEvent.then(({ update: () => {  dynamic(); this.table.screenResize(); }}));
     this.scrollManager = this.ctx.scrollEvent.then({ oneStep: 25, maxHeight: () => (this.table.limitRect?.startY || 0) + this.table.height + settings.gui.button.padding, dynamic });
   }
@@ -42,6 +46,7 @@ class Menu extends AbstractGame<undefined, MenuEnd> {
     this.table.stop();
     this.resizeManager();
     this.scrollManager();
+    clearInterval(this.refreshTimer);
   }
   private menuTable() {
     const game5 = new Button(this.ctx);
@@ -101,6 +106,7 @@ class Menu extends AbstractGame<undefined, MenuEnd> {
     return result;
   }
 
+  private refreshTimer: NodeJS.Timer;
   private table: ButtonGroupTable;
   private resizeManager: ResizeManager;
   private scrollManager: ScrollManager;

@@ -68,6 +68,8 @@ const localStorage = {
 
 const maxBonusDif = 10;
 
+const maxWordsLearnedPerMinute = 1.2;
+
 const settings = {
   name,
   calculate,
@@ -77,6 +79,7 @@ const settings = {
   gui,
   localStorage,
   maxBonusDif,
+  maxWordsLearnedPerMinute
 }
 
 export type Settings = typeof settings;

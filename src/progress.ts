@@ -93,7 +93,13 @@ export default class Progress {
 	saveProgressFail(answerWord: string, clickedWord: string) {
 		// save success
 		const answerProgress = this.getWord(answerWord);
-		answerProgress.substage = Math.max(0, answerProgress.substage - 1);
+		answerProgress.substage = Math.max(-4, answerProgress.substage - 1);
+		if (answerProgress.substage <= -4 && answerProgress.stage > 0) {
+			answerProgress.stage -= 1;
+			answerProgress.substage = 0;
+			answerProgress.bonusstage = 0;
+			answerProgress.timestamp = new Date(0);
+		}
 		answerProgress.fail += 1;
 		// save mistake
 		const mistake = answerProgress.mistakes.find((mistake) => mistake[0] === clickedWord);
@@ -201,25 +207,22 @@ export default class Progress {
 
   sortWords(words = this.ctx.words, now = new Date()) {
     return words.sort((a, b) => {
-      if (this.getWord(a.toLearnText).stage === this.getWord(b.toLearnText).stage) {
-        const aLearned = this.isLearnedForNow(a.toLearnText, now);
-        const bLearned = this.isLearnedForNow(b.toLearnText, now);
-        if (bLearned && !aLearned) return 1;
-        else if (!bLearned && aLearned) return -1;
-        else if (aLearned && bLearned) return this.getWord(a.toLearnText).bonusstage - this.getWord(b.toLearnText).bonusstage;
-        else if (this.getWord(b.toLearnText).substage !== this.getWord(a.toLearnText).substage) return this.getWord(b.toLearnText).substage - this.getWord(a.toLearnText).substage;
-        else if (a.toLearnText < b.toLearnText) return -1;
-        else if (a.toLearnText > b.toLearnText) return 1;
-        else return 0;
-      } else {
-        return this.getWord(a.toLearnText).stage - this.getWord(b.toLearnText).stage;
-      }
+			const aWord = this.getWord(a.toLearnText), bWord = this.getWord(b.toLearnText);
+			const aLearned = this.isLearnedForNow(a.toLearnText, now), bLearned = this.isLearnedForNow(b.toLearnText, now);
+			if (bLearned && !aLearned) return  -1;
+			else if (!bLearned && aLearned) return 1;
+			else if (aLearned && bLearned) return aWord.bonusstage - bWord.bonusstage;
+      else if (aWord.stage !== bWord.stage) return aWord.stage - bWord.stage;
+			else if (aWord.substage !== bWord.substage) return bWord.substage - aWord.substage;
+      else if (a.toLearnText < b.toLearnText) return -1;
+      else if (a.toLearnText > b.toLearnText) return 1;
+      else return 0;
     });
   }
 	
 	suggestWords(endTime: Date, now = new Date()) {
 		const diff = new Date(endTime.getTime() - now.getTime());
-		const count = Math.max(2, Math.floor(diff.getTime() / (1.2 * 60 * 1000)));
+		const count = Math.max(2, Math.floor(diff.getTime() / ((1 / settings.maxWordsLearnedPerMinute) * 60 * 1000)));
 		return this.sortWords(undefined, now).slice(0, count);
 	}
 
@@ -251,13 +254,31 @@ export default class Progress {
 		return result;
 	}
 
+	suggestGameName(word: Word): GameName {
+		return "form";
+	}
+
   suggestGame(words = this.ctx.words, now = new Date()): AbstractGame<any, any> {
     const shouldTest = true;
 		if (shouldTest) {
 			//return () => new Form(this.ctx, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: formSettings.generateLearningSetup(progress.learnFormDif) });
 		}
 		const answer = this.suggestWord(words) as WordWithImage;
-		const falseAnswers = this.suggestWordPartners(answer, 1) as WordWithImage[];
+		const progress = this.getWord(answer.toLearnText)
+		const gameName = this.suggestGameName(answer);
+		if (gameName === "form") {
+			let numFalseAnswers = 5;
+			if (progress.stage === 0) numFalseAnswers = 1;
+			else if (progress.stage === 1) numFalseAnswers = 2;
+			else if (progress.stage === 2) numFalseAnswers = 3;
+			else if (progress.stage === 3) numFalseAnswers = 4;
+			const falseAnswers = this.suggestWordPartners(answer, numFalseAnswers) as WordWithImage[];
+			return new Form(this.ctx, { answer, falseAnswers, setup: formSettings.generateLearningSetup(this.ctx.progress.learnFormDif) });
+		}
+		
+		let numFalseAnswers = 4;
+		if (this.getWord(answer.toLearnText).stage === 0) numFalseAnswers = 1;
+		const falseAnswers = this.suggestWordPartners(answer, numFalseAnswers) as WordWithImage[];
 		return new Form(this.ctx, { answer, falseAnswers, setup: formSettings.generateLearningSetup(this.ctx.progress.learnFormDif) });
   }
 	

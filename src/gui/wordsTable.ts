@@ -1,12 +1,13 @@
 import { Word, WordWithImage } from "../games";
 import CTX from "./CTX";
 import { Button } from "./button";
-import { ButtonGroupTable } from "./buttonGroup";
+import { ButtonGroupTable, Table } from "./buttonGroup";
 import { ButtonWithDescription } from "./buttonWithDescription";
 
 const wordsTable = (ctx: CTX) => {
-  const result = new ButtonGroupTable(ctx);
-  result.content = ctx.progress.sortWords().map((word) => {
+  const table = new ButtonGroupTable(ctx);
+  const words = ctx.progress.sortWords();
+  table.content = words.map((word) => {
     const text = new Button(ctx);
       text.likeLabel = true;
       text.content = word.toLearnText;
@@ -18,15 +19,10 @@ const wordsTable = (ctx: CTX) => {
       }
 
       // progress
-      let learning = ctx.progress.wordLearning(word.toLearnText);
+      const learning = ctx.progress.wordLearning(word.toLearnText);
       const progress = new Button(ctx);
       progress.likeLabel = true;
       progress.content = learning.text;
-      /*if (learning.updateRequired) this._buttonUpdaters.push(() => {
-        learning = wordLearning(word, this.content.progress);
-        progress.content = learning.text;
-        progress.redraw();
-      });*/
 
       // stats
       const stats = ctx.progress.wordStats(word.toLearnText);
@@ -36,7 +32,18 @@ const wordsTable = (ctx: CTX) => {
 
       return [text, img, progress, desc];
   });
-  return result;
+  const dynamic = () => {
+    let changed = false;
+    for (let i = 0; i < words.length; i += 1) {
+      const word = words[i];
+      // progress
+      const learning = ctx.progress.wordLearning(word.toLearnText);
+      const progress = (table.content as Table)[i][2] as Button;
+      changed ||= progress.setContentWithSizeChangeCheck(learning.text);
+    }
+    return changed;
+  }
+  return { table, dynamic };
 }
 
 export default wordsTable;
