@@ -1,6 +1,6 @@
 import { AbstractGame, EndGameStats, WordWithImage } from "..";
 import settings from "../../settings";
-import { FormGameSetup, formSettings as formGame } from "./settings";
+import { FormGameSetup, formSettings as formGame, formSettings } from "./settings";
 import { ButtonGroupGrid, ButtonGroupTable } from "../../gui/buttonGroup";
 import { randomiseArray } from "../../utils";
 import { Button } from "../../gui/button";
@@ -15,12 +15,17 @@ class Form extends AbstractGame<{ answer: WordWithImage, falseAnswers: WordWithI
         if (answer === this.content.answer) {
           button.bgColor = settings.colors.success;
           this.ctx.progress.saveProgressSuccess(this.content.answer.toLearnText, this.content.falseAnswers.map((fa) => fa.toLearnText));
+          this.endTimer = setTimeout(() => {
+            this.ctx.progress.saveProgressEnd("form");
+            this.stop();
+          }, formSettings.pause);
+          
         } else {
           button.bgColor = settings.colors.fail;
           this.ctx.progress.saveProgressFail(this.content.answer.toLearnText, answer.toLearnText);
         }
         button.onClick = undefined;
-      }      
+      }; 
       return button;
     });
     const grid = new ButtonGroupGrid(this.ctx);
@@ -45,8 +50,10 @@ class Form extends AbstractGame<{ answer: WordWithImage, falseAnswers: WordWithI
   protected freeResources(): void {
     this.table.stop();
     this.resizeManager();
+    if (this.endTimer) clearTimeout(this.endTimer);
   }
 
+  private endTimer?: NodeJS.Timeout;
   private resizeManager: ResizeManager;
   private table: ButtonGroupTable;
   readonly answers: WordWithImage[] = randomiseArray([ this.content.answer, ...this.content.falseAnswers ]);

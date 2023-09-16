@@ -1,4 +1,4 @@
-import { AbstractGame, EndGameStats, Word } from ".";
+import { AbstractGame } from ".";
 import { Button } from "../gui/button";
 import { ButtonGroupTable} from "../gui/buttonGroup";
 import { ResizeManager } from "../gui/events/resize";
@@ -7,7 +7,7 @@ import wordsTable from "../gui/wordsTable";
 import settings from "../settings";
 import { ru } from "../translation";
 
-interface MenuEnd extends EndGameStats { is5?: boolean, is25?: boolean };
+interface MenuEnd { is5?: boolean, is25?: boolean };
 
 class Menu extends AbstractGame<undefined, MenuEnd> {
   protected init() {
@@ -45,11 +45,11 @@ class Menu extends AbstractGame<undefined, MenuEnd> {
   }
   private menuTable() {
     const game5 = new Button(this.ctx);
-    game5.onClick = () => this.stop({ isSuccess: true, is5: true });
+    game5.onClick = () => this.stop({ is5: true });
     game5.content = ru["5minuteGame"];
 
     const game25 = new Button(this.ctx);
-    game25.onClick = () => this.stop({ isSuccess: true, is25: true });
+    game25.onClick = () => this.stop({ is25: true });
     game25.content = ru["25minuteGame"];
 
     const dif = new Button(this.ctx);

@@ -1,6 +1,7 @@
-import { AbstractGame, EndGameStats, Word } from "./games";
+import { AbstractGame } from "./games";
 import Menu from "./games/menu";
 import CTX from "./gui/CTX";
+import Status from "./gui/status";
 
 class Nav {
   constructor(private ctx: CTX) {
@@ -9,23 +10,31 @@ class Nav {
     this.showMenu();
   }
 
-  private curGame?: AbstractGame<any, EndGameStats>;
+  private curGame?: AbstractGame<any, any>;
 
   private async showMenu() {
     const result = await new Menu(this.ctx, undefined).start().onGameEnd;
     history.pushState(`elgame${Math.floor(Math.random() * 1000)}`, "");
-    await this.playGame(new Date());
+    await this.playGame(new Date((new Date()).getTime() + (5 * 60 * 1000)));
     this.showMenu();
   }
 
   private async playGame(endTime: Date) {
-    this.curGame = this.ctx.progress.suggestGame(endTime).start();
-    await this.curGame.onGameEnd;
+    this.ctx.status = new Status(this.ctx, endTime);
+    let now = new Date();
+    while(endTime > now) {
+      const words = this.ctx.progress.suggestWords(endTime);
+      this.curGame = this.ctx.progress.suggestGame(words, now).start();
+      const result = await this.curGame.onGameEnd;
+      if (result?.isStopped) break;
+      now = new Date();
+    }
+    this.ctx.status.stop();
   }
 
   private onPopState() {
     if (this.curGame) {
-      this.curGame?.stop();
+      this.curGame?.stop({ isStopped: true });
       this.curGame = undefined;
     }
   }

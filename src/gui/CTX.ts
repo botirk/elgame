@@ -9,6 +9,7 @@ import ScrollEvent from "./events/scroll";
 import BottomMenu from "./bottomMenu";
 import Progress from "../progress";
 import { UnloadedWord, Word } from "../games";
+import Status from "./status";
 
 export default class CTX {
   private constructor(public readonly ctx: CanvasRenderingContext2D, public readonly assets: Assets, public readonly words: Word[]) {
@@ -27,7 +28,9 @@ export default class CTX {
 
   /** drawings */
   innerRedraw?: () => void;
+  status?: Status;
   outerRedraw() {
+    this.status?.redraw();
     this.scrollEvent.redraw();
     this.bottomMenu.redraw();
   }
@@ -101,8 +104,7 @@ export default class CTX {
   drawTextAtCenter = (x: number, y: number, text: string) => {
     CTX.drawTextAtCenter(this.ctx, x, y, text);
   }
-  
-  calcTextWidth = (text: string) => {
+  calcTextWidth(text: string) {
     return this.ctx.measureText(text).width;
   }
 

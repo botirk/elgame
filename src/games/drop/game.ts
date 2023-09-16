@@ -3,7 +3,7 @@ import { dropSettings, DropGameSetup } from "./settings";
 import { randomInArray } from "../../utils";
 import { AbstractGame, WordWithImage } from "..";
 import { EndGameStats } from "..";
-import { drawStatusText, prepareStatusText } from "../../gui/status";
+import { drawStatusText, prepareStatusText } from "../../gui/status1";
 import { randomNInArray } from "../../utils";
 
 interface DropContent { words: WordWithImage[], setup: DropGameSetup };

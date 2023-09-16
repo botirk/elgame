@@ -1,127 +1,40 @@
-import { Init } from "../init";
 import settings from "../settings";
-import { calcTextWidth } from "./text";
+import CTX from "./CTX";
 
-interface PreparedQuestText {
-  questTextY: number,
-  questTextX: number,
-};
-
-const prepareQuestText = (init: Init): PreparedQuestText => ({
-  questTextY: (settings.gui.status.height + settings.fonts.fontSize) / 2,
-  questTextX: (init.ctx.canvas.width / 2),
-});
-
-const drawQuestText = (init: Init, text: string, prepared: PreparedQuestText) => {
-  init.ctx.fillStyle = "black";
-  init.ctx.fillText(text, prepared.questTextX - calcTextWidth(init.ctx, text) / 2, prepared.questTextY);
-};
-
-const drawBar = (init: Init) => {
-  // bg
-  init.ctx.fillStyle = settings.colors.questColorBG;
-  init.ctx.fillRect(0, 0, init.ctx.canvas.width, settings.gui.status.height);
-};
-
-const drawProgressBar = (init: Init, score: number, maxScore: number) => {
-  // bg
-  drawBar(init);
-  // bar
-  const progress = score / maxScore;
-  if (progress < 0.25) init.ctx.fillStyle = settings.colors.questColor1;
-  else if (progress < 0.5) init.ctx.fillStyle = settings.colors.questColor2;
-  else if (progress < 0.75) init.ctx.fillStyle = settings.colors.questColor3;
-  else init.ctx.fillStyle = settings.colors.questColor4;
-  init.ctx.fillRect(0, 0, init.ctx.canvas.width * progress, settings.gui.status.height);
-};
-
-const drawBarSuccess = (init: Init) => {
-  init.ctx.fillStyle = settings.colors.success;
-  init.ctx.fillRect(0, 0, init.ctx.canvas.width, settings.gui.status.height);
-};
-
-const drawBarFail = (init: Init) => {
-  init.ctx.fillStyle = settings.colors.fail;
-  init.ctx.fillRect(0, 0, init.ctx.canvas.width, settings.gui.status.height);
-};
-
-interface PreparedHealths {
-  healthsY: number,
-  healthsX: number,
-  healthsTextY: number,
-  healthsTextX: number,
-};
-
-const prepareHealths = (init: Init): PreparedHealths => ({
-  healthsY: (settings.gui.status.height - init.prepared.assets.heart.height) / 2,
-  healthsX: (init.ctx.canvas.width - init.prepared.assets.heart.width - settings.gui.margin),
-  healthsTextX: (init.ctx.canvas.width - init.prepared.assets.heart.width / 2 - settings.gui.margin),
-  healthsTextY: settings.gui.status.height  - init.prepared.assets.heart.height / 2 - settings.fonts.fontSize
-});
-
-const drawHealths = (init: Init, healths: number, prepared: PreparedHealths) => {
-  if (healths > 3 || init.prepared.isMobile) {
-    init.ctx.drawImage(init.prepared.assets.heart, prepared.healthsX, prepared.healthsY, init.prepared.assets.heart.width, init.prepared.assets.heart.height);
-    const text = isFinite(healths) ? Math.ceil(healths).toString() : "∞";
-    init.ctx.fillStyle = "black";
-    init.ctx.fillText(text, prepared.healthsTextX - calcTextWidth(init.ctx, text)  / 2, prepared.healthsTextY);
-  } else {
-    for (let x = prepared.healthsX; healths > 0; healths--, x-= (init.prepared.assets.heart.width * 1.2)) {
-      init.ctx.drawImage(init.prepared.assets.heart, x, prepared.healthsY, init.prepared.assets.heart.width, init.prepared.assets.heart.height);
-    }
+export default class Status {
+  constructor(private readonly ctx: CTX, private readonly endTime: Date) {
+    ctx.status?.stop();
+    ctx.status = this;
+    this.redrawTimer = setInterval(() => ctx.redraw(), 1000);
   }
-};
 
-const drawTimer = (init: Init, remainingTime: Date, prepared: PreparedStatusText) => {
-  const seconds = remainingTime.getSeconds();
-  init.ctx.fillStyle = "black";
-  if (seconds < 10) {
-    const ms = remainingTime.getMilliseconds();
-    init.ctx.fillText(`${seconds}.${ms}`, settings.gui.margin, prepared.questTextY);
-  } else {
-    init.ctx.fillText(`${seconds}`, settings.gui.margin, prepared.questTextY);
+  redraw() {
+    this.drawProgress();
   }
+
+  stop() {
+    clearInterval(this.redrawTimer);
+  }
+
+  private drawProgress(now = new Date()) {
+    // bg
+    this.drawBar();
+    // progress
+    const progress = Math.max(0, Math.min(1, (now.getTime() - this.start.getTime()) / this.dif));
+    if (progress < 0.25) this.ctx.ctx.fillStyle = settings.colors.questColor1;
+    else if (progress < 0.5) this.ctx.ctx.fillStyle = settings.colors.questColor2;
+    else if (progress < 0.75) this.ctx.ctx.fillStyle = settings.colors.questColor3;
+    else this.ctx.ctx.fillStyle = settings.colors.questColor4;
+    this.ctx.ctx.fillRect(0, 0, this.ctx.ctx.canvas.width * progress, settings.gui.status.height);
+  }
+
+  private drawBar() {
+    // bar
+    this.ctx.ctx.fillStyle = settings.colors.questColorBG;
+    this.ctx.ctx.fillRect(0, 0, this.ctx.ctx.canvas.width, settings.gui.status.height);
+  }
+
+  private redrawTimer: NodeJS.Timer;
+  private start = new Date();
+  private dif = this.endTime.getTime() - this.start.getTime();
 }
-
-interface PreparedStatusText extends PreparedHealths, PreparedQuestText {};
-
-export const prepareStatusText = (init: Init): PreparedStatusText => ({
-  ...prepareHealths(init),
-  ...prepareQuestText(init),
-});
-
-export const drawStatusSimple = (init: Init, health: number, prepared: PreparedStatusText) => {
-  drawBar(init);
-  drawHealths(init, health, prepared);
-};
-
-export const drawStatusSimpleSuccess = (init: Init, health: number, prepared: PreparedStatusText) => {
-  drawBarSuccess(init);
-  drawHealths(init, health, prepared);
-};
-
-export const drawStatusSimpleFail = (init: Init, health: number, prepared: PreparedStatusText) => {
-  drawBarFail(init);
-  drawHealths(init, health, prepared);
-};
-
-export const drawStatusText = (init: Init, quest: string, score: number, maxScore: number, health: number, prepared: PreparedStatusText, remainingTime?: Date) => {
-  drawProgressBar(init, score, maxScore);
-  drawHealths(init, health, prepared);
-  drawQuestText(init, quest, prepared);
-  if (remainingTime) drawTimer(init, remainingTime, prepared);
-};
-
-export const drawStatusTextSuccess = (init: Init, quest: string, health: number, prepared: PreparedStatusText, remainingTime?: Date) => {
-  drawBarSuccess(init);
-  drawHealths(init, health, prepared);
-  drawQuestText(init, quest, prepared);
-  if (remainingTime) drawTimer(init, remainingTime, prepared);
-};
-
-export const drawStatusTextFail = (init: Init, quest: string, health: number, prepared: PreparedStatusText, remainingTime?: Date) => {
-  drawBarFail(init);
-  drawHealths(init, health, prepared);
-  drawQuestText(init, quest, prepared);
-  if (remainingTime) drawTimer(init, remainingTime, prepared);
-};

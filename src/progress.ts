@@ -1,9 +1,10 @@
-import { AbstractGame, EndGameStats, GameName, Word, WordWithImage } from "./games";
+import { AbstractGame, GameName, Word, WordWithImage } from "./games";
 import Form from "./games/form/game";
 import { formSettings } from "./games/form/settings";
 import CTX from "./gui/CTX";
 import settings from "./settings";
 import { ru } from "./translation";
+import { randomInArray, randomiseArray } from "./utils";
 
 export const ProgressPrevGamesLen = 10;
 
@@ -71,10 +72,11 @@ export default class Progress {
 
 	save() {
 		try {
-			const parsed = JSON.stringify(this);
+			// exclude ctx
+			const parsed = JSON.stringify({ ...this, ctx: undefined });
 			localStorage.setItem(settings.localStorage.progress, parsed);
 			return true;
-		} catch {
+		} catch(e) {
 			return false;
 		}
 	}
@@ -92,7 +94,8 @@ export default class Progress {
 		// save success
 		const answerProgress = this.getWord(answerWord);
 		answerProgress.substage = Math.max(0, answerProgress.substage - 1);
-		// save failure
+		answerProgress.fail += 1;
+		// save mistake
 		const mistake = answerProgress.mistakes.find((mistake) => mistake[0] === clickedWord);
 		// increment
 		if (mistake) mistake[1] += 1;
@@ -112,6 +115,15 @@ export default class Progress {
 		// main word
 		let wordProgress = this.getWord(answerWord);
 		wordProgress.success += 1;
+		// reduce mistakes
+		for (let i = 0; i < wordProgress.mistakes.length; i += 1) {
+			wordProgress.mistakes[i][1] = Math.max(0, wordProgress.mistakes[i][1] * 0.9 - 0.25);
+			if (wordProgress.mistakes[i][1] === 0) {
+				wordProgress.mistakes.splice(i, 1);
+				i -= 1;
+			}
+		}
+		// learned
 		if (!this.isLearnedForNow(answerWord, now)) {
 			wordProgress.substage += 1;
 			if (wordProgress.substage >= 4) {
@@ -123,10 +135,9 @@ export default class Progress {
 		} else {
 			wordProgress.bonusstage += 1;
 		}
-		this.words[answerWord] = wordProgress;
 		// partners
 		for (const partnerWord of partnerWords) {
-			wordProgress = this.words[partnerWord];
+			wordProgress = this.getWord(partnerWord);
 			if (!this.isLearnedForNow(partnerWord, now)) {
 				wordProgress.substage += 0.1;
 				if (wordProgress.substage >= 4) {
@@ -138,16 +149,14 @@ export default class Progress {
 			} else {
 				wordProgress.bonusstage += 0.1;
 			}
-			this.words[partnerWord] = wordProgress;
 		}
 		// write
 		return this.save();
 	}
 
-	saveProgressEnd(stats: EndGameStats) {
-		if (!stats.name) return;
+	saveProgressEnd(game: GameName) {
 		while (this.prevGames.length >= 10) this.prevGames.shift();
-		this.prevGames.push(stats.name);
+		this.prevGames.push(game);
 		return this.save();
 	}
 
@@ -190,8 +199,8 @@ export default class Progress {
     return { successes: `${ru.OfSuccesses}: ${wordProgress.success}`, fails: `${ru.OfFails}: ${wordProgress.fail}` };
   }
 
-  sortedWords(now = new Date()) {
-    return this.ctx.words.sort((a, b) => {
+  sortWords(words = this.ctx.words, now = new Date()) {
+    return words.sort((a, b) => {
       if (this.getWord(a.toLearnText).stage === this.getWord(b.toLearnText).stage) {
         const aLearned = this.isLearnedForNow(a.toLearnText, now);
         const bLearned = this.isLearnedForNow(b.toLearnText, now);
@@ -207,14 +216,49 @@ export default class Progress {
       }
     });
   }
+	
+	suggestWords(endTime: Date, now = new Date()) {
+		const diff = new Date(endTime.getTime() - now.getTime());
+		const count = Math.max(2, Math.floor(diff.getTime() / (1.2 * 60 * 1000)));
+		return this.sortWords(undefined, now).slice(0, count);
+	}
 
-  suggestGame(timer: Date, now = new Date()): AbstractGame<any, any> {
+	suggestWord(words = this.ctx.words) {
+		return randomInArray(words);
+	}
+
+	suggestWordPartners(word: Word, count: number) {
+		const result: Word[] = [];
+		// add mistakes to partners
+		if (count > 0) {
+			let mistake = this.getWord(word.toLearnText).mistakes[0];
+			if (mistake) {
+				let mistakeWord = this.ctx.words.find((word) => word.toLearnText === mistake[0]);
+				if (!mistakeWord) {
+					mistake = this.getWord(word.toLearnText).mistakes[1];
+					mistakeWord = this.ctx.words.find((word) => word.toLearnText === mistake[0]);
+				}
+				if (mistakeWord) {
+					result.push(mistakeWord);
+					count -= 1;
+				}
+			}
+			if (mistake) result.push()
+		}
+		// add others as partners
+		result.push(...randomiseArray(this.ctx.words.filter((fword) => !result.includes(fword) && fword !== word)).slice(0, count));
+		// return 
+		return result;
+	}
+
+  suggestGame(words = this.ctx.words, now = new Date()): AbstractGame<any, any> {
     const shouldTest = true;
-		const words = this.ctx.progress.sortedWords(now) as WordWithImage[];
 		if (shouldTest) {
 			//return () => new Form(this.ctx, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: formSettings.generateLearningSetup(progress.learnFormDif) });
 		}
-		return new Form(this.ctx, { answer: words[0], falseAnswers: [words[1]], setup: formSettings.generateLearningSetup(this.ctx.progress.learnFormDif) });
+		const answer = this.suggestWord(words) as WordWithImage;
+		const falseAnswers = this.suggestWordPartners(answer, 1) as WordWithImage[];
+		return new Form(this.ctx, { answer, falseAnswers, setup: formSettings.generateLearningSetup(this.ctx.progress.learnFormDif) });
   }
 	
 	// length <= 10

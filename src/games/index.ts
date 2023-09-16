@@ -6,11 +6,10 @@ import { promiseMagic } from "../utils";
 export type GameName = "form" | "drop" | "memory";
 
 export interface EndGameStats {
-  isSuccess: boolean,
-  name?: GameName,
+  isStopped?: boolean
 }
 
-export type Game = () => AbstractGame<any, EndGameStats>;
+export type Game = () => AbstractGame<any, any>;
 
 export interface UnloadedWord {
   toLearnText: string,

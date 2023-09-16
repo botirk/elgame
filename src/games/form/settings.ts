@@ -24,8 +24,7 @@ const generateSetup = (difficulty: number) => {
 };
 
 export const formSettings = {
-  endAnimationTime: 3000,
-  pause: 900,
+  pause: 500,
   recomendation,
   generateLearningSetup, 
   endDif,

@@ -8,7 +8,7 @@ import Card, { GuessState } from "./card";
 import { calcTextWidth } from "../../gui/text";
 import { drawBackground } from "../../gui/background";
 import { ButtonGroupGrid } from "../../gui/buttonGroup";
-import { drawStatusSimple, drawStatusSimpleFail, drawStatusSimpleSuccess, drawStatusText, prepareStatusText } from "../../gui/status";
+import { drawStatusSimple, drawStatusSimpleFail, drawStatusSimpleSuccess, drawStatusText, prepareStatusText } from "../../gui/status1";
 
 const calcCardSize = (init: Init, words: WordWithImage[]) => {
   let height = settings.fonts.fontSize + settings.gui.button.padding * 2;

@@ -4,7 +4,7 @@ import { formSettings as formGame, FormGameSetup  } from "./settings";
 import { AbstractGame, Word, WordWithImage } from "..";
 import { EndGameStats } from "..";
 import Form from "./game3";
-import { drawStatusText, drawStatusTextFail, drawStatusTextSuccess, prepareStatusText } from "../../gui/status";
+import { drawStatusText, drawStatusTextFail, drawStatusTextSuccess, prepareStatusText } from "../../gui/status1";
 
 const calculateCardSize = (init: Init, words: WordWithImage[]) => {
   let minHeight = 0;
