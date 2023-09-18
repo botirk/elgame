@@ -1,12 +1,49 @@
-import { AbstractGame, EndGameStats } from "..";
-import { removeRandomInArray } from "../../utils";
-import { memorySettings } from "./settings";
-import { WordWithImage } from "..";
-import Card, { GuessState } from "./card";
-import { ButtonGroupGrid } from "../../gui/buttonGroup";
-import CTX from "../../gui/CTX";
-import { Button } from "../../gui/button";
-import { ResizeManager } from "../../gui/events/resize";
+import { removeRandomInArray } from "../utils";
+import { WordWithImage, AbstractGame, EndGameStats } from ".";
+import { ButtonGroupGrid } from "../gui/buttonGroup";
+import CTX from "../gui/CTX";
+import { Button } from "../gui/button";
+import { ResizeManager } from "../gui/events/resize";
+import settings from "../settings";
+
+type GuessState = "image" | "word";
+type GameState = "open" | "closed" | "failed" | "solved&open" | "solved&closed";
+
+class Card extends Button {
+  constructor(ctx: CTX, readonly word: WordWithImage, readonly guessState: GuessState) {
+    super(ctx);
+  }
+
+  private _gameState: GameState = "closed";
+  get gameState() {
+    return this._gameState;
+  }
+  set gameState(gameState: GameState) {
+    if (this._gameState === gameState) return;
+    this._gameState = gameState;
+    if (gameState === "closed") {
+      this.content = "";
+    } else if (gameState === "failed" || gameState === "open" || gameState === "solved&open") {
+      if (this.guessState === "word") {
+        this.content = this.word.toLearnText;
+      } else {
+        this.content = this.word.toLearnImg;
+      }
+    }
+    if (gameState == "failed") {
+      this.bgColor = settings.colors.fail; 
+    } else if (gameState == "solved&open") {
+      this.bgColor = settings.colors.success;
+    } else {
+      this.bgColor = undefined;
+    }
+    if (gameState === "solved&closed") {
+      this.justBorder = true;
+    } else {
+      this.justBorder = false;
+    }
+  }
+}
 
 const calcCardSize = (ctx: CTX, words: WordWithImage[]) => {
   let height = 0;
@@ -36,7 +73,7 @@ export default class Memory extends AbstractGame<{ words: WordWithImage[] }, End
       this.grid.xy(this.ctx.centerX(), this.ctx.centerY());
     };
     dynamic();
-    this.resizeManager = this.ctx.resizeEvent.then({ update: dynamic });
+    this.resizeManager = this.ctx.resizeEvent.then({ update: () => { dynamic(); this.grid.screenResize(); }});
   }
   private async onCardClick(card: Card) {
     if (this._remainingCards <= 0) return;
@@ -58,7 +95,7 @@ export default class Memory extends AbstractGame<{ words: WordWithImage[] }, End
         open[0].gameState = "failed";
       }
       this.ctx.redraw();
-      this._timer = setTimeout(() => this.finishCardAction(), memorySettings.pairWaitTime);
+      this._timer = setTimeout(() => this.finishCardAction(), settings.memory.pairWaitTime);
     }
   }
   private finishCardAction() {
@@ -68,6 +105,7 @@ export default class Memory extends AbstractGame<{ words: WordWithImage[] }, End
     for (const solvedOpen of (this.grid.content as Card[]).filter((card) => card.gameState == "solved&open")) {
       solvedOpen.gameState = "solved&closed";
       if ((this._remainingCards -= 1) <= 0) {
+        this.ctx.progress.saveProgressEnd("memory");
         this.stop();
         break;
       }
@@ -107,6 +145,7 @@ export default class Memory extends AbstractGame<{ words: WordWithImage[] }, End
   }
   protected freeResources(): void {
     this.grid.stop();
+    this.resizeManager();
     clearTimeout(this._timer);
   }
   protected innerRedraw() {

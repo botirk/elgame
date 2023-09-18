@@ -70,6 +70,16 @@ const maxBonusDif = 5;
 
 const maxWordsLearnedPerMinute = 1.2;
 
+const memory = {
+  pairWaitTime: 1500,
+  gameChance: 0.08,
+}
+
+const form = {
+  pause: 500,
+  gameChance: 1,
+}
+
 const settings = {
   name,
   calculate,
@@ -79,7 +89,9 @@ const settings = {
   gui,
   localStorage,
   maxBonusDif,
-  maxWordsLearnedPerMinute
+  maxWordsLearnedPerMinute,
+  memory,
+  form,
 }
 
 export type Settings = typeof settings;

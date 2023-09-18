@@ -1,7 +1,6 @@
 import { AbstractGame, GameName, Word, WordWithImage } from "./games";
-import Form from "./games/form/game";
-import { formSettings } from "./games/form/settings";
-import Memory from "./games/memory/game";
+import Form from "./games/form";
+import Memory from "./games/memory";
 import CTX from "./gui/CTX";
 import settings from "./settings";
 import { ru } from "./translation";
@@ -264,9 +263,9 @@ export default class Progress {
   	const dropCount = this.prevGames.filter((name) => name === "drop").length;
   	const memoryCount = this.prevGames.filter((name) => name === "memory").length;
 
-  	const formVotes = ProgressPrevGamesLen + 1 - formCount;
+  	const formVotes = (ProgressPrevGamesLen + 1 - formCount) * settings.form.gameChance;
   	const dropVotes = (ProgressPrevGamesLen + 1 - dropCount) * 0;
-  	const memoryVotes = (ProgressPrevGamesLen + 1 - memoryCount) * 0.2;
+  	const memoryVotes = (ProgressPrevGamesLen + 1 - memoryCount) * settings.memory.gameChance;
   
   	const vote = Math.random() * (formVotes + dropCount + memoryVotes);
 
@@ -282,7 +281,7 @@ export default class Progress {
   suggestGame(words = this.ctx.words, now = new Date()): AbstractGame<any, any> {
     let gameName = this.suggestGameName();
 
-		const shouldTest = true;
+		const shouldTest = false;
 		if (shouldTest) {
 			gameName = "memory";
 		}
@@ -299,7 +298,7 @@ export default class Progress {
 			const progress = this.getWord(answer.toLearnText);
 			const numFalseAnswers = Math.min(5, progress.stage + 1) + this.ctx.progress.bonusDif;
 			const falseAnswers = this.suggestWordPartners(answer, numFalseAnswers) as WordWithImage[];
-			return new Form(this.ctx, { answer, falseAnswers, setup: formSettings.generateLearningSetup(this.ctx.progress.learnFormDif) });
+			return new Form(this.ctx, { answer, falseAnswers });
 		}
   }
 	

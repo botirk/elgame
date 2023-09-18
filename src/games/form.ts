@@ -1,12 +1,11 @@
-import { AbstractGame, EndGameStats, WordWithImage } from "..";
-import settings from "../../settings";
-import { FormGameSetup, formSettings as formGame, formSettings } from "./settings";
-import { ButtonGroupGrid, ButtonGroupTable } from "../../gui/buttonGroup";
-import { randomiseArray } from "../../utils";
-import { Button } from "../../gui/button";
-import { ResizeManager } from "../../gui/events/resize";
+import { AbstractGame, EndGameStats, WordWithImage } from ".";
+import settings from "../settings";
+import { ButtonGroupGrid, ButtonGroupTable } from "../gui/buttonGroup";
+import { randomiseArray } from "../utils";
+import { Button } from "../gui/button";
+import { ResizeManager } from "../gui/events/resize";
 
-class Form extends AbstractGame<{ answer: WordWithImage, falseAnswers: WordWithImage[], setup: FormGameSetup }, EndGameStats> {
+class Form extends AbstractGame<{ answer: WordWithImage, falseAnswers: WordWithImage[] }, EndGameStats> {
   protected init(): void {
     const buttons = this.answers.map((answer) => {
       const button = new Button(this.ctx);
@@ -20,7 +19,7 @@ class Form extends AbstractGame<{ answer: WordWithImage, falseAnswers: WordWithI
           this.endTimer = setTimeout(() => {
             this.ctx.progress.saveProgressEnd("form");
             this.stop();
-          }, formSettings.pause);
+          }, settings.form.pause);
           
         } else {
           button.bgColor = settings.colors.fail;
