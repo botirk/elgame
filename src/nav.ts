@@ -22,8 +22,8 @@ class Nav {
   private async playGame(endTime: Date) {
     this.ctx.status = new Status(this.ctx, endTime);
     let now = new Date();
+    const words = this.ctx.progress.suggestWordsToLearn(endTime, now);
     while(endTime > now) {
-      const words = this.ctx.progress.suggestWords(endTime);
       this.curGame = this.ctx.progress.suggestGame(words, now).start();
       const result = await this.curGame.onGameEnd;
       if (result?.isStopped) break;

@@ -66,7 +66,7 @@ const localStorage = {
   progress: name,
 }
 
-const maxBonusDif = 10;
+const maxBonusDif = 5;
 
 const maxWordsLearnedPerMinute = 1.2;
 

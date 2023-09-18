@@ -1,10 +1,11 @@
 import { AbstractGame, GameName, Word, WordWithImage } from "./games";
 import Form from "./games/form/game";
 import { formSettings } from "./games/form/settings";
+import Memory from "./games/memory/game";
 import CTX from "./gui/CTX";
 import settings from "./settings";
 import { ru } from "./translation";
-import { randomInArray, randomiseArray } from "./utils";
+import { randomInArray, randomNInArray, randomiseArray } from "./utils";
 
 export const ProgressPrevGamesLen = 10;
 
@@ -220,7 +221,7 @@ export default class Progress {
     });
   }
 	
-	suggestWords(endTime: Date, now = new Date()) {
+	suggestWordsToLearn(endTime: Date, now = new Date()) {
 		const diff = new Date(endTime.getTime() - now.getTime());
 		const count = Math.max(2, Math.floor(diff.getTime() / ((1 / settings.maxWordsLearnedPerMinute) * 60 * 1000)));
 		return this.sortWords(undefined, now).slice(0, count);
@@ -228,6 +229,10 @@ export default class Progress {
 
 	suggestWord(words = this.ctx.words) {
 		return randomInArray(words);
+	}
+
+	suggestWords(words = this.ctx.words, n: number) {
+		return randomNInArray(words, n);
 	}
 
 	suggestWordPartners(word: Word, count: number) {
@@ -254,32 +259,48 @@ export default class Progress {
 		return result;
 	}
 
-	suggestGameName(word: Word): GameName {
-		return "form";
+	suggestGameName(): GameName {
+		const formCount = this.prevGames.filter((name) => name === "form").length;
+  	const dropCount = this.prevGames.filter((name) => name === "drop").length;
+  	const memoryCount = this.prevGames.filter((name) => name === "memory").length;
+
+  	const formVotes = ProgressPrevGamesLen + 1 - formCount;
+  	const dropVotes = (ProgressPrevGamesLen + 1 - dropCount) * 0;
+  	const memoryVotes = (ProgressPrevGamesLen + 1 - memoryCount) * 0.2;
+  
+  	const vote = Math.random() * (formVotes + dropCount + memoryVotes);
+
+		if (vote <= formVotes) {
+			return "form"
+		} else if (vote <= formVotes + dropVotes) {
+			return "drop";
+		} else {
+			return "memory";
+		}
 	}
 
   suggestGame(words = this.ctx.words, now = new Date()): AbstractGame<any, any> {
-    const shouldTest = true;
+    let gameName = this.suggestGameName();
+
+		const shouldTest = true;
 		if (shouldTest) {
-			//return () => new Form(this.ctx, { words: await loadWords(wordsSelected, settings.gui.icon.width, "width") as WordWithImage[], setup: formSettings.generateLearningSetup(progress.learnFormDif) });
+			gameName = "memory";
 		}
-		const answer = this.suggestWord(words) as WordWithImage;
-		const progress = this.getWord(answer.toLearnText)
-		const gameName = this.suggestGameName(answer);
-		if (gameName === "form") {
-			let numFalseAnswers = 5;
-			if (progress.stage === 0) numFalseAnswers = 1;
-			else if (progress.stage === 1) numFalseAnswers = 2;
-			else if (progress.stage === 2) numFalseAnswers = 3;
-			else if (progress.stage === 3) numFalseAnswers = 4;
+
+		if (gameName === "memory") {
+			let cards = this.sortWords(this.suggestWords(words, 5 + this.ctx.progress.bonusDif), now) as WordWithImage[];
+			if (cards.length < 5 + this.ctx.progress.bonusDif) cards = [ ...cards, ... randomNInArray((this.ctx.words as WordWithImage[]).filter((word) => !cards.includes(word)), 5 + this.ctx.progress.bonusDif - cards.length) ]
+			if (cards.length > 4 && cards.find((card) => this.getWord(card.toLearnText).stage <= 2)) cards.pop();
+			if (cards.length > 3 && cards.find((card) => this.getWord(card.toLearnText).stage <= 1)) cards.pop();
+			if (cards.length > 2 && cards.find((card) => this.getWord(card.toLearnText).stage == 0)) cards.pop();
+			return new Memory(this.ctx, { words: cards });
+		} else {
+			const answer = this.suggestWord(words) as WordWithImage;
+			const progress = this.getWord(answer.toLearnText);
+			const numFalseAnswers = Math.min(5, progress.stage + 1) + this.ctx.progress.bonusDif;
 			const falseAnswers = this.suggestWordPartners(answer, numFalseAnswers) as WordWithImage[];
 			return new Form(this.ctx, { answer, falseAnswers, setup: formSettings.generateLearningSetup(this.ctx.progress.learnFormDif) });
 		}
-		
-		let numFalseAnswers = 4;
-		if (this.getWord(answer.toLearnText).stage === 0) numFalseAnswers = 1;
-		const falseAnswers = this.suggestWordPartners(answer, numFalseAnswers) as WordWithImage[];
-		return new Form(this.ctx, { answer, falseAnswers, setup: formSettings.generateLearningSetup(this.ctx.progress.learnFormDif) });
   }
 	
 	// length <= 10

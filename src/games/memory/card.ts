@@ -1,14 +1,14 @@
 import { WordWithImage } from "..";
+import CTX from "../../gui/CTX";
 import { Button } from "../../gui/button";
-import { Init } from "../../init";
 import settings from "../../settings";
 
 export type GuessState = "image" | "word";
 type GameState = "open" | "closed" | "failed" | "solved&open" | "solved&closed";
 
 class Card extends Button {
-  constructor(init: Init, readonly word: WordWithImage, readonly guessState: GuessState, cardWidth: number, cardHeight: number, onClick: (this: Card) => void) {
-    super(init, "", 0, 0, { onClick, minWidth: cardWidth, minHeight: cardHeight });
+  constructor(ctx: CTX, readonly word: WordWithImage, readonly guessState: GuessState) {
+    super(ctx);
   }
 
   private _gameState: GameState = "closed";
