@@ -12,13 +12,14 @@ const loadSoundAsset = async (b64: string) => {
 const loadImgAsset = async (b64: string, pxValue: number, side: "width" | "heigth"): Promise<HTMLImageElement> => {
   return new Promise<HTMLImageElement>((resolve) => {
     const asset = new Image();
+    asset.src = `data:image/png;base64,${b64}`;
     asset.onload = () => {
       const scale = (side == "width") ? pxValue / asset.width : pxValue / asset.height;
       asset.width *= scale;
       asset.height *= scale;
       resolve(asset);
     };
-    asset.src = `data:image/png;base64,${b64}`;
+    
   });
 }
 

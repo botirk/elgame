@@ -46,6 +46,7 @@ const gui = {
   },
   status: {
     height: 100,
+    winLoseTime: 500,
   }
 }
 
@@ -72,7 +73,7 @@ const maxWordsLearnedPerMinute = 1.2;
 
 const memory = {
   pairWaitTime: 1500,
-  gameChance: 0.05,
+  gameChance: 0.025,
 }
 
 const form = {
@@ -85,12 +86,7 @@ const drop = {
   mouseSpeed: 0.4, // per 0.001 second or 1 ms
   heroY: 150,
   accelerationButton: " ",
-  winTime: 4000, loseTime: 3000,
-  recomendation: {
-    minWords: 3,
-    maxWords: 10,
-    goodWords: 5,
-  }
+  gameChance: 0.025,
 }
 
 const settings = {

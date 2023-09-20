@@ -1,4 +1,4 @@
-import CTX from "../gui/CTX";
+import CTX from "../CTX";
 import { saveProgressFail, saveProgressSuccess } from "../learner";
 import { promiseMagic } from "../utils";
 
@@ -47,7 +47,5 @@ export abstract class AbstractGame<TContent, TEndGameStats extends EndGameStats>
   protected scroll() {};
  
   onGameEnd: Promise<TEndGameStats | undefined>;
-  onProgressSuccess?: typeof saveProgressSuccess;
-  onProgressFail?: typeof saveProgressFail;
   stop: (result?: TEndGameStats) => void;
 }

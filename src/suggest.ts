@@ -1,7 +1,8 @@
 import { AbstractGame, GameName, Word, WordWithImage } from "./games";
+import Drop from "./games/drop";
 import Form from "./games/form";
 import Memory from "./games/memory";
-import CTX from "./gui/CTX";
+import CTX from "./CTX";
 import { ProgressPrevGamesLen } from "./progress";
 import settings from "./settings";
 import { randomInArray, randomNInArray, randomiseArray } from "./utils";
@@ -30,7 +31,7 @@ export default class Suggest {
 		return this.sortWords(this.ctx.words, now).slice(0, count);
 	}
 
-  wordWithImage(words = this.ctx.words) {
+  wordWithImage(words = this.ctx.wordsWithImage()): WordWithImage {
 		return randomInArray(words);
 	}
 
@@ -44,22 +45,17 @@ export default class Suggest {
 		const result: WordWithImage[] = [];
 		// add mistakes to partners
 		if (count > 0) {
-			let mistake = this.ctx.progress.getWord(word.toLearnText).mistakes[0];
+			const mistake = this.ctx.progress.getWord(word.toLearnText).mistakes.find((mistake) => mistake[0] !== word.toLearnText && this.ctx.wordsWithImage().find((word) => word.toLearnText === mistake[0]));
 			if (mistake) {
-				let mistakeWord = this.ctx.wordsWithImage().find((word) => word.toLearnText === mistake[0]);
-				if (!mistakeWord) {
-					mistake = this.ctx.progress.getWord(word.toLearnText).mistakes[1];
-					mistakeWord = this.ctx.wordsWithImage().find((word) => word.toLearnText === mistake[0]);
-				}
+				const mistakeWord = this.ctx.wordsWithImage().find((word) => word.toLearnText === mistake?.[0]);
 				if (mistakeWord) {
 					result.push(mistakeWord);
 					count -= 1;
 				}
 			}
-			if (mistake) result.push()
 		}
 		// add others as partners
-		result.push(...randomiseArray(this.ctx.wordsWithImage().filter((fword) => !result.includes(fword) && fword !== word)).slice(0, count));
+		result.push(...randomNInArray(this.ctx.wordsWithImage().filter((fword) => !result.includes(fword) && fword !== word), count));
 		// return 
 		return result;
 	}
@@ -70,10 +66,12 @@ export default class Suggest {
   	const memoryCount = this.ctx.progress.prevGames.filter((name) => name === "memory").length;
 
   	const formVotes = (ProgressPrevGamesLen + 1 - formCount) * settings.form.gameChance;
-  	const dropVotes = (ProgressPrevGamesLen + 1 - dropCount) * 0;
+  	const dropVotes = (ProgressPrevGamesLen + 1 - dropCount) * settings.drop.gameChance;
   	const memoryVotes = (ProgressPrevGamesLen + 1 - memoryCount) * settings.memory.gameChance;
   
   	const vote = Math.random() * (formVotes + dropCount + memoryVotes);
+
+		debugger;
 
 		if (vote <= formVotes) {
 			return "form"
@@ -86,21 +84,24 @@ export default class Suggest {
 
   game(words = this.ctx.words, now = new Date()): AbstractGame<any, any> {
     let gameName = this.gameName();
+		const wordsWithImage = this.ctx.wordsWithImage(words);
 
 		const shouldTest = false;
 		if (shouldTest) {
-			gameName = "memory";
+			gameName = "form";
 		}
 
 		if (gameName === "memory") {
-			const wordsWithImage = this.ctx.wordsWithImage(words);
 			const cards = this.sortWords(this.wordsWithImage(wordsWithImage, 5 + this.ctx.progress.bonusDif), now);
 			if (cards.length > 4 && cards.find((card) => this.ctx.progress.getWord(card.toLearnText).stage <= 2)) cards.pop();
 			if (cards.length > 3 && cards.find((card) => this.ctx.progress.getWord(card.toLearnText).stage <= 1)) cards.pop();
 			if (cards.length > 2 && cards.find((card) => this.ctx.progress.getWord(card.toLearnText).stage == 0)) cards.pop();
 			return new Memory(this.ctx, { words: cards });
-		} else {
-			const answer = this.wordWithImage(words) as WordWithImage;
+		} else if (gameName === "drop") {
+			const answers = this.wordsWithImage(wordsWithImage, 2);
+			return new Drop(this.ctx, { words: answers, setup: Drop.generateSetup(this.ctx.progress.bonusDif) });
+		} else { // form
+			const answer = this.wordWithImage(wordsWithImage);
 			const progress = this.ctx.progress.getWord(answer.toLearnText);
 			const numFalseAnswers = Math.min(5, progress.stage + 1) + this.ctx.progress.bonusDif;
 			const falseAnswers = this.wordPartnersWithImage(answer, numFalseAnswers);

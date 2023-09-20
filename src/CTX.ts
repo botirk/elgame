@@ -1,16 +1,16 @@
-import { Assets, loadAssets, loadWords } from "../asset";
-import settings from "../settings";
-import ButtonEvent from "./events/button";
-import ClickEvent from "./events/click";
-import HoverEvent from "./events/hover";
-import MoveEvent from "./events/move";
-import ResizeEvent from "./events/resize";
-import ScrollEvent from "./events/scroll";
-import BottomMenu from "./bottomMenu";
-import Progress from "../progress";
-import { UnloadedWord, Word, WordWithImage } from "../games";
-import Status from "./status";
-import Suggest from "../suggest";
+import { Assets, loadAssets, loadWords } from "./asset";
+import settings from "./settings";
+import ButtonEvent from "./gui/events/button";
+import ClickEvent from "./gui/events/click";
+import HoverEvent from "./gui/events/hover";
+import MoveEvent from "./gui/events/move";
+import ResizeEvent from "./gui/events/resize";
+import ScrollEvent from "./gui/events/scroll";
+import BottomMenu from "./gui/bottomMenu";
+import Progress from "./progress";
+import { UnloadedWord, Word, WordWithImage } from "./games";
+import Status from "./gui/status";
+import Suggest from "./suggest";
 
 export default class CTX {
   private constructor(public readonly ctx: CanvasRenderingContext2D, public readonly assets: Assets, public readonly words: Word[]) {

@@ -3,6 +3,7 @@ import { randomInArray } from "../utils";
 import { AbstractGame, WordWithImage } from ".";
 import { EndGameStats } from ".";
 import { randomNInArray } from "../utils";
+import { ResizeManager } from "../gui/events/resize";
 
 interface DropContent { words: WordWithImage[], setup: ReturnType<typeof Drop.generateSetup> };
 
@@ -20,9 +21,12 @@ class Drop extends AbstractGame<DropContent, EndGameStats> {
     };
   }
   protected init(): void {
+    this.dynamic();
     this._quest = this.generateQuest();
+    if (this.ctx.status) this.ctx.status.word = this._quest.toLearnText;
     this.ctx.redraw();
     this._frameRequest = requestAnimationFrame(() => this.onTick());
+    this.resizeManager = this.ctx.resizeEvent.then({ update: () => this.dynamic() });
   }
   private generateQuest() {
     let wordsAvailable = this.content.words;
@@ -38,7 +42,7 @@ class Drop extends AbstractGame<DropContent, EndGameStats> {
   }
   private generateTarget() {
     if (this._targets.candidates.length === 0 || !this._targets.candidates.includes(this._quest)) {
-      this._targets.candidates = randomNInArray(this.content.words, this.content.setup.maxWordsTillQuest + 1);
+      this._targets.candidates = randomNInArray(this.ctx.wordsWithImage(), this.content.setup.maxWordsTillQuest + 1);
       if (!this._targets.candidates.includes(this._quest)) {
         this._targets.candidates[Math.floor(Math.random() * this._targets.candidates.length)] = this._quest;
       }
@@ -56,17 +60,24 @@ class Drop extends AbstractGame<DropContent, EndGameStats> {
         if (this._score.perWord[this._quest.toLearnText] < this._score.requiredPerWord) {
           this._score.perWord[this._quest.toLearnText] += 1;
           this._score.total += 1;
-          this.onProgressSuccess?.(target.word, this._targets.partners);
+          this.ctx.progress.saveProgressSuccess(target.word.toLearnText, this._targets.partners.map((word) => word.toLearnText));
+          if (this.ctx.status) this.ctx.status.victory = true;
           this._targets.partners = [];
         }
         if (this._score.total == this._score.required) {
           cancelAnimationFrame(this._frameRequest);
-          this._stopTimeout = setTimeout(() => { this.ctx.progress.saveProgressEnd("drop"); this.stop(); }, settings.drop.winTime);
+          this._stopTimeout = setTimeout(() => { this.ctx.progress.saveProgressEnd("drop"); this.stop(); }, settings.gui.status.winLoseTime);
         } else {
           this._quest = this.generateQuest();
+          if (this.ctx.status) this.ctx.status.word = this._quest.toLearnText;
         }
-      } else if ((isMiss && isQuest) || (isHit && !isQuest)) {
+      } else if (isHit && !isQuest) {
         this.ctx.progress.saveProgressFail(this._quest.toLearnText, target.word.toLearnText);
+        if (this.ctx.status) this.ctx.status.lose = true;
+        this._targets.partners = [];
+      } else if (isMiss && isQuest) {
+        this.ctx.progress.saveProgressFailSolo(this._quest.toLearnText);
+        if (this.ctx.status) this.ctx.status.lose = true;
         this._targets.partners = [];
       }
       if (isHit || isMiss) {
@@ -106,8 +117,7 @@ class Drop extends AbstractGame<DropContent, EndGameStats> {
     }
   }
   private drawHero() {
-    this.ctx.ctx.fillStyle = "#03fc28";
-    this.ctx.ctx.fillRect(this._hero.x, this._hero.y, settings.gui.icon.width, settings.gui.icon.height);
+    this.ctx.ctx.drawImage(this.ctx.assets.cat, this._hero.x, this._hero.y, this.ctx.assets.cat.width, this.ctx.assets.cat.height);
   }
   private onTick() {
     this._frameRequest = requestAnimationFrame(() => this.onTick());
@@ -116,7 +126,7 @@ class Drop extends AbstractGame<DropContent, EndGameStats> {
     this._lastFrameTime = newTime;
     this.motion(dif);
     this.gameplay();
-    this.innerRedraw();
+    this.ctx.redraw();
   }
   protected freeResources(): void {
     clearTimeout(this._stopTimeout);
@@ -125,29 +135,25 @@ class Drop extends AbstractGame<DropContent, EndGameStats> {
     this.stopLeft();
     this.stopRight();
     this.stopSpace();
+    this.resizeManager();
+    if (this.ctx.status) this.ctx.status.word = undefined;
   }
   private dynamic() {
-    return {
-      maxXHero: this.ctx.gameXMax - settings.gui.icon.width, 
-      maxXTarget: this.ctx.gameXMax - settings.gui.icon.width,
-      clickableGameX: (this.ctx.ctx.canvas.width - this.ctx.gameWidth) / 2 + settings.gui.icon.width,
-      clickableGameXMax: (this.ctx.ctx.canvas.width + this.ctx.gameWidth) / 2 - settings.gui.icon.width,
-      clickableGameWidth: this.ctx.gameWidth - settings.gui.icon.width * 2,
-    };
+    this._dynamic.maxXHero = this.ctx.gameXMax - settings.gui.icon.width;
+    this._dynamic.maxXTarget = this.ctx.gameXMax - settings.gui.icon.width;
+    this._dynamic.clickableGameX = (this.ctx.ctx.canvas.width - this.ctx.gameWidth) / 2 + settings.gui.icon.width;
+    this._dynamic.clickableGameXMax = (this.ctx.ctx.canvas.width + this.ctx.gameWidth) / 2 - settings.gui.icon.width;
+    this._dynamic.clickableGameWidth = this.ctx.gameWidth - settings.gui.icon.width * 2;
+    this._hero.x = Math.max(this._dynamic.clickableGameX, Math.min(this._dynamic.clickableGameXMax, this._hero.x));
+    for (const target of this._targets.a) {
+      target.x = Math.max(this._dynamic.clickableGameX, Math.min(this._dynamic.clickableGameXMax, this._hero.x));
+    }
   }
   protected innerRedraw() {
     this.ctx.drawBackground();
     this.drawGameBackground();
     this.drawHero();
     this.drawTargets();
-  }
-  protected scrollOptions() {
-    return {
-      oneStep: 0,
-      maxHeight: 0,
-    }
-  }
-  protected resize() {
   }
 
   private stopMouse = this.ctx.moveEvent.then((x, y) => {
@@ -169,6 +175,7 @@ class Drop extends AbstractGame<DropContent, EndGameStats> {
     onPressed: () => { this._mouse.x = -Infinity; },
     onReleased: () => { this._mouse.x = undefined; },
   });
+  private resizeManager: ResizeManager;
   private _stopTimeout?: NodeJS.Timeout;
   private _frameRequest: number;
   private _lastFrameTime: number = performance.now();
@@ -178,7 +185,13 @@ class Drop extends AbstractGame<DropContent, EndGameStats> {
     acceleration: false, 
     accelerationKB: false,
   }
-  private _dynamic = this.dynamic();
+  private _dynamic = {
+    maxXHero: 0,
+    maxXTarget: 0,
+    clickableGameX: 0,
+    clickableGameXMax: 0,
+    clickableGameWidth: 0,
+  };
   private _quest: WordWithImage;
   private _hero = {
     x: this.ctx.gameX + this.ctx.gameWidth / 2, 

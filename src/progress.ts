@@ -1,5 +1,5 @@
 import { GameName } from "./games";
-import CTX from "./gui/CTX";
+import CTX from "./CTX";
 import settings from "./settings";
 import { ru } from "./translation";
 
@@ -109,6 +109,21 @@ export default class Progress {
 			answerProgress.mistakes.sort((a, b) => b[1] - a[1]);
 			answerProgress.mistakes[9] = [clickedWord, 1];
 		}
+		
+		return this.save();
+	}
+
+	saveProgressFailSolo(answerWord: string) {
+		// save success
+		const answerProgress = this.getWord(answerWord);
+		answerProgress.substage = Math.max(-4, answerProgress.substage - 1);
+		if (answerProgress.substage <= -4 && answerProgress.stage > 0) {
+			answerProgress.stage -= 1;
+			answerProgress.substage = 0;
+			answerProgress.bonusstage = 0;
+			answerProgress.timestamp = new Date(0);
+		}
+		answerProgress.fail += 1;
 		
 		return this.save();
 	}
