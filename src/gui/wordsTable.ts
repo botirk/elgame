@@ -1,4 +1,4 @@
-import { Word, WordWithImage } from "../games";
+import { WordWithImage } from "../games";
 import CTX from "./CTX";
 import { Button } from "./button";
 import { ButtonGroupTable, Table } from "./buttonGroup";
@@ -6,7 +6,7 @@ import { ButtonWithDescription } from "./buttonWithDescription";
 
 const wordsTable = (ctx: CTX) => {
   const table = new ButtonGroupTable(ctx);
-  const words = ctx.progress.sortWords();
+  const words = ctx.suggest.sortWords(ctx.words);
   table.content = words.map((word) => {
     const text = new Button(ctx);
       text.likeLabel = true;

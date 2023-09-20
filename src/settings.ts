@@ -72,12 +72,25 @@ const maxWordsLearnedPerMinute = 1.2;
 
 const memory = {
   pairWaitTime: 1500,
-  gameChance: 0.08,
+  gameChance: 0.05,
 }
 
 const form = {
   pause: 500,
   gameChance: 1,
+}
+
+const drop = {
+  acceleration: 1.85,
+  mouseSpeed: 0.4, // per 0.001 second or 1 ms
+  heroY: 150,
+  accelerationButton: " ",
+  winTime: 4000, loseTime: 3000,
+  recomendation: {
+    minWords: 3,
+    maxWords: 10,
+    goodWords: 5,
+  }
 }
 
 const settings = {
@@ -92,6 +105,7 @@ const settings = {
   maxWordsLearnedPerMinute,
   memory,
   form,
+  drop,
 }
 
 export type Settings = typeof settings;

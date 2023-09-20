@@ -8,8 +8,9 @@ import ResizeEvent from "./events/resize";
 import ScrollEvent from "./events/scroll";
 import BottomMenu from "./bottomMenu";
 import Progress from "../progress";
-import { UnloadedWord, Word } from "../games";
+import { UnloadedWord, Word, WordWithImage } from "../games";
 import Status from "./status";
+import Suggest from "../suggest";
 
 export default class CTX {
   private constructor(public readonly ctx: CanvasRenderingContext2D, public readonly assets: Assets, public readonly words: Word[]) {
@@ -25,6 +26,10 @@ export default class CTX {
     return new CTX(ctx, assets, words);
   }
   readonly loaded: Promise<void>;
+
+  wordsWithImage(words = this.words) {
+    return words.filter((word) => word.toLearnImg) as WordWithImage[];
+  }
 
   /** drawings */
   innerRedraw?: () => void;
@@ -156,6 +161,8 @@ export default class CTX {
   readonly bottomMenu: BottomMenu;
   // progress
   readonly progress = new Progress(this);
+  // suggest
+  readonly suggest = new Suggest(this);
 
   stop() {
     this.buttonEvent.stop();
