@@ -26,7 +26,6 @@ export default class Status {
   }
 
   redraw() {
-    console.log("STATUS REDRAW", Math.random());
     this.drawProgress();
     if (this.wordSetup) {
       this.ctx.ctx.fillStyle = "black";
