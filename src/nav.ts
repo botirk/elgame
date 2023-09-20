@@ -1,6 +1,6 @@
 import { AbstractGame } from "./games";
 import Menu from "./games/menu";
-import CTX from "./gui/CTX";
+import CTX from "./CTX";
 import Status from "./gui/status";
 
 class Nav {
@@ -25,7 +25,7 @@ class Nav {
     const words = this.ctx.suggest.wordsToLearn(endTime, now);
     while(endTime > now) {
       this.curGame = this.ctx.suggest.game(words, now).start();
-      const result = await this.curGame.onGameEnd;
+      const result = await this.curGame?.onGameEnd;
       if (result?.isStopped) break;
       now = new Date();
     }
